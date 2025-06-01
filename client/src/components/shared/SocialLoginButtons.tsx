@@ -1,4 +1,4 @@
-import React from "react";
+// nothing
 import { Button } from "@/components/ui/button";
 import { FaApple, FaGoogle } from 'react-icons/fa';
 

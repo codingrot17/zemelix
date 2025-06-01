@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Heart, Flame, Star, Clock, Share2, ShoppingBag, Calendar, Info } from "lucide-react";
 
 // Demo data
-const featuredItems = [
+const featuredItems: FeaturedItem[] = [
   {
     id: 1,
     title: "Handmade Wooden Chair",
@@ -53,8 +53,29 @@ const featuredItems = [
   },
 ];
 
+// Define TypeScript types
+interface Seller {
+  name: string;
+  avatar: string;
+  rating: number;
+}
+
+interface FeaturedItem {
+  id: number | string;
+  title: string;
+  description: string;
+  price: string;
+  imageUrl: string;
+  seller: Seller;
+  badge?: "Hot" | "Trending" | "New";
+  flashDealEnds: number | null;
+  available: number;
+  total: number;
+  type: "goods" | "booking";
+}
+
 // Countdown hook
-function useCountdown(endTime) {
+function useCountdown(endTime: number | null) {
   const [timeLeft, setTimeLeft] = useState(endTime ? endTime - Date.now() : 0);
   useEffect(() => {
     if (!endTime) return;
@@ -84,7 +105,7 @@ function useIsMobile() {
   return isMobile;
 }
 
-function FeaturedCard({ item }) {
+function FeaturedCard({ item }: { item: FeaturedItem }) {
   const isMobile = useIsMobile();
   const [wishlisted, setWishlisted] = useState(false);
   const [showPrice, setShowPrice] = useState(false);
@@ -92,7 +113,7 @@ function FeaturedCard({ item }) {
   const countdown = useCountdown(item.flashDealEnds);
 
   // Badge color logic
-  const badgeColors = {
+  const badgeColors: Record<"Hot" | "Trending" | "New", string> = {
     Hot: "bg-red-500 text-white",
     Trending: "bg-emerald-500 text-white",
     New: "bg-indigo-500 text-white",
@@ -119,7 +140,7 @@ function FeaturedCard({ item }) {
   }
 
   // Only flip on hover for desktop, on button tap for mobile
-  function handleFlip(e) {
+  function handleFlip(e: React.MouseEvent<HTMLButtonElement>) {
     e.stopPropagation();
     setFlipped((f) => !f);
   }
@@ -128,11 +149,9 @@ function FeaturedCard({ item }) {
     <div
       className="group relative w-full h-[420px] [perspective:1200px] cursor-pointer"
       tabIndex={0}
-      // Only allow hover flip on desktop
       onMouseEnter={!isMobile ? () => setFlipped(true) : undefined}
       onMouseLeave={!isMobile ? () => setFlipped(false) : undefined}
     >
-      {/* Card inner */}
       <div
         className={`
           transition-transform duration-700 [transform-style:preserve-3d] w-full h-full
@@ -299,9 +318,8 @@ function FeaturedCard({ item }) {
 
 export function FeaturedListingsCarousel() {
   const [current, setCurrent] = useState(0);
-  const autoPlayRef = useRef();
+  const autoPlayRef = useRef<(() => void) | null>(null);
 
-  // Responsive: 1 card on mobile, 2 on md+
   const [cardsPerView, setCardsPerView] = useState(1);
   useEffect(() => {
     function handleResize() {
@@ -312,15 +330,16 @@ export function FeaturedListingsCarousel() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Auto-play logic
   useEffect(() => {
     autoPlayRef.current = next;
   });
   useEffect(() => {
     function play() {
-      autoPlayRef.current();
+      if (autoPlayRef.current) {
+        autoPlayRef.current();
+      }
     }
-    const interval = setInterval(play, 5000); // 5 seconds per slide
+    const interval = setInterval(play, 5000);
     return () => clearInterval(interval);
   }, [current, cardsPerView]);
 
@@ -372,7 +391,6 @@ export function FeaturedListingsCarousel() {
             </CarouselItem>
           ))}
         </CarouselContent>
-        {/* Dot indicators */}
         <div className="flex justify-center gap-2 mt-6">
           {Array.from({ length: totalDots }).map((_, idx) => (
             <button
@@ -388,12 +406,11 @@ export function FeaturedListingsCarousel() {
           ))}
         </div>
       </Carousel>
-      
-      {/* View More Button */}
+
       <div className="flex justify-center mt-8">
         <Button
           className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-400 dark:hover:bg-indigo-500 px-8 py-3 text-base font-semibold rounded-full shadow-lg transition"
-          onClick={() => navigate("/listings")} // Change "/listings" to your actual route
+          onClick={() => navigate("/listings")}
         >
           View More Products & Services
         </Button>

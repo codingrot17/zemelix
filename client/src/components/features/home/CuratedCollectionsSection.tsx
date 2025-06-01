@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Carousel,
   CarouselContent,
@@ -55,7 +55,7 @@ const curatedCollections = [
 export function CuratedCollectionsCarousel() {
   const [current, setCurrent] = useState(0);
   const [cardsPerView, setCardsPerView] = useState(1);
-  const autoPlayRef = useRef();
+  const autoPlayRef = useRef<() => void>(() => {});
 
   // Responsive: 1 card on mobile, 2 on md+
   useEffect(() => {
@@ -90,9 +90,6 @@ export function CuratedCollectionsCarousel() {
         : prev + cardsPerView
     );
   }
-
-  // Calculate visible collections
-  const visible = curatedCollections.slice(current, current + cardsPerView);
 
   // Dot indicators logic
   const totalDots = Math.ceil(curatedCollections.length / cardsPerView);
@@ -163,7 +160,7 @@ export function CuratedCollectionsCarousel() {
                 <div className="mt-4 flex justify-center md:justify-end">
                   <Button
                     className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-400 dark:hover:bg-indigo-500 w-full md:w-auto p-2"
-                    size="md"
+                    size="lg"
                   >
                     View More
                   </Button>

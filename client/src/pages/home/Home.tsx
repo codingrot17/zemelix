@@ -2,10 +2,39 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import BragBar from "@/components/features/home/BragBar";
 import HeroSection from "@/components/features/home/Hero";
-import DiscoveryQuiz from "@/components/features/home/DiscoveryQuiz"; 
+import DiscoveryQuiz from "@/components/features/home/DiscoveryQuiz";
 import { OnboardingProgress } from "@/components/features/home/OnboardingProgress";
 import { CuratedCollectionsCarousel } from "@/components/features/home/CuratedCollectionsSection";
 import { FeaturedListingsCarousel } from "@/components/features/home/FeaturedListingsSection";
+
+// Dummy featuredItems and onboardingSteps for demonstration
+const featuredItems = [
+  {
+    id: 1,
+    title: "Handmade Wooden Chair",
+    description: "Comfortable and stylish wooden chair for your living room.",
+    price: "$120",
+    imageUrl: "/images/placeholder.svg",
+    type: "product",
+    category: "Furniture",
+  },
+  {
+    id: 2,
+    title: "Web Design Service",
+    description: "Professional website design tailored for your business.",
+    price: "$500",
+    imageUrl: "/images/placeholder.svg",
+    type: "service",
+    category: "Design",
+  },
+];
+
+const onboardingSteps = [
+  "Complete profile",
+  "Add first listing",
+  "Verify payment method",
+  "Start selling",
+];
 
 const testimonials = [
   {
@@ -21,7 +50,7 @@ const testimonials = [
 ];
 
 // logic based on quiz answers
-function getRecommendations(answers) {
+function getRecommendations(answers: any) {
   if (!answers) return [];
   // Example: recommend based on purpose and category
   if (answers.purpose === "Buy Products") {
@@ -51,8 +80,8 @@ function getRecommendations(answers) {
 
 const HomePage = () => {
   const [quizDone, setQuizDone] = useState(false);
-  const [quizAnswers, setQuizAnswers] = useState(null);
-  
+  const [quizAnswers, setQuizAnswers] = useState<any>(null);
+
   const [onboardingCompleted, setOnboardingCompleted] = useState(2);
 
   function handleNextOnboardingStep() {
@@ -61,7 +90,7 @@ const HomePage = () => {
     );
   }
 
-  function handleQuizComplete(answers) {
+  function handleQuizComplete(answers: any) {
     setQuizDone(true);
     setQuizAnswers(answers);
   }
@@ -100,7 +129,7 @@ const HomePage = () => {
                   Sorry, no direct matches found. Try browsing our collections below!
                 </div>
               )}
-              {recommendations.map((item) => (
+              {recommendations.map((item: any) => (
                 <div
                   key={item.id}
                   className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-4"
@@ -131,7 +160,7 @@ const HomePage = () => {
       )}
 
       {/* Gamified Onboarding for Sellers/Providers */}
-       <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6">
         <h2 className="text-xl font-bold mb-2 text-primary dark:text-primary-light">
           New Seller? Get Started!
         </h2>
@@ -140,13 +169,13 @@ const HomePage = () => {
           onNextStep={handleNextOnboardingStep}
         />
       </div>
-      
+
       {/* Curated Collections */}
       <CuratedCollectionsCarousel />
 
       {/* Featured Items */}
       <FeaturedListingsCarousel />
-     
+
       {/* Video Testimonials Carousel */}
       <section className="max-w-7xl mx-auto px-6 py-12">
         <h2 className="text-2xl font-semibold mb-6 text-primary">What Our Users Say</h2>

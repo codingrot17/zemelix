@@ -21,8 +21,8 @@ const registerSchema = z
     email: z.string().email({ message: "Please enter a valid email address." }),
     password: z.string().min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string().min(6, { message: "Please confirm your password." }),
-    acceptTerms: z.literal(true, {
-      errorMap: () => ({ message: "You must accept the terms and conditions." }),
+    acceptTerms: z.boolean().refine(val => val === true, {
+      message: "You must accept the terms and conditions.",
     }),
   })
   .superRefine(({ password, confirmPassword }, ctx) => {
@@ -35,13 +35,15 @@ const registerSchema = z
     }
   });
 
+type RegisterFormData = z.infer<typeof registerSchema>;
+
 export default function RegisterPage() {
-  const form = useForm<z.infer<typeof registerSchema>>({
+  const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: { email: "", password: "", confirmPassword: "", acceptTerms: false },
   });
 
-  function onSubmit(values: z.infer<typeof registerSchema>) {
+  function onSubmit(values: RegisterFormData) {
     console.log("Registration attempt:", values);
     alert("Registration functionality is not implemented in this demo. Check console for input values.");
   }
