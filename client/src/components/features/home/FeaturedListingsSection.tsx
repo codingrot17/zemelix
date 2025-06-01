@@ -149,7 +149,7 @@ function FeaturedCard({ item }: { item: FeaturedItem }) {
     <div
       className="group relative w-full h-[420px] [perspective:1200px] cursor-pointer"
       tabIndex={0}
-      onMouseEnter={!isMobile ? () => setFlipped(true) : undefined}
+      onClick={!isMobile ? () => setFlipped(true) : undefined}
       onMouseLeave={!isMobile ? () => setFlipped(false) : undefined}
     >
       <div

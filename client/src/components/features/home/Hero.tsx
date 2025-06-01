@@ -81,7 +81,7 @@ export default function HeroSection() {
         </p>
 
         {/* Animated Category Bubbles */}
-        <div className="flex flex-wrap gap-2 sm:gap-3 mb-3 sm:mb-5 w-full">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-5 w-full">
           {categories.map(cat => (
             <Button
               key={cat.name}
