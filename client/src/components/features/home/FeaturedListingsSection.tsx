@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -6,8 +7,8 @@ import {
   CarouselItem,
   CarouselPrevious,
   CarouselNext,
- CarouselApi,
 } from "@/components/ui/carousel";
+import type { CarouselApi } from "@/components/ui/carousel"; // Use type-only import
 import { Button } from "@/components/ui/button";
 import {
   Heart,
