@@ -342,7 +342,7 @@ const Header = () => {
                 <Link to="/settings">Settings</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/logout">Logout</Link>
+                <Link to="/login">Logout</Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Carousel,
@@ -6,9 +6,42 @@ import {
   CarouselItem,
   CarouselPrevious,
   CarouselNext,
+ // CarouselApi,
 } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
-import { Heart, Flame, Star, Clock, Share2, ShoppingBag, Calendar, Info } from "lucide-react";
+import {
+  Heart,
+  Flame,
+  Star,
+  Clock,
+  Share2,
+  ShoppingBag,
+  Calendar,
+  Info,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+
+// TypeScript types
+interface Seller {
+  name: string;
+  avatar: string;
+  rating: number;
+}
+
+interface FeaturedItem {
+  id: number | string;
+  title: string;
+  description: string;
+  price: string;
+  imageUrl: string;
+  seller: Seller;
+  badge?: "Hot" | "Trending" | "New";
+  flashDealEnds: number | null;
+  available: number;
+  total: number;
+  type: "goods" | "booking";
+}
 
 // Demo data
 const featuredItems: FeaturedItem[] = [
@@ -53,27 +86,6 @@ const featuredItems: FeaturedItem[] = [
   },
 ];
 
-// Define TypeScript types
-interface Seller {
-  name: string;
-  avatar: string;
-  rating: number;
-}
-
-interface FeaturedItem {
-  id: number | string;
-  title: string;
-  description: string;
-  price: string;
-  imageUrl: string;
-  seller: Seller;
-  badge?: "Hot" | "Trending" | "New";
-  flashDealEnds: number | null;
-  available: number;
-  total: number;
-  type: "goods" | "booking";
-}
-
 // Countdown hook
 function useCountdown(endTime: number | null) {
   const [timeLeft, setTimeLeft] = useState(endTime ? endTime - Date.now() : 0);
@@ -91,22 +103,7 @@ function useCountdown(endTime: number | null) {
   return `${h > 0 ? h + "h " : ""}${m}m ${s}s`;
 }
 
-// Detect mobile device
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    function check() {
-      setIsMobile(window.innerWidth < 768);
-    }
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-  return isMobile;
-}
-
 function FeaturedCard({ item }: { item: FeaturedItem }) {
-  const isMobile = useIsMobile();
   const [wishlisted, setWishlisted] = useState(false);
   const [showPrice, setShowPrice] = useState(false);
   const [flipped, setFlipped] = useState(false);
@@ -125,7 +122,10 @@ function FeaturedCard({ item }: { item: FeaturedItem }) {
 
   // Animation classes
   const almostGoneAnim = lowStock ? "animate-bounce animate-infinite" : "";
-  const bookNowPulse = item.type === "booking" && item.available > 0 ? "animate-pulse animate-infinite" : "";
+  const bookNowPulse =
+    item.type === "booking" && item.available > 0
+      ? "animate-pulse animate-infinite"
+      : "";
 
   function handleShare() {
     if (navigator.share) {
@@ -139,19 +139,13 @@ function FeaturedCard({ item }: { item: FeaturedItem }) {
     }
   }
 
-  // Only flip on hover for desktop, on button tap for mobile
   function handleFlip(e: React.MouseEvent<HTMLButtonElement>) {
     e.stopPropagation();
     setFlipped((f) => !f);
   }
 
   return (
-    <div
-      className="group relative w-full h-[420px] [perspective:1200px] cursor-pointer"
-      tabIndex={0}
-      onClick={!isMobile ? () => setFlipped(true) : undefined}
-      onMouseLeave={!isMobile ? () => setFlipped(false) : undefined}
-    >
+    <div className="relative w-full h-[420px] [perspective:1200px]">
       <div
         className={`
           transition-transform duration-700 [transform-style:preserve-3d] w-full h-full
@@ -203,16 +197,14 @@ function FeaturedCard({ item }: { item: FeaturedItem }) {
             >
               <Share2 className="w-5 h-5 text-indigo-500" />
             </button>
-            {/* Flip button for mobile */}
-            {isMobile && (
-              <button
-                className="absolute top-3 right-1 bg-white/80 dark:bg-gray-800/80 rounded-full p-1.5 shadow hover:bg-indigo-100 dark:hover:bg-indigo-900 transition z-10"
-                aria-label="Show more info"
-                onClick={handleFlip}
-              >
-                <Info className="w-5 h-5 text-indigo-500" />
-              </button>
-            )}
+            {/* Flip button (Info) always visible */}
+            <button
+              className="absolute top-3 right-1 bg-white/80 dark:bg-gray-800/80 rounded-full p-1.5 shadow hover:bg-indigo-100 dark:hover:bg-indigo-900 transition z-10"
+              aria-label="Show more info"
+              onClick={handleFlip}
+            >
+              <Info className="w-5 h-5 text-indigo-500" />
+            </button>
           </div>
           <div className="p-4 flex-1 flex flex-col justify-between">
             <div>
@@ -300,16 +292,13 @@ function FeaturedCard({ item }: { item: FeaturedItem }) {
           >
             Quick Book / Buy Now
           </Button>
-          {/* Flip back button for mobile */}
-          {isMobile && (
-            <Button
-              size="sm"
-              className="mt-4 w-full bg-white/10 text-white border-white"
-              onClick={handleFlip}
-            >
-              Back
-            </Button>
-          )}
+          <Button
+            size="sm"
+            className="mt-4 w-full bg-white/10 text-white border-white"
+            onClick={handleFlip}
+          >
+            Back
+          </Button>
         </div>
       </div>
     </div>
@@ -317,9 +306,12 @@ function FeaturedCard({ item }: { item: FeaturedItem }) {
 }
 
 export function FeaturedListingsCarousel() {
-  const [current, setCurrent] = useState(0);
-  const autoPlayRef = useRef<(() => void) | null>(null);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+  const navigate = useNavigate();
 
+  // Responsive cards per view (1 mobile, 2 desktop)
   const [cardsPerView, setCardsPerView] = useState(1);
   useEffect(() => {
     function handleResize() {
@@ -330,60 +322,65 @@ export function FeaturedListingsCarousel() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    autoPlayRef.current = next;
-  });
-  useEffect(() => {
-    function play() {
-      if (autoPlayRef.current) {
-        autoPlayRef.current();
-      }
-    }
-    const interval = setInterval(play, 5000);
-    return () => clearInterval(interval);
-  }, [current, cardsPerView]);
+  // Update selected index and scroll snaps on carousel init and slide change
+  const onSelect = useCallback(() => {
+    if (!carouselApi) return;
+    setSelectedIndex(carouselApi.selectedScrollSnap());
+  }, [carouselApi]);
 
-  function prev() {
-    setCurrent((prev) => Math.max(prev - cardsPerView, 0));
-  }
-  function next() {
-    setCurrent((prev) =>
-      prev + cardsPerView >= featuredItems.length
-        ? 0
-        : prev + cardsPerView
-    );
-  }
+  useEffect(() => {
+    if (!carouselApi) return;
+    onSelect();
+    setScrollSnaps(carouselApi.scrollSnapList());
+    carouselApi.on("select", onSelect);
+    carouselApi.on("reInit", onSelect);
+    return () => {
+      carouselApi.off("select", onSelect);
+      carouselApi.off("reInit", onSelect);
+    };
+  }, [carouselApi, onSelect]);
 
-  const totalDots = Math.ceil(featuredItems.length / cardsPerView);
-  const navigate = useNavigate();
+  // Scroll to a specific slide
+  function scrollTo(index: number) {
+    if (!carouselApi) return;
+    carouselApi.scrollTo(index);
+  }
 
   return (
-    <section className="max-w-7xl mx-auto px-3 sm:px-6 py-8">
+    <section className="max-w-7xl mx-auto px-3 sm:px-6 py-8 relative">
       <h2 className="text-2xl font-semibold mb-6 text-primary dark:text-primary-light text-center animate-fade-in">
         Featured Listings
       </h2>
+
       <Carousel
+        setApi={setCarouselApi}
         opts={{
           align: "start",
           loop: false,
         }}
-        className="w-full mb-10"
+        className="w-full relative"
       >
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <CarouselPrevious onClick={prev} />
-          <CarouselNext onClick={next} />
-        </div>
+        {/* Overlay Prev Button */}
+        <CarouselPrevious className="
+          absolute top-1/2 left-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition
+          focus:outline-none focus:ring-2 focus:ring-indigo-500
+        ">
+          <ChevronLeft className="w-6 h-6" />
+        </CarouselPrevious>
+
+        {/* Overlay Next Button */}
+        <CarouselNext className="
+          absolute top-1/2 right-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition
+          focus:outline-none focus:ring-2 focus:ring-indigo-500
+        ">
+          <ChevronRight className="w-6 h-6" />
+        </CarouselNext>
+
         <CarouselContent>
-          {featuredItems.map((item, idx) => (
+          {featuredItems.map((item) => (
             <CarouselItem
               key={item.id}
               className="pl-1 md:basis-1/2 lg:basis-1/2"
-              style={{
-                display:
-                  idx >= current && idx < current + cardsPerView
-                    ? "block"
-                    : "none",
-              }}
             >
               <div className="min-h-[420px] animate-fade-in">
                 <FeaturedCard item={item} />
@@ -391,22 +388,25 @@ export function FeaturedListingsCarousel() {
             </CarouselItem>
           ))}
         </CarouselContent>
-        <div className="flex justify-center gap-2 mt-6">
-          {Array.from({ length: totalDots }).map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setCurrent(idx * cardsPerView)}
-              className={`w-3 h-3 rounded-full transition-colors ${
-                current / cardsPerView === idx
-                  ? "bg-indigo-600"
-                  : "bg-gray-300 dark:bg-gray-700"
-              }`}
-              aria-label={`Go to slide ${idx + 1}`}
-            />
-          ))}
-        </div>
       </Carousel>
 
+      {/* Dot Indicators */}
+      <div className="flex justify-center gap-3 mt-6">
+        {scrollSnaps.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => scrollTo(index)}
+            className={`w-3 h-3 rounded-full transition-colors ${
+              selectedIndex === index
+                ? "bg-indigo-600 dark:bg-indigo-400 scale-125"
+                : "bg-gray-300 dark:bg-gray-700"
+            }`}
+            aria-label={`Go to slide ${index + 1}`}
+          />
+        ))}
+      </div>
+
+      {/* View More Button */}
       <div className="flex justify-center mt-8">
         <Button
           className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-400 dark:hover:bg-indigo-500 px-8 py-3 text-base font-semibold rounded-full shadow-lg transition"
