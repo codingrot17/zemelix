@@ -6,6 +6,9 @@ import DiscoveryQuiz from "@/components/features/home/DiscoveryQuiz";
 import { OnboardingProgress } from "@/components/features/home/OnboardingProgress";
 import { CuratedCollectionsCarousel } from "@/components/features/home/CuratedCollectionsSection";
 import { FeaturedListingsCarousel } from "@/components/features/home/FeaturedListingsSection";
+import { TestimonialsSection } from "@/components/features/home/TestimonialsSection";
+
+
 
 // Dummy featuredItems and onboardingSteps for demonstration
 const featuredItems = [
@@ -176,22 +179,9 @@ const HomePage = () => {
       {/* Featured Items */}
       <FeaturedListingsCarousel />
 
-      {/* Video Testimonials Carousel */}
-      <section className="max-w-7xl mx-auto px-6 py-12">
-        <h2 className="text-2xl font-semibold mb-6 text-primary">What Our Users Say</h2>
-        <div className="flex gap-6 overflow-x-auto">
-          {testimonials.map((t, idx) => (
-            <div key={idx} className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 min-w-[300px]">
-              <video controls className="w-full h-40 rounded mb-2" poster="/images/placeholder.svg">
-                <source src={t.videoUrl} type="video/mp4" />
-                Sorry, your browser doesn't support embedded videos.
-              </video>
-              <p className="italic mb-1">"{t.quote}"</p>
-              <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">{t.name}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/*  Testimonials  */}
+      <TestimonialsSection />
+      
     </div>
   );
 };

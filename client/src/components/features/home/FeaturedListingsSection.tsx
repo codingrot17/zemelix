@@ -146,7 +146,7 @@ function FeaturedCard({ item }: { item: FeaturedItem }) {
   }
 
   return (
-    <div className="relative w-full h-[420px] [perspective:1200px]">
+    <div className="relative w-full h-[450px] [perspective:1200px] ml-4 mr-2 mb-10">
       <div
         className={`
           transition-transform duration-700 [transform-style:preserve-3d] w-full h-full
@@ -155,7 +155,7 @@ function FeaturedCard({ item }: { item: FeaturedItem }) {
       >
         {/* Front */}
         <div className="
-          absolute w-full h-full [backface-visibility:hidden] bg-gradient-to-br from-white/90 to-indigo-50 dark:from-gray-900/90 dark:to-indigo-900 rounded-xl shadow-xl overflow-hidden flex flex-col animate-fade-in
+          absolute w-full h-full [backface-visibility:hidden] bg-gradient-to-br from-white/90 to-indigo-50 dark:from-gray-900/90 dark:to-indigo-900 rounded-xl shadow-xl overflow-hidden flex flex-col animate-fade-in pb-4
         ">
           <div className="relative">
             <img
@@ -272,7 +272,7 @@ function FeaturedCard({ item }: { item: FeaturedItem }) {
             </div>
             <Button
               variant="secondary"
-              className="mt-4 w-full"
+              className="mt-4 mb-6 w-full"
               onClick={() => alert(`View details for ${item.title}`)}
             >
               View Details
@@ -383,14 +383,13 @@ export function FeaturedListingsCarousel() {
               key={item.id}
               className="pl-1 md:basis-1/2 lg:basis-1/2"
             >
-              <div className="min-h-[420px] animate-fade-in">
+              <div className="min-h-[420px] animate-fade-in flex gap-10">
                 <FeaturedCard item={item} />
               </div>
             </CarouselItem>
           ))}
         </CarouselContent>
-      </Carousel>
-
+      
       {/* Dot Indicators */}
       <div className="flex justify-center gap-3 mt-6">
         {scrollSnaps.map((_, index) => (
@@ -406,6 +405,8 @@ export function FeaturedListingsCarousel() {
           />
         ))}
       </div>
+      </Carousel>
+
 
       {/* View More Button */}
       <div className="flex justify-center mt-8">
