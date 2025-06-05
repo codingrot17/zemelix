@@ -173,7 +173,7 @@ function AddTestimonyModal({
 // Testimonial card (text or video)
 function TestimonialCard({ t }: { t: any }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 min-w-[320px] max-w-xs flex flex-col  justify-center items-center h-72">
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 min-w-[300px] max-w-xs flex flex-col  justify-center items-center h-72">
       {t.type === "video" && t.videoUrl ? (
         <video
           controls
@@ -213,7 +213,7 @@ export function TestimonialsSection() {
   }
 
   return (
-    <section className="max-w-7xl mx-auto px-6 py-12">
+    <section className="max-w-7xl mx-auto px-6 md px-4 py-12">
       <div className="flex items-center mb-4">
         <h2 className="text-2xl font-semibold text-primary">What Our Users Say</h2>
       </div>
@@ -239,7 +239,7 @@ export function TestimonialsSection() {
           <CarouselNext className="absolute top-1/2 right-0 -translate-y-1/2 z-10 bg-black/20 hover:bg-black/40 text-white" />
           <CarouselContent>
             {testimonials.map((t, idx) => (
-              <CarouselItem key={idx} className="pl-1 basis-full sm:basis-1/2 md:basis-1/3">
+              <CarouselItem key={idx} className="pl-4 basis-full sm:basis-1/2 md:basis-1/3">
                 <TestimonialCard t={t} />
               </CarouselItem>
             ))}

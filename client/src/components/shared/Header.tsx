@@ -13,12 +13,14 @@ import {
   UserRound,
   ChevronDown,
   ChevronUp,
-  ShoppingCart,
-  Bell,
+  Heart,
+  // ShoppingCart,
+  // Bell,
   Sun,
   Moon,
-  Globe,
+  // Globe,
   LayoutGrid,
+  HelpCircle,
 } from 'lucide-react';
 
 const PLACEHOLDER_ICON = '/images/placeholder.svg';
@@ -38,26 +40,34 @@ const categories = [
   // Add more if needed
 ];
 
+/*
+// Uncomment and use when cart is implemented
 const cartItems = [
   { id: 1, name: 'Wireless Headphones', price: 199.99, quantity: 1 },
   { id: 2, name: 'Smart Watch', price: 159.99, quantity: 2 },
 ];
 
+// Uncomment and use when notifications are implemented
 const notifications = [
   'Order #1234 shipped',
   'Flash sale: 50% off electronics',
   'New message from seller'
 ];
+*/
 
 const Header = () => {
+  // Simulate authentication state
+  const isLoggedIn = true; // Change to false to simulate logged-out state
+  const userName = "Amina"; // Replace with real user data when available
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  // const [cartOpen, setCartOpen] = useState(false);
+  // const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [darkTheme, setDarkTheme] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('EN');
+  // const [selectedLanguage, setSelectedLanguage] = useState('EN');
   const [showAllCategories, setShowAllCategories] = useState(false);
 
   // Logo switching based on theme
@@ -132,9 +142,15 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-white dark:bg-black shadow-md sticky top-0 z-50">
+    <header className="bg-white dark:bg-black shadow-md sticky top-0 z-50" role="navigation">
+      {/* Promotional Banner */}
+      <div className="bg-indigo-600 text-white text-xs py-1 px-4 text-center font-semibold">
+        🎉 Summer Sale: Up to 30% off select categories! &nbsp;
+        <Link to="/collections/sale" className="underline hover:text-yellow-200">Shop Now</Link>
+      </div>
+
+      {/* Desktop Header */}
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-y-4">
-        
         {/* Logo */}
         <div className="flex items-center">
           <Link to="/">
@@ -145,6 +161,25 @@ const Header = () => {
             />
           </Link>
         </div>
+
+        {/* Horizontal Navigation Menu (Desktop) */}
+        <nav className="hidden md:flex space-x-6 ml-6">
+          <Link to="/" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium">
+            Home
+          </Link>
+          <Link to="/collections" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium">
+            Collections
+          </Link>
+          <Link to="/sellers" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium">
+            Sellers
+          </Link>
+          <Link to="/blog" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium">
+            Blog
+          </Link>
+          <Link to="/about" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium">
+            About Us
+          </Link>
+        </nav>
 
         {/* Mobile Search Toggle + Category */}
         <div className="md:hidden flex items-center space-x-2">
@@ -191,7 +226,14 @@ const Header = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm bg-white dark:bg-gray-800"
             placeholder="Search products, services, categories..."
+            aria-label="Search"
           />
+          {/* Example: Search suggestions/autocomplete (future) */}
+          {/* 
+          <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-900 border rounded shadow-lg z-10">
+            <div className="p-2 text-sm text-gray-500">Suggested: Headphones, Web Design, Home Decor</div>
+          </div>
+          */}
         </form>
 
         {/* Mega Category Dropdown (Desktop) */}
@@ -217,22 +259,42 @@ const Header = () => {
         </DropdownMenu>
 
         {/* Action Icons */}
-        <div className="flex items-center space-x-7">
-          {/* Theme Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-          >
-            {darkTheme ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </Button>
+        <div className="flex items-center space-x-10">
+          {/* Theme Toggle + Mode Indicator */}
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+            >
+              {darkTheme ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </Button>
+            <span className="ml-1 text-xs text-gray-500">
+              {darkTheme ? 'Dark' : 'Light'}
+            </span>
+          </div>
 
-          {/* Language Selector */}
+          {/* Help/FAQ */}
+          <Link to="/faq" aria-label="Help / FAQ">
+            <Button variant="ghost" size="icon">
+              <HelpCircle className="h-5 w-5" />
+            </Button>
+          </Link>
+
+          {/* Wishlist Icon */}
+          <Link to="/wishlist" aria-label="Wishlist">
+            <Button variant="ghost" size="icon">
+              <Heart className="h-5 w-5 text-pink-500" />
+            </Button>
+          </Link>
+
+          {/* Language Selector (future) */}
+          {/*
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -251,8 +313,10 @@ const Header = () => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          */}
 
-          {/* Cart Preview */}
+          {/* Cart Preview (future) */}
+          {/*
           <DropdownMenu onOpenChange={setCartOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
@@ -292,8 +356,10 @@ const Header = () => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          */}
 
-          {/* Notifications */}
+          {/* Notifications (future) */}
+          {/*
           <DropdownMenu onOpenChange={setNotificationsOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
@@ -314,6 +380,14 @@ const Header = () => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          */}
+
+          {/* User Greeting (if logged in) */}
+          {isLoggedIn && (
+            <span className="hidden lg:inline text-gray-700 dark:text-gray-300 mr-2 font-medium">
+              Hi, {userName}!
+            </span>
+          )}
 
           {/* Account Dropdown */}
           <DropdownMenu onOpenChange={setAccountOpen}>
@@ -329,25 +403,75 @@ const Header = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem asChild>
-                <Link to="/account">Profile</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/orders">Orders</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/wishlist">Wishlist</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/settings">Settings</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/login">Logout</Link>
-              </DropdownMenuItem>
+              {!isLoggedIn ? (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link to="/login">Login</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/signup">Sign Up</Link>
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link to="/account">Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/orders">Orders</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/wishlist">Wishlist</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings">Settings</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/login">Logout</Link>
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Sign Up Button (visible if not logged in) */}
+          {!isLoggedIn && (
+            <Link to="/signup">
+              <Button className="ml-2 hidden md:inline-flex" variant="default">
+                Sign Up
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
+
+      {/* Mobile Lower Part: Quick Actions + Scrollable Categories */}
+           {/*  <div className="md:hidden bg-white dark:bg-black border-t border-gray-200 dark:border-gray-700 px-4 py-2 flex flex-col gap-3 shadow-inner">
+
+
+        <div className="overflow-x-auto no-scrollbar">
+          <div className="flex space-x-4">
+            {categories.slice(0, MAX_VISIBLE_CATEGORIES).map((category) => (
+              <Link
+                key={category.name}
+                to={`/category/${category.name.toLowerCase().replace(/\s+/g, '-')}`}
+                className="flex-shrink-0 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-sm font-semibold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition"
+              >
+                {category.name}
+              </Link>
+            ))}
+            {categories.length > MAX_VISIBLE_CATEGORIES && (
+              <button
+                onClick={() => setShowAllCategories((prev) => !prev)}
+                className="flex-shrink-0 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+              >
+                {showAllCategories ? 'Less' : 'More'}
+              </button>
+            )}
+          </div>
+        </div>
+
+      </div>         */}
     </header>
   );
 };
