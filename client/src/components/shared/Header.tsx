@@ -14,13 +14,11 @@ import {
   ChevronDown,
   ChevronUp,
   Heart,
-  // ShoppingCart,
-  // Bell,
   Sun,
   Moon,
-  // Globe,
   LayoutGrid,
   HelpCircle,
+  Menu,
 } from 'lucide-react';
 
 const PLACEHOLDER_ICON = '/images/placeholder.svg';
@@ -40,34 +38,17 @@ const categories = [
   // Add more if needed
 ];
 
-/*
-// Uncomment and use when cart is implemented
-const cartItems = [
-  { id: 1, name: 'Wireless Headphones', price: 199.99, quantity: 1 },
-  { id: 2, name: 'Smart Watch', price: 159.99, quantity: 2 },
-];
-
-// Uncomment and use when notifications are implemented
-const notifications = [
-  'Order #1234 shipped',
-  'Flash sale: 50% off electronics',
-  'New message from seller'
-];
-*/
-
 const Header = () => {
   // Simulate authentication state
-  const isLoggedIn = true; // Change to false to simulate logged-out state
+  const isLoggedIn = false; // Change to true to simulate logged-in state
   const userName = "Amina"; // Replace with real user data when available
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  // const [cartOpen, setCartOpen] = useState(false);
-  // const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkTheme, setDarkTheme] = useState(false);
-  // const [selectedLanguage, setSelectedLanguage] = useState('EN');
   const [showAllCategories, setShowAllCategories] = useState(false);
 
   // Logo switching based on theme
@@ -84,10 +65,7 @@ const Header = () => {
   const showShowLess = categories.length > MAX_VISIBLE_CATEGORIES && showAllCategories;
 
   // Responsive grid columns
-  const getGridCols = (isMobile) => {
-    if (isMobile) return 'grid-cols-2';
-    return 'grid-cols-3';
-  };
+  const getGridCols = (isMobile) => (isMobile ? 'grid-cols-2' : 'grid-cols-3');
 
   // Category dropdown content as a component for reuse
   function CategoryDropdownContent({ isMobile = false }) {
@@ -102,6 +80,7 @@ const Header = () => {
               key={category.name}
               to={`/category/${category.name.toLowerCase().replace(/\s+/g, '-')}`}
               className="group flex flex-col items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              onClick={() => setMobileMenuOpen(false)} // Close mobile menu if open
             >
               <img
                 src={category.icon}
@@ -149,11 +128,11 @@ const Header = () => {
         <Link to="/collections/sale" className="underline hover:text-yellow-200">Shop Now</Link>
       </div>
 
-      {/* Desktop Header */}
+      {/* Main Header Row */}
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-y-4">
         {/* Logo */}
         <div className="flex items-center">
-          <Link to="/">
+          <Link to="/" onClick={() => setMobileMenuOpen(false)}>
             <img
               src={logoSrc}
               alt="Zemelix Brand Logo"
@@ -162,23 +141,13 @@ const Header = () => {
           </Link>
         </div>
 
-        {/* Horizontal Navigation Menu (Desktop) */}
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex space-x-6 ml-6">
-          <Link to="/" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium">
-            Home
-          </Link>
-          <Link to="/collections" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium">
-            Collections
-          </Link>
-          <Link to="/sellers" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium">
-            Sellers
-          </Link>
-          <Link to="/blog" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium">
-            Blog
-          </Link>
-          <Link to="/about" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium">
-            About Us
-          </Link>
+          <Link to="/" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium" onClick={() => setMobileMenuOpen(false)}>Home</Link>
+          <Link to="/collections" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium" onClick={() => setMobileMenuOpen(false)}>Collections</Link>
+          <Link to="/sellers" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium" onClick={() => setMobileMenuOpen(false)}>Sellers</Link>
+          <Link to="/blog" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium" onClick={() => setMobileMenuOpen(false)}>Blog</Link>
+          <Link to="/about" className="text-gray-700 dark:text-gray-300 hover:text-indigo-600 font-medium" onClick={() => setMobileMenuOpen(false)}>About Us</Link>
         </nav>
 
         {/* Mobile Search Toggle + Category */}
@@ -203,6 +172,8 @@ const Header = () => {
               <CategoryDropdownContent isMobile />
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Search Toggle */}
           <button
             onClick={() => setShowMobileSearch(!showMobileSearch)}
             className="text-gray-600 hover:text-indigo-600 transition"
@@ -228,12 +199,6 @@ const Header = () => {
             placeholder="Search products, services, categories..."
             aria-label="Search"
           />
-          {/* Example: Search suggestions/autocomplete (future) */}
-          {/* 
-          <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-900 border rounded shadow-lg z-10">
-            <div className="p-2 text-sm text-gray-500">Suggested: Headphones, Web Design, Home Decor</div>
-          </div>
-          */}
         </form>
 
         {/* Mega Category Dropdown (Desktop) */}
@@ -259,7 +224,7 @@ const Header = () => {
         </DropdownMenu>
 
         {/* Action Icons */}
-        <div className="flex items-center space-x-10">
+        <div className="flex items-center space-x-4">
           {/* Theme Toggle + Mode Indicator */}
           <div className="flex items-center">
             <Button
@@ -293,102 +258,7 @@ const Header = () => {
             </Button>
           </Link>
 
-          {/* Language Selector (future) */}
-          {/*
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Globe className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {['EN', 'ES', 'FR'].map((lang) => (
-                <DropdownMenuItem
-                  key={lang}
-                  onSelect={() => setSelectedLanguage(lang)}
-                  className={selectedLanguage === lang ? 'bg-gray-100 dark:bg-gray-800' : ''}
-                >
-                  {lang}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          */}
-
-          {/* Cart Preview (future) */}
-          {/*
-          <DropdownMenu onOpenChange={setCartOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <ShoppingCart className="h-5 w-5" />
-                {cartItems.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                    {cartItems.length}
-                  </span>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-72 p-4" align="end">
-              <h3 className="font-semibold mb-2">Shopping Cart</h3>
-              {cartItems.length === 0 ? (
-                <p className="text-sm text-gray-500">Your cart is empty</p>
-              ) : (
-                <>
-                  <div className="space-y-4 mb-4">
-                    {cartItems.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center">
-                        <div>
-                          <p className="text-sm">{item.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {item.quantity} × ${item.price}
-                          </p>
-                        </div>
-                        <Button variant="outline" size="sm">
-                          Remove
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  <Link to="/cart">
-                    <Button className="w-full">View Cart</Button>
-                  </Link>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          */}
-
-          {/* Notifications (future) */}
-          {/*
-          <DropdownMenu onOpenChange={setNotificationsOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  3
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64" align="end">
-              {notifications.map((notification, index) => (
-                <DropdownMenuItem
-                  key={index}
-                  className="text-sm p-2 hover:bg-gray-100"
-                >
-                  {notification}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          */}
-
-          {/* User Greeting (if logged in) */}
-          {isLoggedIn && (
-            <span className="hidden lg:inline text-gray-700 dark:text-gray-300 mr-2 font-medium">
-              Hi, {userName}!
-            </span>
-          )}
-
+       
           {/* Account Dropdown */}
           <DropdownMenu onOpenChange={setAccountOpen}>
             <DropdownMenuTrigger asChild>
@@ -402,7 +272,7 @@ const Header = () => {
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="w-40">
               {!isLoggedIn ? (
                 <>
                   <DropdownMenuItem asChild>
@@ -433,22 +303,76 @@ const Header = () => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          
+             {/* Mobile Menu Button */}
+          <button
+            className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            aria-label="Toggle menu"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
 
-          {/* Sign Up Button (visible if not logged in) */}
-          {!isLoggedIn && (
-            <Link to="/signup">
-              <Button className="ml-2 hidden md:inline-flex" variant="default">
-                Sign Up
-              </Button>
-            </Link>
-          )}
         </div>
       </div>
 
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <nav className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-md">
+          <ul className="flex flex-col px-4 py-3 space-y-2">
+            <li>
+              <Link
+                to="/"
+                className="block py-2 px-3 rounded hover:bg-indigo-600 hover:text-white"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Home
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/collections"
+                className="block py-2 px-3 rounded hover:bg-indigo-600 hover:text-white"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Collections
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/sellers"
+                className="block py-2 px-3 rounded hover:bg-indigo-600 hover:text-white"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sellers
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/blog"
+                className="block py-2 px-3 rounded hover:bg-indigo-600 hover:text-white"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Blog
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/about"
+                className="block py-2 px-3 rounded hover:bg-indigo-600 hover:text-white"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                About Us
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      )}
+
       {/* Mobile Lower Part: Quick Actions + Scrollable Categories */}
-           {/*  <div className="md:hidden bg-white dark:bg-black border-t border-gray-200 dark:border-gray-700 px-4 py-2 flex flex-col gap-3 shadow-inner">
-
-
+      {/* Uncomment and adjust if needed */}
+      {/* 
+      <div className="md:hidden bg-white dark:bg-black border-t border-gray-200 dark:border-gray-700 px-4 py-2 flex flex-col gap-3 shadow-inner">
         <div className="overflow-x-auto no-scrollbar">
           <div className="flex space-x-4">
             {categories.slice(0, MAX_VISIBLE_CATEGORIES).map((category) => (
@@ -456,6 +380,7 @@ const Header = () => {
                 key={category.name}
                 to={`/category/${category.name.toLowerCase().replace(/\s+/g, '-')}`}
                 className="flex-shrink-0 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-sm font-semibold hover:bg-indigo-200 dark:hover:bg-indigo-800 transition"
+                onClick={() => setMobileMenuOpen(false)}
               >
                 {category.name}
               </Link>
@@ -470,8 +395,8 @@ const Header = () => {
             )}
           </div>
         </div>
-
-      </div>         */}
+      </div>
+      */}
     </header>
   );
 };
