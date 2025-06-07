@@ -2,7 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/auth/login";
 import RegisterPage from "./pages/auth/register";
 import HomePage from "./pages/home/Home";
-import CollectionsPage from "./pages/collections/CollectionsPage";
+import { CollectionsPage } from "./pages/collections/CollectionsPage";
+
 import PageLayout from "@/components/layouts/PageLayout";
 
 function App() {
@@ -22,7 +23,10 @@ function App() {
         />
         
             <Route 
-            path="/collections" element={<CollectionsPage />
+            path="/collections" element={
+            <PageLayout>
+              <CollectionsPage />
+            </PageLayout >
               }
             /> 
         
