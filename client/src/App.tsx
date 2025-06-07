@@ -12,7 +12,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
         
- <Route
+        <Route
           path="/"
           element={
             <PageLayout>
@@ -21,14 +21,10 @@ function App() {
           }
         />
         
-        {/*       <Route
-          path="/"
-          element={
-            <PageLayout>
-              <CollectionsPage />
-            </PageLayout>
-          }
-        /> */}
+            <Route 
+            path="/collections" element={<CollectionsPage />
+              }
+            /> 
         
         
         

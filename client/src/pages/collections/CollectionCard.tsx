@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import type { Collection } from "@/types";
 
 interface CollectionCardProps {
   collection: Collection;

@@ -11,22 +11,14 @@ import type { CarouselApi } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { CollectionCard } from "./CollectionCard";
-
-interface Collection {
-  id: number | string;
-  title: string;
-  description: string;
-  imageUrl: string;
-  slug: string;
-  badge?: "Featured" | "Popular" | "New";
-}
+import type { Collection } from "@/types";
 
 const collections: Collection[] = [
   {
     id: 1,
     title: "Top Electronics",
     description: "Latest gadgets and must-have devices.",
-    imageUrl: "/images/collections/electronics.jpg",
+    imageUrl: "/images/placeholder.svg",
     slug: "electronics",
     badge: "Featured",
   },
@@ -34,7 +26,7 @@ const collections: Collection[] = [
     id: 2,
     title: "Fashion Finds",
     description: "Trending styles and timeless classics.",
-    imageUrl: "/images/collections/fashion.jpg",
+    imageUrl: "/images/placeholder.svg",
     slug: "fashion",
     badge: "Popular",
   },
@@ -42,12 +34,11 @@ const collections: Collection[] = [
     id: 3,
     title: "Home & Garden",
     description: "Everything for a cozy, beautiful home.",
-    imageUrl: "/images/collections/home-garden.jpg",
+    imageUrl: "/images/placeholder.svg",
     slug: "home-garden",
   },
   // Add more collections as needed
 ];
-
 
 export function CollectionsPage() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
@@ -145,16 +136,6 @@ export function CollectionsPage() {
           ))}
         </div>
       </Carousel>
-
-      {/* View More Button */}
-      <div className="flex justify-center mt-8">
-        <Button
-          className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-400 dark:hover:bg-indigo-500 px-8 py-3 text-base font-semibold rounded-full shadow-lg transition"
-          onClick={() => navigate("/collections")}
-        >
-          View All Collections
-        </Button>
-      </div>
     </section>
   );
 }
