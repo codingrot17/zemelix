@@ -1,141 +1,119 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselPrevious,
-  CarouselNext,
-} from "@/components/ui/carousel";
-import type { CarouselApi } from "@/components/ui/carousel";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState, useMemo } from "react";
 import { CollectionCard } from "./CollectionCard";
+import { collections as allCollections } from "./collectionsData";
 import type { Collection } from "@/types";
 
-const collections: Collection[] = [
-  {
-    id: 1,
-    title: "Top Electronics",
-    description: "Latest gadgets and must-have devices.",
-    imageUrl: "/images/placeholder.svg",
-    slug: "electronics",
-    badge: "Featured",
-  },
-  {
-    id: 2,
-    title: "Fashion Finds",
-    description: "Trending styles and timeless classics.",
-    imageUrl: "/images/placeholder.svg",
-    slug: "fashion",
-    badge: "Popular",
-  },
-  {
-    id: 3,
-    title: "Home & Garden",
-    description: "Everything for a cozy, beautiful home.",
-    imageUrl: "/images/placeholder.svg",
-    slug: "home-garden",
-  },
-  // Add more collections as needed
-];
+// Utility to extract all unique tags from collections
+function getAllTags(collections: Collection[]) {
+  const tags = new Set<string>();
+  collections.forEach(col => col.tags?.forEach(tag => tags.add(tag)));
+  return Array.from(tags);
+}
 
 export function CollectionsPage() {
-  const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
-  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-  // Responsive cards per view (1 mobile, 2 desktop)
-  const [cardsPerView, setCardsPerView] = useState(1);
-  useEffect(() => {
-    function handleResize() {
-      setCardsPerView(window.innerWidth < 768 ? 1 : 2);
-    }
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  // Filtering logic
+  const filteredCollections = useMemo(() => {
+    return allCollections.filter(col => {
+      const matchesSearch =
+        col.title.toLowerCase().includes(search.toLowerCase()) ||
+        col.description.toLowerCase().includes(search.toLowerCase());
+      const matchesTag = selectedTag ? col.tags?.includes(selectedTag) : true;
+      return matchesSearch && matchesTag;
+    });
+  }, [search, selectedTag]);
 
-  const onSelect = useCallback(() => {
-    if (!carouselApi) return;
-    setSelectedIndex(carouselApi.selectedScrollSnap());
-  }, [carouselApi]);
+  const tags = useMemo(() => getAllTags(allCollections), []);
 
-  useEffect(() => {
-    if (!carouselApi) return;
-    onSelect();
-    setScrollSnaps(carouselApi.scrollSnapList());
-    carouselApi.on("select", onSelect);
-    carouselApi.on("reInit", onSelect);
-    return () => {
-      carouselApi.off("select", onSelect);
-      carouselApi.off("reInit", onSelect);
-    };
-  }, [carouselApi, onSelect]);
-
-  function scrollTo(index: number) {
-    if (!carouselApi) return;
-    carouselApi.scrollTo(index);
-  }
+  // Featured collection (first with badge or just the first)
+  const featured =
+    allCollections.find(col => col.badge === "Featured") || allCollections[0];
 
   return (
-    <section className="max-w-7xl mx-auto px-3 sm:px-6 py-8 relative">
-      <h2 className="text-2xl font-semibold mb-6 text-primary dark:text-primary-light text-center">
-        Explore Collections
-      </h2>
-
-      <Carousel
-        setApi={setCarouselApi}
-        opts={{
-          align: "start",
-          loop: false,
-        }}
-        className="w-full relative"
-      >
-        <CarouselPrevious
-          className="absolute top-1/2 left-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          aria-label="Previous collections"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </CarouselPrevious>
-
-        <CarouselNext
-          className="absolute top-1/2 right-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          aria-label="Next collections"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </CarouselNext>
-
-        <CarouselContent>
-          {collections.map((collection) => (
-            <CarouselItem
-              key={collection.id}
-              className={`pl-1 md:basis-1/2 lg:basis-1/3`}
-            >
-              <div className="min-h-[320px] animate-fade-in flex gap-6">
-                <CollectionCard collection={collection} />
+    <div className="max-w-7xl mx-auto px-4 py-10">
+      {/* Banner */}
+      <div className="relative rounded-3xl overflow-hidden mb-10 shadow-lg bg-gradient-to-br from-indigo-500/80 to-indigo-700/90 text-white">
+        <img
+          src={featured.imageUrl}
+          alt={featured.title}
+          className="absolute inset-0 w-full h-full object-cover opacity-30"
+          loading="lazy"
+        />
+        <div className="relative z-10 p-8 md:p-16 flex flex-col md:flex-row items-center md:items-end justify-between gap-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2 drop-shadow-lg">{featured.title}</h1>
+            <p className="text-lg md:text-xl mb-4 md:mb-0 drop-shadow-lg">{featured.description}</p>
+            {featured.tags && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {featured.tags.map(tag => (
+                  <span
+                    key={tag}
+                    className="inline-block bg-white/20 text-white px-3 py-1 rounded-full text-xs font-semibold backdrop-blur"
+                  >
+                    #{tag}
+                  </span>
+                ))}
               </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-
-        {/* Dot Indicators */}
-        <div className="flex justify-center gap-3 mt-6">
-          {scrollSnaps.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => scrollTo(index)}
-              className={`w-3 h-3 rounded-full transition-colors ${
-                selectedIndex === index
-                  ? "bg-indigo-600 dark:bg-indigo-400 scale-125"
-                  : "bg-gray-300 dark:bg-gray-700"
-              }`}
-              aria-label={`Go to slide ${index + 1}`}
-            />
-          ))}
+            )}
+          </div>
+          {featured.badge && (
+            <span className="px-5 py-2 rounded-full bg-white/90 text-indigo-700 font-bold text-base shadow-lg">
+              {featured.badge}
+            </span>
+          )}
         </div>
-      </Carousel>
-    </section>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 mb-8 justify-center">
+        <button
+          className={`px-4 py-1.5 rounded-full font-medium text-sm transition ${
+            !selectedTag
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+          }`}
+          onClick={() => setSelectedTag(null)}
+        >
+          All
+        </button>
+        {tags.map(tag => (
+          <button
+            key={tag}
+            className={`px-4 py-1.5 rounded-full font-medium text-sm transition ${
+              selectedTag === tag
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+            }`}
+            onClick={() => setSelectedTag(tag)}
+          >
+            #{tag}
+          </button>
+        ))}
+      </div>
+
+      {/* Search */}
+      <div className="flex justify-center mb-8">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search collections..."
+          className="w-full max-w-md px-4 py-2 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
+      {/* Grid of collection cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {filteredCollections.length > 0 ? (
+          filteredCollections.map(col => <CollectionCard key={col.id} collection={col} />)
+        ) : (
+          <div className="col-span-full text-center text-gray-400">
+            No collections found.
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

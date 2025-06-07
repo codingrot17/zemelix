@@ -412,7 +412,7 @@ export function FeaturedListingsCarousel() {
       <div className="flex justify-center mt-8">
         <Button
           className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-400 dark:hover:bg-indigo-500 px-8 py-3 text-base font-semibold rounded-full shadow-lg transition"
-          onClick={() => navigate("/listings")}
+          onClick={() => navigate("/collections")}
         >
           View More Products & Services
         </Button>
