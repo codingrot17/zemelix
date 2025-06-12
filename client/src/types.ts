@@ -19,5 +19,5 @@ export interface Collection {
     description: string;
     price: string;
   };
-  type: "goods" | "booking"; // <-- NEW: distinguishes physical items vs services
+  type: "goods" | "booking";
 }

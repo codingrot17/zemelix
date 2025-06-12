@@ -3,6 +3,7 @@ import LoginPage from "./pages/auth/login";
 import RegisterPage from "./pages/auth/register";
 import HomePage from "./pages/home/Home";
 import { CollectionsPage } from "./pages/collections/CollectionsPage";
+import { SingleCollectionPage } from "./pages/collections/SingleCollectionPage";
 
 import PageLayout from "@/components/layouts/PageLayout";
 
@@ -12,7 +13,7 @@ function App() {
       <Routes>
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
-        
+
         <Route
           path="/"
           element={
@@ -29,7 +30,15 @@ function App() {
             </PageLayout >
               }
             /> 
-        
+<Route
+  path="/collections/:slug"
+  element={
+    <PageLayout>
+      <SingleCollectionPage />
+    </PageLayout>
+  }
+/>
+
         
         
       </Routes>

@@ -8,6 +8,9 @@ router.get('/', controller.getAll);
 // GET /api/services/:id
 router.get('/:id', controller.getOne);
 
+// GET /api/services/collection/:collectionId
+router.get('/collection/:collectionId', controller.getByCollection);
+
 // POST /api/services
 router.post('/', controller.create);
 

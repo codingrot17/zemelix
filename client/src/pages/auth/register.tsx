@@ -1,156 +1,113 @@
-import React from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import AuthLayout from "@/components/layouts/AuthLayout";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
-import { Link } from "react-router-dom"; // or next/link if using Next.js
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const registerSchema = z
-  .object({
-    email: z.string().email({ message: "Please enter a valid email address." }),
-    password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-    confirmPassword: z.string().min(6, { message: "Please confirm your password." }),
-    acceptTerms: z.boolean().refine(val => val === true, {
-      message: "You must accept the terms and conditions.",
-    }),
-  })
-  .superRefine(({ password, confirmPassword }, ctx) => {
-    if (password !== confirmPassword) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["confirmPassword"],
-        message: "Passwords do not match.",
-      });
-    }
-  });
-
-type RegisterFormData = z.infer<typeof registerSchema>;
+const roles = [
+  { value: "buyer", label: "Buyer" },
+  { value: "seller", label: "Seller / Service Provider" },
+  { value: "admin", label: "Admin" },
+];
 
 export default function RegisterPage() {
-  const form = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: { email: "", password: "", confirmPassword: "", acceptTerms: false },
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "buyer",
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  function onSubmit(values: RegisterFormData) {
-    console.log("Registration attempt:", values);
-    alert("Registration functionality is not implemented in this demo. Check console for input values.");
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Registration failed");
+      setSuccess("Registration successful! You can now log in.");
+      setTimeout(() => navigate("/login"), 1500);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <AuthLayout title="Create an Account">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field, fieldState }) => (
-              <FormItem>
-                <FormLabel htmlFor="email">Email</FormLabel>
-                <FormControl>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
-                    {...field}
-                    className="rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-50 dark:border-gray-600"
-                  />
-                </FormControl>
-                {fieldState.error && <FormMessage>{fieldState.error.message}</FormMessage>}
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field, fieldState }) => (
-              <FormItem>
-                <FormLabel htmlFor="password">Password</FormLabel>
-                <FormControl>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    {...field}
-                    className="rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-50 dark:border-gray-600"
-                  />
-                </FormControl>
-                {fieldState.error && <FormMessage>{fieldState.error.message}</FormMessage>}
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="confirmPassword"
-            render={({ field, fieldState }) => (
-              <FormItem>
-                <FormLabel htmlFor="confirmPassword">Confirm Password</FormLabel>
-                <FormControl>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    {...field}
-                    className="rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-50 dark:border-gray-600"
-                  />
-                </FormControl>
-                {fieldState.error && <FormMessage>{fieldState.error.message}</FormMessage>}
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="acceptTerms"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    className="data-[state=checked]:bg-blue-500 data-[state=checked]:text-white dark:data-[state=checked]:bg-blue-600"
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel htmlFor="acceptTerms" className="cursor-pointer select-none">
-                    I accept the terms and conditions
-                  </FormLabel>
-                </div>
-                {form.formState.errors.acceptTerms && (
-                  <FormMessage>{form.formState.errors.acceptTerms.message}</FormMessage>
-                )}
-              </FormItem>
-            )}
-          />
-
-          <Button type="submit" className="w-full hover:opacity-70 transition-opacity duration-200">
-            Sign Up
-          </Button>
-        </form>
-      </Form>
-
-      <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-        Already have an account?{" "}
-        <Link
-          to="/login"
-          className="underline text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+    <div className="max-w-md mx-auto mt-16 bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8">
+      <h2 className="text-2xl font-bold mb-6 text-center">Create Account</h2>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <input
+          name="name"
+          type="text"
+          required
+          placeholder="Full Name"
+          value={form.name}
+          onChange={handleChange}
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
+        />
+        <input
+          name="email"
+          type="email"
+          required
+          placeholder="Email"
+          value={form.email}
+          onChange={handleChange}
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
+        />
+        <input
+          name="password"
+          type="password"
+          required
+          placeholder="Password"
+          value={form.password}
+          onChange={handleChange}
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
+        />
+        <select
+          name="role"
+          value={form.role}
+          onChange={handleChange}
+          className="w-full px-4 py-2 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
         >
-          Sign in
-        </Link>
+          {roles.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded transition"
+        >
+          {loading ? "Registering..." : "Register"}
+        </button>
+      </form>
+      {error && <div className="mt-4 text-red-500 text-center">{error}</div>}
+      {success && <div className="mt-4 text-green-600 text-center">{success}</div>}
+      <div className="mt-6 text-center">
+        Already have an account?{" "}
+        <button
+          className="text-indigo-600 hover:underline"
+          onClick={() => navigate("/login")}
+        >
+          Login
+        </button>
       </div>
-    </AuthLayout>
+    </div>
   );
 }

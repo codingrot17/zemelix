@@ -17,6 +17,14 @@ exports.getOne = (req, res) => {
   });
 };
 
+// GET all services for a specific collection
+exports.getByCollection = (req, res) => {
+  Service.find({ collectionId: req.params.collectionId }, (err, docs) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    res.json(docs);
+  });
+};
+
 // CREATE a new service
 exports.create = (req, res) => {
   const data = {
