@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { Outlet } from "react-router-dom"; 
 import Header from '@/components/shared/Header';
 import Footer from '@/components/shared/Footer';
 import { ArrowUp, MessageCircle } from 'lucide-react';
@@ -67,7 +68,9 @@ const PageLayout: React.FC<PageLayoutProps> = ({ children }) => {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="flex-grow">{children}</main>
+      <main className="flex-grow">
+        <Outlet />
+      </main>
       <Footer />
 
       {/* Back to Top Button */}

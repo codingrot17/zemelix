@@ -1,49 +1,14 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import LoginPage from "./pages/auth/login";
-import RegisterPage from "./pages/auth/register";
-import HomePage from "./pages/home/Home";
-import { CollectionsPage } from "./pages/collections/CollectionsPage";
-import { SingleCollectionPage } from "./pages/collections/SingleCollectionPage";
+import React from "react";
+import { BrowserRouter } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import AppRoutes from "./routes/AppRoutes"; 
 
-import PageLayout from "@/components/layouts/PageLayout";
-
-function App() {
-  return (
-   <Router>
-      <Routes>
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/login" element={<LoginPage />} />
-
-        <Route
-          path="/"
-          element={
-            <PageLayout>
-              <HomePage />
-            </PageLayout>
-          }
-        />
-        
-            <Route 
-            path="/collections" element={
-            <PageLayout>
-              <CollectionsPage />
-            </PageLayout >
-              }
-            /> 
-<Route
-  path="/collections/:slug"
-  element={
-    <PageLayout>
-      <SingleCollectionPage />
-    </PageLayout>
-  }
-/>
-
-        
-        
-      </Routes>
-    </Router>
-  );
-}
+const App: React.FC = () => (
+  <AuthProvider>
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  </AuthProvider>
+);
 
 export default App;
