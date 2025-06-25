@@ -135,4 +135,8 @@
   .bg-surface {
     background-color: rgb(var(--color-background-soft));
   }
+
+  button {
+    cursor: pointer;
+  }
 }

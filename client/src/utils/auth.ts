@@ -1,4 +1,4 @@
-import { dummyUsers } from '../api/dummyUsers';
+import { dummyUsers } from '../api/dummyUsers.ts';
 import { User } from '../types/auth';
 
 export function login(email: string, password: string): User | null {

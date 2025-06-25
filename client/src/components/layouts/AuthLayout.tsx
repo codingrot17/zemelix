@@ -18,7 +18,7 @@ export default function AuthLayout({ children, title = "Welcome Back" }: AuthLay
           />
           <div
             className="absolute inset-0 bg-cover bg-center hidden dark:block"
-            style={{ backgroundImage: "url('/images/Illustration-dark.png')" }}
+            style={{ backgroundImage: "url('/images/illustration-dark.png')" }}
           />
         </div>
 

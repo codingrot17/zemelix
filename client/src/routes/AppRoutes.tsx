@@ -5,7 +5,7 @@ import { Routes, Route } from "react-router-dom";
 import HomePage from "@/pages/home/Home";
 import { CollectionsPage } from "@/pages/collections/CollectionsPage";
 import { SingleCollectionPage } from "@/pages/collections/SingleCollectionPage";
-import PageLayout from "@/components/layouts/PageLayout";
+// import PageLayout from "@/components/layouts/PageLayout";
 import LoginPage from "@/pages/auth/login";
 import Unauthorized from "@/pages/auth/Unauthorized";
 
@@ -14,6 +14,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import SellerDashboard from "@/pages/seller/SellerDashboard";
 import CustomerDashboard from "@/pages/customer/CustomerDashboard";
+import PageLayout from "@/components/layouts/PageLayout";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -21,8 +22,8 @@ const AppRoutes: React.FC = () => {
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
-      <Route element={<PageLayout />}>
-        <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<PageLayout />}>
+        <Route index element={<HomePage />} />
         <Route path="/collections" element={<CollectionsPage />} />
         <Route path="/collections/:slug" element={<SingleCollectionPage />} />
       </Route>
