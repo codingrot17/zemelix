@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const roles = [
   { label: "Customer", value: "customer" },
@@ -214,13 +215,13 @@ const SignupPage: React.FC = () => {
 
         {/* Login Link */}
         <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-          Already have an account?{" "}
-          <a
-            href="/login"
+          Already have an account?
+          <Link
+            to="/login"
             className="font-semibold text-indigo-600 hover:underline"
           >
             Sign in
-          </a>
+          </Link>
         </p>
       </form>
     </AuthLayout>

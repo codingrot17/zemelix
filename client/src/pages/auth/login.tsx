@@ -8,6 +8,7 @@ import { Eye, EyeOff, Loader2, Github } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FaGoogle } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -177,12 +178,12 @@ const LoginPage: React.FC = () => {
         {/* Register Link */}
         <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
           Don&apos;t have an account?{" "}
-          <a
-            href="/register"
+          <Link
+            to="/register"
             className="font-semibold text-indigo-600 hover:underline"
           >
             Register here
-          </a>
+          </Link>
         </p>
       </form>
     </AuthLayout>
