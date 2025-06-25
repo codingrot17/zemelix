@@ -1,10 +1,17 @@
-import React, { useContext } from "react";
+import React from "react";
 import { NavLink } from "react-router-dom";
 import { sidebarNavConfig } from "@/config/sidebarNav";
 import { useAuth } from "@/contexts/AuthContext";
 
+interface SidebarNavigationProps {
+  mobile?: boolean;
+  onClose?: () => void; // <-- make optional
+}
 
-export default function SidebarNavigation({ mobile = false, onClose }) {
+export default function SidebarNavigation({
+  mobile = false,
+  onClose,
+}: SidebarNavigationProps) {
   const { user } = useAuth();
   const navItems = sidebarNavConfig[user?.role] || [];
 
