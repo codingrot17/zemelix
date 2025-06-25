@@ -116,11 +116,6 @@ const Header = () => {
     alert(`Searching for: ${searchTerm}`);
   };
 
-  const toggleTheme = () => {
-    setDarkTheme(!darkTheme);
-    document.documentElement.classList.toggle('dark');
-  };
-
   return (
     <header className="bg-white dark:bg-black shadow-md sticky top-0 z-50" role="navigation">
       {/* Promotional Banner */}
@@ -281,7 +276,7 @@ const Header = () => {
                     <Link to="/login">Login</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/signup">Sign Up</Link>
+                    <Link to="/register">Sign Up</Link>
                   </DropdownMenuItem>
                 </>
               ) : (
