@@ -21,13 +21,13 @@ const AppRoutes: React.FC = () => {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="login" element={<LoginPage />} />
-      <Route path="register" element={<SignupPage />} />
-      <Route path="unauthorized" element={<Unauthorized />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<SignupPage />} />
+      <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/" element={<PageLayout />}>
         <Route index element={<HomePage />} />
-        <Route path="collections" element={<CollectionsPage />} />
-        <Route path="collections/:slug" element={<SingleCollectionPage />} />
+        <Route path="/collections" element={<CollectionsPage />} />
+        <Route path="/collections/:slug" element={<SingleCollectionPage />} />
       </Route>
 
       {/* Dashboard routes with role-based access */}
