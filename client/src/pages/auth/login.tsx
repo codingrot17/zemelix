@@ -54,20 +54,7 @@ const LoginPage: React.FC = () => {
         return;
       }
 
-      // Redirect based on role
-      switch (loggedInUser.role) {
-        case "admin":
-          navigate("/admin/dashboard");
-          break;
-        case "seller":
-          navigate("/seller/dashboard");
-          break;
-        case "customer":
-          navigate("/customer/dashboard");
-          break;
-        default:
-          navigate("/");
-      }
+      navigate("/dashboard");
     }, 1000);
   };
 
