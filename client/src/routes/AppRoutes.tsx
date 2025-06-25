@@ -1,46 +1,86 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Outlet } from "react-router-dom";
 
-// Public Page Imports
 import HomePage from "@/pages/home/Home";
 import { CollectionsPage } from "@/pages/collections/CollectionsPage";
 import { SingleCollectionPage } from "@/pages/collections/SingleCollectionPage";
 import LoginPage from "@/pages/auth/login";
-import Unauthorized from "@/pages/auth/Unauthorized";
 import SignupPage from "@/pages/auth/register";
+import Unauthorized from "@/pages/auth/Unauthorized";
 import PageLayout from "@/components/layouts/PageLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
+import Dashboard from "@/pages/dashboard/Dashboard";
 
-// Protected Route Imports
-import ProtectedRoute from "@/components/ProtectedRoute";
-import AdminDashboard from "@/pages/admin/AdminDashboard";
-import SellerDashboard from "@/pages/seller/SellerDashboard";
-import CustomerDashboard from "@/pages/customer/CustomerDashboard";
+import AdminUsers from "@/pages/dashboard/admin/Users";
+import SellerProducts from "@/pages/dashboard/seller/Products";
+import CustomerOrders from "@/pages/dashboard/customer/Orders";
+
+import RequireRole from "@/components/RequireRole";
 
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<SignupPage />} />
-      <Route path="/unauthorized" element={<Unauthorized />} />
+      {/* Public routes */}
+      <Route path="login" element={<LoginPage />} />
+      <Route path="register" element={<SignupPage />} />
+      <Route path="unauthorized" element={<Unauthorized />} />
       <Route path="/" element={<PageLayout />}>
         <Route index element={<HomePage />} />
-        <Route path="/collections" element={<CollectionsPage />} />
-        <Route path="/collections/:slug" element={<SingleCollectionPage />} />
+        <Route path="collections" element={<CollectionsPage />} />
+        <Route path="collections/:slug" element={<SingleCollectionPage />} />
       </Route>
-      
-        {/* Protected Routes */}
-        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+      {/* Dashboard routes with role-based access */}
+      <Route path="/dashboard" element={<DashboardLayout />}>
+        {/* Smart dashboard home */}
+        <Route
+          index
+          element={
+            <RequireRole allowedRoles={["admin", "seller", "customer"]}>
+              <Dashboard />
+            </RequireRole>
+          }
+        />
+
+        {/* Admin section */}
+        <Route
+          path="admin"
+          element={
+            <RequireRole allowedRoles={["admin"]}>
+              <Outlet />
+            </RequireRole>
+          }
+        >
+          <Route path="users" element={<AdminUsers />} />
+          {/* add more admin subroutes */}
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={["seller"]} />}>
-          <Route path="/seller/dashboard" element={<SellerDashboard />} />
+        {/* Seller section */}
+        <Route
+          path="seller"
+          element={
+            <RequireRole allowedRoles={["seller"]}>
+              <Outlet />
+            </RequireRole>
+          }
+        >
+          <Route path="products" element={<SellerProducts />} />
+          {/* add more seller subroutes */}
         </Route>
 
-        <Route element={<ProtectedRoute allowedRoles={["customer"]} />}>
-          <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+        {/* Customer section */}
+        <Route
+          path="user"
+          element={
+            <RequireRole allowedRoles={["customer"]}>
+              <Outlet />
+            </RequireRole>
+          }
+        >
+          <Route path="orders" element={<CustomerOrders />} />
+          {/* add more customer subroutes */}
         </Route>
+      </Route>
     </Routes>
   );
 };
