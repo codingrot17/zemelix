@@ -20,6 +20,7 @@ import {
   HelpCircle,
   Menu,
 } from 'lucide-react';
+import ThemeToggle from '../ui/ThemeToggle';
 
 const PLACEHOLDER_ICON = '/images/placeholder.svg';
 const MAX_VISIBLE_CATEGORIES = 6;
@@ -226,7 +227,7 @@ const Header = () => {
         {/* Action Icons */}
         <div className="flex items-center space-x-4">
           {/* Theme Toggle + Mode Indicator */}
-          <div className="flex items-center">
+          {/* <div className="flex items-center">
             <Button
               variant="ghost"
               size="icon"
@@ -242,7 +243,8 @@ const Header = () => {
             <span className="ml-1 text-xs text-gray-500">
               {darkTheme ? 'Dark' : 'Light'}
             </span>
-          </div>
+          </div> */}
+          <ThemeToggle />
 
           {/* Help/FAQ */}
           <Link to="/faq" aria-label="Help / FAQ">
