@@ -48,9 +48,9 @@ const ThemeToggle: React.FC = () => {
   };
 
   const icon =
-    mode === 'system' ? <Laptop className="w-5 h-5" /> :
-    currentTheme === 'dark' ? <Sun className="w-5 h-5" /> :
-    <Moon className="w-5 h-5" />;
+    mode === 'system' ? <Laptop className="w-6 h-6 rounded-sm  dark:text-primary  " /> :
+    currentTheme === 'dark' ? <Moon className="w-6 h-6 rounded-sm dark:text-primary" /> :
+    <Sun className="text-primary" />;
 
   return (
     <DropdownMenu>
@@ -63,17 +63,17 @@ const ThemeToggle: React.FC = () => {
         <DropdownMenuItem onClick={() => changeTheme('light')}>
           <Sun className="mr-2 h-4 w-4" />
           Light
-          {mode === 'light' && <Check className="ml-auto h-4 w-4 text-indigo-600" />}
+          {mode === 'light' && <Check className="ml-auto h-4 w-4 text-primary" />}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => changeTheme('dark')}>
           <Moon className="mr-2 h-4 w-4" />
           Dark
-          {mode === 'dark' && <Check className="ml-auto h-4 w-4 text-indigo-600" />}
+          {mode === 'dark' && <Check className="ml-auto h-4 w-4 text-primary" />}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => changeTheme('system')}>
           <Laptop className="mr-2 h-4 w-4" />
           System
-          {mode === 'system' && <Check className="ml-auto h-4 w-4 text-indigo-600" />}
+          {mode === 'system' && <Check className="ml-auto h-4 w-4 text-primary" />}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

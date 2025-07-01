@@ -73,7 +73,7 @@ export default function HeroSection() {
     <section className="relative max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-12 flex flex-col md:flex-row items-center md:gap-10 gap-6 bg-background dark:bg-background-dark transition-colors">
       {/* Left: Main content */}
       <div className="flex-1 flex flex-col items-start w-full md:w-auto">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 text-primary dark:text-primary-light leading-tight">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 text-primary dark:text leading-tight">
           The Marketplace for Everything Local & Digital
         </h1>
         <p className="mb-2 sm:mb-4 text-base sm:text-lg text-foreground dark:text-foreground-light max-w-xs sm:max-w-md">

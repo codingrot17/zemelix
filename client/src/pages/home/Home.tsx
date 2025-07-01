@@ -60,7 +60,7 @@ const HomePage = () => {
   const recommendations = getRecommendations(quizAnswers, featuredItems);
 
   return (
-    <div className="min-h-screen bg-secondary dark:bg-secondary overflow-hidden">
+    <div className="min-h-screen bg-background dark:bg-background overflow-hidden">
       <BragBar />
       <HeroSection />
 
