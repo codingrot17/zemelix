@@ -48,9 +48,9 @@ const ThemeToggle: React.FC = () => {
   };
 
   const icon =
-    mode === 'system' ? <Laptop className="w-6 h-6 rounded-sm  dark:text-primary  " /> :
-    currentTheme === 'dark' ? <Moon className="w-6 h-6 rounded-sm dark:text-primary" /> :
-    <Sun className="text-primary" />;
+    mode === 'system' ? <Laptop className="w-6 h-6 rounded-sm" /> :
+    currentTheme === 'dark' ? <Moon className="w-6 h-6 rounded-sm" /> :
+    <Sun  />;
 
   return (
     <DropdownMenu>

@@ -1,9 +1,10 @@
 // DashboardHeader.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import {
+  HiArrowCircleLeft,
   HiChevronDown,
   HiOutlineBell,
   HiOutlineQuestionMarkCircle,
@@ -11,6 +12,14 @@ import {
 } from "react-icons/hi";
 import { FaArrowCircleLeft, FaCog } from "react-icons/fa";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import {
+  DropdownMenu,
+  DropdownMenuArrow,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@radix-ui/react-dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void;
@@ -77,7 +86,7 @@ export default function DashboardHeader({
           <div className="flex items-center gap-2">
             {/* The background color here is for a placeholder div if the image doesn't load immediately,
                 or if you want a solid color behind the logo. Using 'bg-primary' for a brand accent. */}
-            <div className="w-8 h-8 dark:bg-primary text-primary-foreground flex items-center justify-center font-bold rounded">
+            <div className="w-8 h-8 bg-primary text-primary-foreground flex items-center justify-center font-bold rounded">
               <Link to="/">
                 {/* Image sources remain the same, as they are external assets. */}
                 <img
@@ -145,105 +154,81 @@ export default function DashboardHeader({
           </div>
 
           {/* Profile dropdown trigger */}
-          <button
-            // hover:bg-muted: Subtle background on hover.
-            // text-foreground: Default text/icon color.
-            className="flex items-center gap-2 p-1 rounded hover:bg-muted text-foreground transition"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-          >
-            <div
-              // bg-primary: Uses the primary brand color for the user's initial circle.
-              // text-primary-foreground: Ensures the initials are readable on the primary background.
-              className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold text-sm"
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="hover:text-primary"
+                aria-label="Account"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold text-sm">
+                  {initials}
+                </div>
+                <div className="hidden sm:flex flex-col text-sm text-left">
+                  {/* text-foreground: Inherits the main text color. */}
+                  <span className="font-bold">{user.name}</span>
+                </div>
+                <HiChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="profile bg-card border border-border"
+              align="end"
             >
-              {initials}
-            </div>
-            <div className="hidden sm:flex flex-col text-sm text-left">
-              {/* text-foreground: Inherits the main text color. */}
-              <span className="font-bold">
-                {user.name}
-              </span>
-            </div>
-            {/* text-foreground: Ensures the icon color contrasts well. */}
-            <HiChevronDown className="text-foreground" />
-          </button>
-
-          {/* Profile Dropdown Content */}
-          {dropdownOpen && (
-            // bg-card: Used for dropdowns/modals.
-            // text-foreground: Ensures text within the dropdown is readable.
-            // border-border: Consistent border for UI elements.
-            <div className="profile absolute top-12 right-2 mt-2 w-44 bg-card text-foreground border border-border rounded shadow-md z-50">
-              <ul className=" pt-4 text-sm text-foreground">
-                <li className="text-center mb-2">
-                  {/* text-primary: Highlights the user's name with the primary brand color. */}
+              <DropdownMenuItem className=" pt-4 text-sm" asChild>
+                <div className="text-center mb-2">
                   <h2 className="text-xl font-bold text-primary">
                     {user.name}
                   </h2>
-                  {/* text-primary-foreground: Used for text that sits on a primary-colored background,
-                      or in this case, as a strong accent related to the primary color. */}
-                  <span className="capitalize font-bold text-primary-foreground">
+                  <span className="capitalize font-bold text-secondary-foreground">
                     {user.role}
                   </span>
-                </li>
-                <li>
-                  <hr />
-                </li>
-                {/* Dropdown menu items */}
-                <li>
-                  <Link
-                    to=""
-                    // text-foreground: Default text color for menu items.
-                    // hover:bg-muted: Subtle hover background.
-                    // hover:text-foreground: Ensures text remains readable on hover.
-                    className="text-sm py-2 px-3 flex items-center text-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <HiOutlineUser className="mr-2 text-lg" />
-                    <span className="">View profile</span>
-                  </Link>
-                </li>
-                <li>
-                  <hr />
-                </li>
-                <li>
-                  <Link
-                    to=""
-                    className="text-sm py-2 px-3 flex items-center text-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <FaCog className="mr-2 text-lg" />
-                    <span className="">Account Settings</span>
-                  </Link>
-                </li>
-                <li>
-                  <hr />
-                </li>
-                <li>
-                  <Link
-                    to=""
-                    className="text-sm py-2 px-3 flex items-center text-foreground hover:bg-muted hover:text-foreground"
-                  >
-                    <HiOutlineQuestionMarkCircle className="mr-2 text-lg" />
-                    <span>Need Help?</span>
-                  </Link>
-                </li>
-                <li>
-                  <hr />
-                </li>
-                <li>
-                  <button
-                    onClick={handleLogout}
-                    // text-foreground: Default text color for the sign-out button.
-                    // hover:bg-muted: Subtle hover background.
-                    // hover:text-foreground: Ensures text remains readable on hover.
-                    className="text-sm py-2 px-3 flex items-center text-foreground hover:bg-muted hover:text-foreground w-full"
-                  >
-                    <FaArrowCircleLeft className="mr-2 text-lg" />
-                    <span>Sign Out</span>
-                  </button>
-                </li>
-              </ul>
-            </div>
-          )}
+                </div>
+              </DropdownMenuItem>
+              <hr />
+              <DropdownMenuItem>
+                <Link
+                  to=""
+                  className="text-sm py-2 px-3 flex items-center text-foreground hover:bg-muted hover:text-primary"
+                >
+                  <HiOutlineUser className="mr-2 text-lg" />
+                  <span className="">View profile</span>
+                </Link>
+              </DropdownMenuItem>
+              <hr />
+              <DropdownMenuItem>
+                <Link
+                  to=""
+                  className="text-sm py-2 px-3 flex items-center text-foreground hover:bg-muted hover:text-primary"
+                >
+                  <FaCog className="mr-2 text-lg" />
+                  <span className="">Account Settings</span>
+                </Link>
+              </DropdownMenuItem>
+              <hr />
+              <DropdownMenuItem>
+                <Link
+                  to=""
+                  className="text-sm py-2 px-3 flex items-center text-foreground hover:bg-muted hover:text-primary"
+                >
+                  <HiOutlineQuestionMarkCircle className="mr-2 text-lg" />
+                  <span>Need Help?</span>
+                </Link>
+              </DropdownMenuItem>
+              <hr />
+              <DropdownMenuItem>
+                <Button
+                variant="destructive"
+                  onClick={handleLogout}
+                  className="w-full"
+                >
+                  <LogOut  />
+                  <span>Sign Out</span>
+                </Button>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+         
         </div>
       </div>
     </header>
