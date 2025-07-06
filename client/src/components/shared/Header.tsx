@@ -14,9 +14,12 @@ import {
   ShoppingCart,
   User,
   Menu,
-  ChevronDown,
-  ChevronUp,
-  UserRound,
+  LogIn,
+  UserPlus,
+  ShoppingBag,
+  Heart,
+  Settings,
+  LogOut,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import ThemeToggle from "../ui/ThemeToggle";
@@ -37,8 +40,6 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
     logout();
     navigate(`/login`);
   };
-
-  
 
   return (
     <header
@@ -119,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
           <ThemeToggle />
 
           {/* Account */}
-          <DropdownMenu >
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Account">
                 <User className="h-5 w-5" />
@@ -134,16 +135,17 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
                   <DropdownMenuItem asChild>
                     <Link
                       to="/login"
-                      className="text-foreground hover:bg-muted hover:text-foreground"
+                      className="flex items-center gap-2 text-foreground hover:bg-muted hover:text-foreground"
                     >
-                      Login
+                      <LogIn className="w-4 h-4" /> Login
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link
                       to="/register"
-                      className="text-foreground hover:bg-muted hover:text-foreground"
+                      className="flex items-center gap-2 text-foreground hover:bg-muted hover:text-foreground"
                     >
+                      <UserPlus className="w-4 h-4" />
                       Sign Up
                     </Link>
                   </DropdownMenuItem>
@@ -153,9 +155,9 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
                   <DropdownMenuItem asChild>
                     <Link
                       to="/account"
-                      className="text-foreground hover:bg-muted hover:text-foreground"
+                      className="text-foreground flex items-center gap-2 hover:bg-muted hover:text-foreground"
                     >
-                      Profile
+                      <User className="w-4 h-4" /> Profile
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -163,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
                       to="/orders"
                       className="text-foreground hover:bg-muted hover:text-foreground"
                     >
-                      Orders
+                      <ShoppingBag className="w-4 h-4" /> Orders
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -171,23 +173,23 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
                       to="/wishlist"
                       className="text-foreground hover:bg-muted hover:text-foreground"
                     >
-                      Wishlist
+                      <Heart className="w-4 h-4" /> Wishlist
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link
                       to="/settings"
-                      className="text-foreground hover:bg-muted hover:text-foreground"
+                      className="text-foreground flex items-center gap-2 hover:bg-muted hover:text-foreground"
                     >
-                      Settings
+                      <Settings className="w-4 h-4" /> Settings
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link
                       to="/login"
-                      className="text-foreground hover:bg-muted hover:text-foreground"
+                      className="text-foreground flex items-center gap-2 hover:bg-muted hover:text-foreground"
                     >
-                      Logout
+                      <LogOut className="w-4 h-4" /> Logout
                     </Link>
                   </DropdownMenuItem>
                 </>

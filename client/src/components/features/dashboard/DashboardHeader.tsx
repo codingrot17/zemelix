@@ -1,20 +1,17 @@
-// DashboardHeader.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, Menu } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  HiArrowCircleLeft,
   HiChevronDown,
   HiOutlineBell,
   HiOutlineQuestionMarkCircle,
   HiOutlineUser,
 } from "react-icons/hi";
-import { FaArrowCircleLeft, FaCog } from "react-icons/fa";
+import { FaCog } from "react-icons/fa";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import {
   DropdownMenu,
-  DropdownMenuArrow,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -30,26 +27,12 @@ export default function DashboardHeader({
 }: DashboardHeaderProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [showAlerts, setShowAlerts] = useState(false);
-  const dropdownRef = useRef(null);
 
   const alerts = [
     "New order placed",
     "Stock running low",
     "New reservation confirmed",
   ];
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdownOpen(false);
-        setShowAlerts(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const handleLogout = () => {
     logout();
@@ -64,31 +47,22 @@ export default function DashboardHeader({
     .toUpperCase();
 
   return (
-    // Header background and border:
-    // bg-background: Uses the main background color, which adapts to light/dark mode.
-    // border-border: Uses the border color, ensuring consistency for outlines.
     <header className="bg-background border-b border-border sticky top-0 z-50 shadow-sm">
       <div className="mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex gap-6">
           {/* Sidebar toggle for mobile */}
           <button
             onClick={onToggleSidebar}
-            // hover:bg-muted: Provides a subtle hover effect using the muted background.
-            // focus:ring-ring: Uses the ring color for focus outlines, enhancing accessibility.
             className="lg:hidden p-2 rounded-md hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring"
             aria-label="Toggle sidebar"
           >
-            {/* text-foreground: Ensures the icon color contrasts well with the background. */}
             <Menu className="w-6 h-6 text-foreground" />
           </button>
 
           {/* Brand Logo */}
           <div className="flex items-center gap-2">
-            {/* The background color here is for a placeholder div if the image doesn't load immediately,
-                or if you want a solid color behind the logo. Using 'bg-primary' for a brand accent. */}
             <div className="w-8 h-8 bg-primary text-primary-foreground flex items-center justify-center font-bold rounded">
               <Link to="/">
-                {/* Image sources remain the same, as they are external assets. */}
                 <img
                   src="/images/brand-dark.jpg"
                   alt="Zemelix Brand Logo"
@@ -105,44 +79,37 @@ export default function DashboardHeader({
         </div>
 
         {/* Right section */}
-        <div className="flex items-center gap-4" ref={dropdownRef}>
-          {/* text-secondary-foreground: Used for elements that should stand out but are not primary actions,
-              often on a dark background in dark mode. */}
+        <div className="flex items-center gap-4">
           <div className="text-secondary-foreground">
             <ThemeToggle />
           </div>
           {/* Notification Bell */}
-          <div className="relative">
-            <button
-              onClick={() => setShowAlerts(!showAlerts)}
-              // text-foreground: Default icon color.
-              // hover:bg-muted: Subtle background on hover.
-              // hover:text-primary: Changes icon color to primary on hover for emphasis.
-              className="relative p-1 rounded-sm text-foreground hover:bg-muted hover:text-primary"
-            >
-              <HiOutlineBell className="w-6 h-6" />
-              {alerts.length > 0 && (
-                <span
-                  // bg-primary: Uses the primary brand color for the notification badge.
-                  // text-primary-foreground: Ensures text on the primary background is readable.
-                  className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-xs flex items-center justify-center rounded-full"
-                >
-                  {alerts.length}
-                </span>
-              )}
-            </button>
-            {showAlerts && (
-              // bg-card: Used for dropdowns/modals, providing a distinct background.
-              // text-foreground: Ensures text within the dropdown is readable.
-              // border-border: Consistent border for UI elements.
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="relative p-1 rounded-sm text-foreground hover:bg-muted hover:text-primary"
+                aria-label="Notification"
+              >
+                <HiOutlineBell className="w-5 h-5" />
+                {alerts.length > 0 && (
+                  <span className="absolute -top-1 -right-1 text-primary-foreground bg-primary text-xs flex items-center justify-center rounded-full w-4 h-4">
+                    {alerts.length}
+                  </span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="center" className=" w-60 bg-card border border-border">
+              {alerts.map((alert, i) => (
+                <DropdownMenuItem key={i}  className="text-sm py-2 px-3 flex items-center text-foreground hover:bg-muted hover:text-primary">{alert}</DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+            {/* {showAlerts && (
               <div className="absolute right-0 mt-2 w-60 bg-card text-foreground border border-border rounded shadow-md z-50">
                 <ul className="py-2 text-sm text-foreground max-h-60 overflow-y-auto">
                   {alerts.map((alert, i) => (
                     <li
                       key={i}
-                      // text-foreground: Default text color for list items.
-                      // hover:bg-muted: Subtle hover background for list items.
-                      // hover:text-foreground: Ensures text remains readable on hover.
                       className="px-4 py-2 text-foreground hover:bg-muted hover:text-foreground"
                     >
                       {alert}
@@ -150,29 +117,28 @@ export default function DashboardHeader({
                   ))}
                 </ul>
               </div>
-            )}
-          </div>
+            )} */}
+          </DropdownMenu>
 
           {/* Profile dropdown trigger */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="hover:text-primary"
+                className="text-foreground hover:text-primary"
                 aria-label="Account"
               >
                 <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold text-sm">
                   {initials}
                 </div>
                 <div className="hidden sm:flex flex-col text-sm text-left">
-                  {/* text-foreground: Inherits the main text color. */}
                   <span className="font-bold">{user.name}</span>
                 </div>
                 <HiChevronDown />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="profile bg-card border border-border"
+              className="profile bg-card border border-border rounded-lg"
               align="end"
             >
               <DropdownMenuItem className=" pt-4 text-sm" asChild>
@@ -218,17 +184,16 @@ export default function DashboardHeader({
               <hr />
               <DropdownMenuItem>
                 <Button
-                variant="destructive"
+                  variant="destructive"
                   onClick={handleLogout}
                   className="w-full"
                 >
-                  <LogOut  />
+                  <LogOut />
                   <span>Sign Out</span>
                 </Button>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-         
         </div>
       </div>
     </header>
