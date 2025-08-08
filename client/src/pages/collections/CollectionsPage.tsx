@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { CollectionCard } from "./CollectionCard";
+import { CollectionCard } from "@/components/features/collection/CollectionCard";
 import type { Collection } from "@/types";
 
 // Utility to extract all unique tags from collections

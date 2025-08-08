@@ -5,14 +5,15 @@ export interface Collection {
   longDescription?: string;
   imageUrl: string;
   slug: string;
-  badge?: "Featured" | "Popular" | "New";
+  badge?: "Hot" | "Trending" | "Featured" | "Popular" | "New";
   tags?: string[];
   curator?: {
     name: string;
     avatar: string;
     rating?: number;
   };
-  itemCount?: number;      // Number of items or services
+  itemCount?: number;
+  flashDealEnds: number | null;
   priceFrom?: string;
   exampleService?: {
     title: string;

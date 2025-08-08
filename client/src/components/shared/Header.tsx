@@ -74,19 +74,19 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6">
           <Link
-            to="/shop"
+            to="/collections"
             className="hover:text-[var(--color-primary)] transition-colors font-medium"
           >
             Shop
           </Link>
           <Link
-            to="/shop"
+            to="/sellers"
             className="hover:text-[var(--color-primary)] transition-colors font-medium"
           >
             Sellers
           </Link>
           <Link
-            to="/shop"
+            to="/blog"
             className="hover:text-[var(--color-primary)] transition-colors font-medium"
           >
             Blog
@@ -220,7 +220,7 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
               <nav className="flex flex-col mt-8">
                 <Link
                   className=" p-2 hover:bg-muted hover:text-primary"
-                  to="/shop"
+                  to="/collections"
                   onClick={() => setMobileNavOpen(false)}
                 >
                   Shop
@@ -231,7 +231,7 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
 
                 <Link
                   className="p-2   hover:bg-muted hover:text-primary"
-                  to="/shop"
+                  to="/sellers"
                   onClick={() => setMobileNavOpen(false)}
                 >
                   Sellers
@@ -242,7 +242,7 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
 
                 <Link
                   className="p-2   hover:bg-muted hover:text-primary"
-                  to="/shop"
+                  to="/blog"
                   onClick={() => setMobileNavOpen(false)}
                 >
                   Blog

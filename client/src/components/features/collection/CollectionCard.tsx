@@ -14,8 +14,9 @@ import {
 import type { Collection } from "@/types";
 
 const badgeColors: Record<string, string> = {
+  Hot: "bg-red-500 text-white",
+  Trending: "bg-emerald-500 text-white",
   Featured: "bg-indigo-600 text-white",
-  Popular: "bg-emerald-500 text-white",
   New: "bg-pink-500 text-white",
 };
 
