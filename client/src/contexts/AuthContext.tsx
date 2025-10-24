@@ -5,14 +5,13 @@ import React, {
     useEffect,
     ReactNode
 } from "react";
-import { User } from "../types/auth";
+import { User } from "@/types/auth";
+import { register, login, logout, getCurrentUser } from "@/utils/auth";
 import {
-    loginUser,
-    logoutUser,
-    getCurrentUser,
     getUserProfile,
-    registerUser
-} from "../lib/appwrite";
+    startSessionMonitor,
+    stopSessionMonitor
+} from "@/lib/appwrite";
 
 interface AuthContextType {
     user: User | null;
@@ -35,105 +34,89 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // 🔄 Load session + profile on mount
+    // 🚀 Initialize user + start session monitor
     useEffect(() => {
         const initAuth = async () => {
             try {
-                const sessionUser = await getCurrentUser();
-                if (sessionUser) {
-                    const profile = await getUserProfile(sessionUser.$id);
-                    setUser({ ...sessionUser, profile });
+                const current = await getCurrentUser();
+                if (current) {
+                    const profile = await getUserProfile(current.id);
+                    const fullUser = { ...current, profile };
+                    setUser(fullUser);
+                    startSessionMonitor(() => {
+                        console.warn("Session expired — auto logout");
+                        handleLogout();
+                    });
                 } else {
                     setUser(null);
                 }
             } catch (error) {
-                console.error("Error fetching user profile:", error);
+                console.error("Init auth error:", error);
                 setUser(null);
             } finally {
                 setLoading(false);
             }
         };
         initAuth();
+
+        // Cleanup monitor on unmount
+        return () => stopSessionMonitor();
     }, []);
 
-    useEffect(() => {
-        const checkSession = async () => {
-            try {
-                const session = await account.get();
-                const profile = await databases.getDocument(
-                    DB_ID,
-                    USERS_COLLECTION_ID,
-                    session.$id
-                );
-                setUser({ account: session, profile });
-            } catch {
-                setUser(null);
-            }
-        };
-
-        checkSession();
-    }, []);
-
-    // 🔐 Register Function
-    const register = async (
+    const handleRegister = async (
         email: string,
         password: string,
         fullName: string,
-        role: string = "customer",
-        country: string = "Nigeria"
-    ): Promise<User | null> => {
-        try {
-            const newUser = await registerUser({
-                email,
-                password,
-                fullName,
-                role,
-                country
-            });
-            const profile = await getUserProfile(newUser.$id);
-            setUser({ ...newUser, profile });
-            return { ...newUser, profile };
-        } catch (error) {
-            console.error("Registration error:", error);
-            return null;
+        role = "customer",
+        country = "Nigeria"
+    ) => {
+        const newUser = await register(
+            email,
+            password,
+            fullName,
+            role,
+            country
+        );
+        if (newUser) {
+            setUser(newUser);
+            startSessionMonitor(() => handleLogout());
         }
+        return newUser;
     };
 
-    // 🔓 Login Function
-    const login = async (
-        email: string,
-        password: string
-    ): Promise<User | null> => {
-        try {
-            await loginUser(email, password);
-            const sessionUser = await getCurrentUser();
-            const profile = await getUserProfile(sessionUser.$id);
-            setUser({ ...sessionUser, profile });
-            return { ...sessionUser, profile };
-        } catch (error) {
-            console.error("Login error:", error);
-            return null;
+    const handleLogin = async (email: string, password: string) => {
+        const loggedUser = await login(email, password);
+        if (loggedUser) {
+            setUser(loggedUser);
+            startSessionMonitor(() => handleLogout());
         }
+        return loggedUser;
     };
 
-    // 🚪 Logout Function
-    const logout = async (): Promise<void> => {
-        await logoutUser();
+    const handleLogout = async () => {
+        await logout();
         setUser(null);
+        stopSessionMonitor();
     };
 
-    // 🔄 Refresh User Data
     const refreshUser = async () => {
-        const sessionUser = await getCurrentUser();
-        if (sessionUser) {
-            const profile = await getUserProfile(sessionUser.$id);
-            setUser({ ...sessionUser, profile });
+        const refreshed = await getCurrentUser();
+        if (refreshed) {
+            const profile = await getUserProfile(refreshed.id);
+            setUser({ ...refreshed, profile });
         }
     };
 
     return (
         <AuthContext.Provider
-            value={{ user, loading, register, login, logout, refreshUser }}
+            value={{
+                user,
+                loading,
+                register: handleRegister,
+                login: handleLogin,
+                logout: handleLogout,
+                refreshUser
+            }}
         >
             {!loading && children}
         </AuthContext.Provider>
@@ -141,8 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context)
-        throw new Error("useAuth must be used within an AuthProvider");
-    return context;
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+    return ctx;
 };

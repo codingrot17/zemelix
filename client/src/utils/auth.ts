@@ -2,9 +2,9 @@ import {
     registerUser,
     loginUser,
     logoutUser,
-    getCurrentUser as appwriteGetCurrentUser
+    getCurrentUser as getAppwriteUser,
+    getUserProfile
 } from "@/lib/appwrite";
-
 import { User } from "@/types/auth";
 
 export async function register(
@@ -12,18 +12,23 @@ export async function register(
     password: string,
     fullName: string,
     role: string = "customer",
-    country: string = "unknown"
+    country: string = "Nigeria"
 ): Promise<User | null> {
     try {
-        const userAccount = await registerUser({ email, password, fullName, role, country });
-
-        // Appwrite returns a user object with $id, name, email, etc.
+        const userAccount = await registerUser({
+            email,
+            password,
+            fullName,
+            role,
+            country
+        });
+        const profile = await getUserProfile(userAccount.$id);
         return {
             id: userAccount.$id,
             name: userAccount.name,
             email: userAccount.email,
-            role,
-            country
+            role: profile?.role ?? role,
+            country: profile?.country ?? country
         };
     } catch (error: any) {
         console.error("Registration error:", error?.message || error);
@@ -31,19 +36,22 @@ export async function register(
     }
 }
 
-export async function login(email: string, password: string): Promise<User | null> {
+export async function login(
+    email: string,
+    password: string
+): Promise<User | null> {
     try {
-        const session = await loginUser(email, password);
-        const authUser = await appwriteGetCurrentUser();
+        await loginUser(email, password);
+        const appwriteUser = await getAppwriteUser();
+        if (!appwriteUser) return null;
 
-        if (!authUser) return null;
-
+        const profile = await getUserProfile(appwriteUser.$id);
         return {
-            id: authUser.$id,
-            name: authUser.name,
-            email: authUser.email,
-            role: "customer", // This should be fetched from database in next phase
-            country: "unknown"
+            id: appwriteUser.$id,
+            name: appwriteUser.name,
+            email: appwriteUser.email,
+            role: profile?.role ?? "customer",
+            country: profile?.country ?? "Nigeria"
         };
     } catch (error: any) {
         console.error("Login error:", error?.message || error);
@@ -61,15 +69,16 @@ export async function logout(): Promise<void> {
 
 export async function getCurrentUser(): Promise<User | null> {
     try {
-        const user = await appwriteGetCurrentUser();
+        const user = await getAppwriteUser();
         if (!user) return null;
 
+        const profile = await getUserProfile(user.$id);
         return {
             id: user.$id,
             name: user.name,
             email: user.email,
-            role: "customer", // This will be synced with DB in next step
-            country: "unknown"
+            role: profile?.role ?? "customer",
+            country: profile?.country ?? "Nigeria"
         };
     } catch {
         return null;
