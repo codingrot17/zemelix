@@ -1,421 +1,564 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+I help me review all this source codes related to the authentication for any errors or bugs.
+
+// .env
+VITE_APPWRITE_ENDPOINT = "https://cloud.appwrite.io/v1"
+VITE_APPWRITE_PROJECT_ID = "68bf9ed10019dexxxx"
+VITE_APPWRITE_DATABASE_ID="68f4252f000aebfxxxxx"
+VITE_APPWRITE_USER_COLLECTION_ID="user"
+
+// src/contexts/AuthContext.tsx
+import React, {
+    createContext,
+    useContext,
+    useState,
+    useEffect,
+    ReactNode
+} from "react";
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselPrevious,
-  CarouselNext,
-} from "@/components/ui/carousel";
-import type { CarouselApi } from "@/components/ui/carousel"; // Use type-only import
-import { Button } from "@/components/ui/button";
-import {
-  Heart,
-  Flame,
-  Star,
-  Clock,
-  Share2,
-  ShoppingBag,
-  Calendar,
-  Info,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+    account,
+    databases,
+    DB_ID,
+    USERS_COLLECTION_ID,
+    loginUser,
+    logoutUser,
+    getCurrentUser
+} from "@/lib/appwrite";
+import { Models } from "appwrite";
 
-// TypeScript types
-interface Seller {
-  name: string;
-  avatar: string;
-  rating: number;
+interface AppUserProfile extends Models.Document {
+    $id: string;
+    fullName: string;
+    role: "customer" | "vendor" | "admin";
+    accountStatus: string;
+    vendorType?: string;
+    businessName?: string;
 }
 
-interface FeaturedItem {
-  id: number | string;
-  title: string;
-  description: string;
-  price: string;
-  imageUrl: string;
-  seller: Seller;
-  badge?: "Hot" | "Trending" | "New";
-  flashDealEnds: number | null;
-  available: number;
-  total: number;
-  type: "goods" | "booking";
+interface AuthContextType {
+    user: AppUserProfile | null;
+    loading: boolean;
+    login: (email: string, password: string) => Promise<AppUserProfile | null>;
+    logout: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
-// Demo data
-const featuredItems: FeaturedItem[] = [
-  {
-    id: 1,
-    title: "Handmade Wooden Chair",
-    description: "Comfortable and stylish wooden chair for your living room.",
-    price: "$120",
-    imageUrl: "/images/placeholder.svg",
-    seller: { name: "Jane Doe", avatar: "/images/placeholder.svg", rating: 4.9 },
-    badge: "Hot",
-    flashDealEnds: Date.now() + 1000 * 60 * 60 * 2,
-    available: 3,
-    total: 20,
-    type: "goods",
-  },
-  {
-    id: 2,
-    title: "Web Design Service",
-    description: "Professional website design tailored for your business.",
-    price: "$500",
-    imageUrl: "/images/placeholder.svg",
-    seller: { name: "CodeSmith", avatar: "/images/placeholder.svg", rating: 5.0 },
-    badge: "Trending",
-    flashDealEnds: null,
-    available: 7,
-    total: 10,
-    type: "booking",
-  },
-  {
-    id: 3,
-    title: "Vintage Camera",
-    description: "Classic vintage camera in excellent condition.",
-    price: "$250",
-    imageUrl: "/images/placeholder.svg",
-    seller: { name: "RetroGuy", avatar: "/images/placeholder.svg", rating: 4.7 },
-    badge: "New",
-    flashDealEnds: Date.now() + 1000 * 60 * 30,
-    available: 1,
-    total: 10,
-    type: "goods",
-  },
-];
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Countdown hook
-function useCountdown(endTime: number | null) {
-  const [timeLeft, setTimeLeft] = useState(endTime ? endTime - Date.now() : 0);
-  useEffect(() => {
-    if (!endTime) return;
-    const interval = setInterval(() => {
-      setTimeLeft(Math.max(0, endTime - Date.now()));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [endTime]);
-  if (!endTime || timeLeft <= 0) return null;
-  const h = Math.floor(timeLeft / 3600000);
-  const m = Math.floor((timeLeft % 3600000) / 60000);
-  const s = Math.floor((timeLeft % 60000) / 1000);
-  return `${h > 0 ? h + "h " : ""}${m}m ${s}s`;
-}
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+    const [user, setUser] = useState<AppUserProfile | null>(null);
+    const [loading, setLoading] = useState(true);
 
-function FeaturedCard({ item }: { item: FeaturedItem }) {
-  const [wishlisted, setWishlisted] = useState(false);
-  const [showPrice, setShowPrice] = useState(false);
-  const [flipped, setFlipped] = useState(false);
-  const countdown = useCountdown(item.flashDealEnds);
+    // 🔄 Restore session on app load
+    useEffect(() => {
+        const fetchUserSession = async () => {
+            try {
+                const session = await getCurrentUser(); // Fetch authenticated Appwrite account
+                if (session) {
+                    await loadUserProfile(session.$id);
+                } else {
+                    setUser(null);
+                }
+            } catch (error) {
+                console.error("Error restoring session:", error);
+                setUser(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchUserSession();
+    }, []);
 
-  // Badge color logic
-  const badgeColors: Record<"Hot" | "Trending" | "New", string> = {
-    Hot: "bg-red-500 text-white",
-    Trending: "bg-emerald-500 text-white",
-    New: "bg-indigo-500 text-white",
-  };
-
-  // Stock/progress
-  const percent = Math.round((item.available / item.total) * 100);
-  const lowStock = item.available <= 2;
-
-  // Animation classes
-  const almostGoneAnim = lowStock ? "animate-bounce animate-infinite" : "";
-  const bookNowPulse =
-    item.type === "booking" && item.available > 0
-      ? "animate-pulse animate-infinite"
-      : "";
-
-  function handleShare() {
-    if (navigator.share) {
-      navigator.share({
-        title: item.title,
-        text: item.description,
-        url: window.location.href,
-      });
-    } else {
-      alert("Share this item: " + window.location.href);
-    }
-  }
-
-  function handleFlip(e: React.MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation();
-    setFlipped((f) => !f);
-  }
-
-  return (
-    <div className="relative w-full h-[450px] [perspective:1200px] ml-4 mr-2 mb-10">
-      <div
-        className={`
-          transition-transform duration-700 [transform-style:preserve-3d] w-full h-full
-          ${flipped ? "[transform:rotateY(180deg)]" : ""}
-        `}
-      >
-        {/* Front */}
-        <div className="
-          absolute w-full h-full [backface-visibility:hidden] bg-gradient-to-br from-white/90 to-indigo-50 dark:from-gray-900/90 dark:to-indigo-900 rounded-xl shadow-xl overflow-hidden flex flex-col animate-fade-in pb-4
-        ">
-          <div className="relative">
-            <img
-              src={item.imageUrl}
-              alt={item.title}
-              className="w-full h-48 object-cover animate-fade-in"
-            />
-            {/* Badge */}
-            {item.badge && (
-              <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold shadow ${badgeColors[item.badge]} animate-fade-in`}>
-                {item.badge === "Hot" && <Flame className="inline w-4 h-4 mr-1" />}
-                {item.badge}
-              </span>
-            )}
-            {/* Flash deal countdown */}
-            {countdown && (
-              <span className="absolute top-3 right-3 flex items-center gap-1 bg-black/70 text-white px-2 py-0.5 rounded-full text-xs animate-fade-in">
-                <Clock className="w-4 h-4" /> {countdown}
-              </span>
-            )}
-            {/* Wishlist */}
-            <button
-              className="absolute bottom-3 right-3 bg-white/80 dark:bg-gray-800/80 rounded-full p-2 shadow hover:bg-pink-100 dark:hover:bg-pink-900 transition"
-              aria-label="Add to wishlist"
-              onClick={(e) => {
-                e.stopPropagation();
-                setWishlisted((w) => !w);
-              }}
-            >
-              <Heart className={`w-5 h-5 transition-all duration-300 ${wishlisted ? "fill-pink-500 text-pink-500 scale-125" : "text-gray-400"}`} />
-            </button>
-            {/* Share */}
-            <button
-              className="absolute bottom-3 left-3 bg-white/80 dark:bg-gray-800/80 rounded-full p-2 shadow hover:bg-indigo-100 dark:hover:bg-indigo-900 transition"
-              aria-label="Share"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleShare();
-              }}
-            >
-              <Share2 className="w-5 h-5 text-indigo-500" />
-            </button>
-            {/* Flip button (Info) always visible */}
-            <button
-              className="absolute top-3 right-1 bg-white/80 dark:bg-gray-800/80 rounded-full p-1.5 shadow hover:bg-indigo-100 dark:hover:bg-indigo-900 transition z-10"
-              aria-label="Show more info"
-              onClick={handleFlip}
-            >
-              <Info className="w-5 h-5 text-indigo-500" />
-            </button>
-          </div>
-          <div className="p-4 flex-1 flex flex-col justify-between">
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white animate-fade-in">{item.title}</h3>
-              <p className="mt-2 text-gray-600 dark:text-gray-300 animate-fade-in">{item.description}</p>
-            </div>
-            {/* Stock/booking info */}
-            <div className="mt-4 flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                {item.type === "goods" ? (
-                  <ShoppingBag className="w-4 h-4 text-indigo-500" />
-                ) : (
-                  <Calendar className="w-4 h-4 text-emerald-500" />
-                )}
-                <span className={`text-xs font-semibold ${lowStock ? "text-red-600" : "text-indigo-600 dark:text-indigo-300"}`}>
-                  {item.available} {item.type === "goods" ? "in stock" : "bookings"} left
-                </span>
-                {lowStock && (
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 ${almostGoneAnim}`}>
-                    Almost Gone!
-                  </span>
-                )}
-                {bookNowPulse && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 animate-pulse">
-                    Book Now
-                  </span>
-                )}
-              </div>
-              {/* Progress bar */}
-              <div className="flex-1 ml-2 h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                <div
-                  className={`h-2 rounded-full transition-all duration-500 ${lowStock ? "bg-red-500" : "bg-indigo-500"}`}
-                  style={{ width: `${percent}%` }}
-                ></div>
-              </div>
-            </div>
-            {/* Seller & price */}
-            <div className="flex items-center justify-between mt-4">
-              <div className="flex items-center gap-2">
-                <img
-                  src={item.seller.avatar}
-                  alt={item.seller.name}
-                  className="w-8 h-8 rounded-full border-2 border-indigo-300 dark:border-indigo-700"
-                />
-                <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{item.seller.name}</span>
-                <span className="flex items-center gap-1 text-yellow-500 ml-2">
-                  <Star className="w-4 h-4" /> {item.seller.rating}
-                </span>
-              </div>
-              {/* Animated price reveal */}
-              <div
-                className="relative"
-                onMouseEnter={() => setShowPrice(true)}
-                onMouseLeave={() => setShowPrice(false)}
-                onTouchStart={() => setShowPrice((p) => !p)}
-              >
-                <span className={`
-                  font-bold text-indigo-600 dark:text-indigo-300 transition-all duration-500
-                  ${showPrice ? "opacity-100 scale-110 animate-bounce" : "opacity-60 scale-90"}
-                `}>
-                  {item.price}
-                </span>
-              </div>
-            </div>
-            <Button
-              variant="secondary"
-              className="mt-4 mb-6 w-full"
-              onClick={() => alert(`View details for ${item.title}`)}
-            >
-              View Details
-            </Button>
-          </div>
-        </div>
-        {/* Back */}
-        <div className="
-          absolute w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)]
-          bg-indigo-600 dark:bg-indigo-900 text-white rounded-xl shadow-xl flex flex-col p-6 items-center justify-center
-        ">
-          <h3 className="text-xl font-bold mb-2 animate-fade-in">{item.title}</h3>
-          <p className="mb-4 text-center animate-fade-in">{item.description}</p>
-          <Button
-            variant="outline"
-            className="w-full border-white text-primary hover:bg-white/10 animate-fade-in"
-            onClick={() => alert(`Quick action for ${item.title}`)}
-          >
-            Quick Book / Buy Now
-          </Button>
-          <Button
-            size="sm"
-            className="mt-4 w-full bg-white/10 text-white border-white"
-            onClick={handleFlip}
-          >
-            Back
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function FeaturedListingsCarousel() {
-  const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
-  const navigate = useNavigate();
-
-  // Responsive cards per view (1 mobile, 2 desktop)
-  const [cardsPerView, setCardsPerView] = useState(1);
-  useEffect(() => {
-    function handleResize() {
-      setCardsPerView(window.innerWidth < 768 ? 1 : 2);
-    }
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  // Update selected index and scroll snaps on carousel init and slide change
-  const onSelect = useCallback(() => {
-    if (!carouselApi) return;
-    setSelectedIndex(carouselApi.selectedScrollSnap());
-  }, [carouselApi]);
-
-  useEffect(() => {
-    if (!carouselApi) return;
-    onSelect();
-    setScrollSnaps(carouselApi.scrollSnapList());
-    carouselApi.on("select", onSelect);
-    carouselApi.on("reInit", onSelect);
-    return () => {
-      carouselApi.off("select", onSelect);
-      carouselApi.off("reInit", onSelect);
+    // 📄 Load user profile from database
+    const loadUserProfile = async ($id: string) => {
+        try {
+            const profile = await databases.getDocument(
+                DB_ID,
+                USERS_COLLECTION_ID,
+                $id
+            );
+            setUser(profile as AppUserProfile);
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+            setUser(null);
+        }
     };
-  }, [carouselApi, onSelect]);
 
-  // Scroll to a specific slide
-  function scrollTo(index: number) {
-    if (!carouselApi) return;
-    carouselApi.scrollTo(index);
-  }
+    // 🔐 Login function (Account + Database Profile)
+    const login = async (
+        email: string,
+        password: string
+    ): Promise<AppUserProfile | null> => {
+        try {
+            await loginUser(email, password); // Create session
+            const accountData = await account.get(); // Get account data
+            await loadUserProfile(accountData.$id); // Load associated profile
+            return user;
+        } catch (error) {
+            console.error("Login failed:", error);
+            return null;
+        }
+    };
 
-  return (
-    <section className="max-w-7xl mx-auto px-3 sm:px-6 py-8 relative">
-      <h2 className="text-2xl font-semibold mb-6 text-primary dark:text-primary-light text-center animate-fade-in">
-        Featured Listings
-      </h2>
+    // 🚪 Logout user
+    const logout = async (): Promise<void> => {
+        try {
+            await logoutUser();
+            setUser(null);
+        } catch (error) {
+            console.error("Logout error:", error);
+        }
+    };
 
-      <Carousel
-        setApi={setCarouselApi}
-        opts={{
-          align: "start",
-          loop: false,
-        }}
-        className="w-full relative"
-      >
-        {/* Overlay Prev Button */}
-        <CarouselPrevious className="
-          absolute top-1/2 left-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition
-          focus:outline-none focus:ring-2 focus:ring-indigo-500
-        ">
-          <ChevronLeft className="w-6 h-6" />
-        </CarouselPrevious>
+    // 🔄 Refresh user data
+    const refreshUser = async () => {
+        try {
+            const accountData = await account.get();
+            await loadUserProfile(accountData.$id);
+        } catch (error) {
+            console.error("Error refreshing user:", error);
+            setUser(null);
+        }
+    };
 
-        {/* Overlay Next Button */}
-        <CarouselNext className="
-          absolute top-1/2 right-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition
-          focus:outline-none focus:ring-2 focus:ring-indigo-500
-        ">
-          <ChevronRight className="w-6 h-6" />
-        </CarouselNext>
-
-        <CarouselContent>
-          {featuredItems.map((item) => (
-            <CarouselItem
-              key={item.id}
-              className="pl-1 md:basis-1/2 lg:basis-1/2"
-            >
-              <div className="min-h-[420px] animate-fade-in flex gap-10">
-                <FeaturedCard item={item} />
-              </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-      
-      {/* Dot Indicators */}
-      <div className="flex justify-center gap-3 mt-6">
-        {scrollSnaps.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => scrollTo(index)}
-            className={`w-3 h-3 rounded-full transition-colors ${
-              selectedIndex === index
-                ? "bg-indigo-600 dark:bg-indigo-400 scale-125"
-                : "bg-gray-300 dark:bg-gray-700"
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
-      </Carousel>
-
-
-      {/* View More Button */}
-      <div className="flex justify-center mt-8">
-        <Button
-          className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-400 dark:hover:bg-indigo-500 px-8 py-3 text-base font-semibold rounded-full shadow-lg transition"
-          onClick={() => navigate("/collections")}
+    return (
+        <AuthContext.Provider
+            value={{ user, loading, login, logout, refreshUser }}
         >
-          View More Products & Services
-        </Button>
-      </div>
-    </section>
-  );
+            {!loading && children}
+        </AuthContext.Provider>
+    );
+};
+
+// 🔧 Custom Hook
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context)
+        throw new Error("useAuth must be used within an AuthProvider");
+    return context;
+};
+
+// src/lib/appwrite.ts
+import { Client, Account, Databases, ID } from "appwrite";
+
+/**
+ * Initialize Appwrite Client
+ */
+const client = new Client();
+
+client
+    .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT) // Your Appwrite endpoint
+    .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID); // Your Appwrite project ID
+
+export const account = new Account(client);
+export const databases = new Databases(client);
+
+// ✅ Constants from environment variables
+export const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
+export const USERS_COLLECTION_ID = import.meta.env
+    .VITE_APPWRITE_USER_COLLECTION_ID;
+
+/**
+ * ✅ Register User
+ * Handles both Appwrite authentication + database profile creation
+ */
+export async function registerUser({
+    email,
+    password,
+    fullName,
+    role = "customer", // default user role
+    country = "unknown"
+}: {
+    email: string;
+    password: string;
+    fullName: string;
+    role?: string;
+    country?: string;
+}) {
+    try {
+        // Step 1: Create User Account in Appwrite auth
+        const userAccount = await account.create(
+            ID.unique(),
+            email,
+            password,
+            fullName
+        );
+
+        // Step 2: Automatically login user
+        await account.createEmailPasswordSession(email, password);
+
+        // Step 3: Store profile in database (key = same user ID)
+        await databases.createDocument(
+            DB_ID,
+            USERS_COLLECTION_ID,
+            userAccount.$id,
+            {
+                fullName,
+                email,
+                role,
+                country,
+                accountStatus: "active",
+                vendorType: null,
+                businessName: "",
+                verificationStatus: "unverified",
+                createdAt: new Date().toISOString()
+            }
+        );
+
+        return userAccount;
+    } catch (error: any) {
+        console.error("Appwrite Registration Error:", error?.message || error);
+        throw error;
+    }
 }
+
+/**
+ * 🔐 Login User
+ */
+export async function loginUser(email: string, password: string) {
+    try {
+        return await account.createEmailPasswordSession(email, password);
+    } catch (error: any) {
+        console.error("Login Error:", error?.message || error);
+        throw error;
+    }
+}
+
+/**
+ * 👤 Get current authenticated user
+ * (from Appwrite Authentication service)
+ */
+export async function getCurrentUser() {
+    try {
+        const user = await account.get();
+        return user;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * 🚪 Logout user
+ */
+export async function logoutUser() {
+    await account.deleteSessions();
+}
+
+
+// src/utils/auth.ts
+import {
+    registerUser,
+    loginUser,
+    logoutUser,
+    getCurrentUser as appwriteGetCurrentUser
+} from "@/lib/appwrite";
+
+import { User } from "@/types/auth";
+
+export async function register(
+    email: string,
+    password: string,
+    fullName: string,
+    role: string = "customer",
+    country: string = "unknown"
+): Promise<User | null> {
+    try {
+        const userAccount = await registerUser({ email, password, fullName, role, country });
+
+        // Appwrite returns a user object with $id, name, email, etc.
+        return {
+            id: userAccount.$id,
+            name: userAccount.name,
+            email: userAccount.email,
+            role,
+            country
+        };
+    } catch (error: any) {
+        console.error("Registration error:", error?.message || error);
+        return null;
+    }
+}
+
+export async function login(email: string, password: string): Promise<User | null> {
+    try {
+        const session = await loginUser(email, password);
+        const authUser = await appwriteGetCurrentUser();
+
+        if (!authUser) return null;
+
+        return {
+            id: authUser.$id,
+            name: authUser.name,
+            email: authUser.email,
+            role: "customer", // This should be fetched from database in next phase
+            country: "unknown"
+        };
+    } catch (error: any) {
+        console.error("Login error:", error?.message || error);
+        return null;
+    }
+}
+
+export async function logout(): Promise<void> {
+    try {
+        await logoutUser();
+    } catch (error: any) {
+        console.error("Logout failed:", error?.message || error);
+    }
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+    try {
+        const user = await appwriteGetCurrentUser();
+        if (!user) return null;
+
+        return {
+            id: user.$id,
+            name: user.name,
+            email: user.email,
+            role: "customer", // This will be synced with DB in next step
+            country: "unknown"
+        };
+    } catch {
+        return null;
+    }
+}
+
+
+// src/pages/auth/register.tsx
+import React, { useState } from "react";
+import AuthLayout from "@/components/layouts/AuthLayout";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { register } from "@/utils/auth"; // Import from new Appwrite auth utils
+
+const SignupPage: React.FC = () => {
+    const navigate = useNavigate();
+
+    // Form state
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [termsAccepted, setTermsAccepted] = useState(false);
+
+    // Basic validation helpers
+    const isEmailValid = (email: string) =>
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    const isPasswordValid = (password: string) => password.length >= 6;
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError("");
+
+        if (!name.trim()) return setError("Please enter your full name.");
+        if (!isEmailValid(email))
+            return setError("Please enter a valid email address.");
+        if (!isPasswordValid(password))
+            return setError("Password must be at least 6 characters.");
+        if (password !== confirmPassword)
+            return setError("Passwords do not match.");
+        if (!termsAccepted)
+            return setError("You must accept the terms and conditions.");
+
+        setLoading(true);
+        const user = await register(email, password, name);
+
+        setLoading(false);
+        if (user) {
+            navigate("/dashboard");
+        } else {
+            setError("Registration failed. Please try again.");
+        }
+    };
+
+    return (
+        <AuthLayout title="Create your account">
+            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+                {error && (
+                    <div
+                        role="alert"
+                        className="text-red-600 text-center font-medium text-sm"
+                    >
+                        {error}
+                    </div>
+                )}
+
+                {/* Name */}
+                <div>
+                    <Label htmlFor="name" className="mb-1 block font-semibold">
+                        Full Name
+                    </Label>
+                    <Input
+                        id="name"
+                        type="text"
+                        placeholder="John Doe"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        required
+                        autoComplete="name"
+                        autoFocus
+                    />
+                </div>
+
+                {/* Email */}
+                <div>
+                    <Label htmlFor="email" className="mb-1 block font-semibold">
+                        Email Address
+                    </Label>
+                    <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        required
+                        autoComplete="email"
+                    />
+                </div>
+
+                {/* Password */}
+                <div className="relative">
+                    <Label
+                        htmlFor="password"
+                        className="mb-1 block font-semibold"
+                    >
+                        Password
+                    </Label>
+                    <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Create a password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        required
+                        autoComplete="new-password"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(v => !v)}
+                        className="absolute right-3 top-7 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+                        aria-label={
+                            showPassword ? "Hide password" : "Show password"
+                        }
+                    >
+                        {showPassword ? (
+                            <EyeOff size={20} />
+                        ) : (
+                            <Eye size={20} />
+                        )}
+                    </button>
+                </div>
+
+                {/* Confirm Password */}
+                <div className="relative">
+                    <Label
+                        htmlFor="confirmPassword"
+                        className="mb-1 block font-semibold"
+                    >
+                        Confirm Password
+                    </Label>
+                    <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        required
+                        autoComplete="new-password"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(v => !v)}
+                        className="absolute right-3 top-7 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+                        aria-label={
+                            showConfirmPassword
+                                ? "Hide password"
+                                : "Show password"
+                        }
+                    >
+                        {showConfirmPassword ? (
+                            <EyeOff size={20} />
+                        ) : (
+                            <Eye size={20} />
+                        )}
+                    </button>
+                </div>
+
+                {/* Terms and Conditions */}
+                <div className="flex items-center space-x-2">
+                    <Checkbox
+                        id="terms"
+                        checked={termsAccepted}
+                        onCheckedChange={checked => setTermsAccepted(!!checked)}
+                    />
+                    <Label htmlFor="terms" className="select-none">
+                        I agree to the{" "}
+                        <a
+                            href="/terms"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 hover:underline"
+                        >
+                            Terms and Conditions
+                        </a>
+                    </Label>
+                </div>
+
+                {/* Submit Button */}
+                <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (
+                        <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            Creating account...
+                        </>
+                    ) : (
+                        "Sign Up"
+                    )}
+                </Button>
+
+                {/* Login Link */}
+                <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+                    Already have an account?{" "}
+                    <Link
+                        to="/login"
+                        className="font-semibold text-indigo-600 hover:underline"
+                    >
+                        Sign in
+                    </Link>
+                </p>
+            </form>
+        </AuthLayout>
+    );
+};
+
+export default SignupPage;
+
+// console error
+cloud.appwrite.io/v1…b2523002a0093404b:1 
+ Failed to load resource: the server responded with a status of 404 ()
+AuthContext.tsx? [sm]:72 Error fetching user profile: AppwriteException: Document with the requested ID could not be found.
+    at _Client.<anonymous> (http://localhost:5173/node_modules/.vite/deps/appwrite.js?v=b642c8a2:548:15)
+    at Generator.next (<anonymous>)
+    at fulfilled (http://localhost:5173/node_modules/.vite/deps/appwrite.js?v=b642c8a2:13:24)
+cloud.appwrite.io/v1…b2523002a0093404b:1 
+ Failed to load resource: the server responded with a status of 404 ()
+AuthContext.tsx? [sm]:72 Error fetching user profile: AppwriteException: Document with the requested ID could not be found.
+    at _Client.<anonymous> (http://localhost:5173/node_modules/.vite/deps/appwrite.js?v=b642c8a2:548:15)
+    at Generator.next (<anonymous>)
+    at fulfilled (http://localhost:5173/node_modules/.vite/deps/appwrite.js?v=b642c8a2:13:24)
+appwrite.ts? [sm]:47 Appwrite is using localStorage for session management. Increase your security by adding a custom domain as your API endpoint.
+appwrite.ts? [sm]:50 
+ POST https://cloud.appwrite.io/v1/databases/68f4252…/collections/user/documents 400
+appwrite.ts? [sm]:69 Appwrite Registration Error: Invalid document structure: Unknown attribute: "email"
+auth.ts? [sm]:29 Registration error: Invalid document structure: Unknown
+attribute: "email
