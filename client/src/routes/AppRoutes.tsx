@@ -7,6 +7,7 @@ import { SingleCollectionPage } from "@/pages/collections/SingleCollectionPage";
 import LoginPage from "@/pages/auth/login";
 import SignupPage from "@/pages/auth/register";
 import Unauthorized from "@/pages/auth/Unauthorized";
+import Verify from "@/pages/auth/Verify";
 import PageLayout from "@/components/layouts/PageLayout";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import Dashboard from "@/pages/dashboard/Dashboard";
@@ -24,6 +25,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<SignupPage />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
+     <Route path="/auth/verify" element={<Verify />} />
+     
       <Route path="/" element={<PageLayout />}>
         <Route index element={<HomePage />} />
         <Route path="/collections" element={<CollectionsPage />} />

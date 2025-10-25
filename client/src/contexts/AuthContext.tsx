@@ -1,130 +1,138 @@
-import React, {
-    createContext,
-    useContext,
-    useState,
-    useEffect,
-    ReactNode
-} from "react";
-import { User } from "@/types/auth";
-import { register, login, logout, getCurrentUser } from "@/utils/auth";
+
+import React, { createContext, useContext, useEffect, useState } from "react";
 import {
+    getCurrentUser,
+    createSession,
+    deleteSession,
+    registerUser,
     getUserProfile,
-    startSessionMonitor,
-    stopSessionMonitor
+    sendVerificationEmail,
+    startSessionMonitor
 } from "@/lib/appwrite";
 
 interface AuthContextType {
-    user: User | null;
+    user: any;
     loading: boolean;
-    register: (
-        email: string,
-        password: string,
-        fullName: string,
-        role?: string,
-        country?: string
-    ) => Promise<User | null>;
-    login: (email: string, password: string) => Promise<User | null>;
+    verificationSent: boolean;
+    login: (email: string, password: string) => Promise<void>;
+    register: (email: string, password: string, name: string) => Promise<void>;
     logout: () => Promise<void>;
-    refreshUser: () => Promise<void>;
+    resendVerification: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+    const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [verificationSent, setVerificationSent] = useState(false);
 
-    // 🚀 Initialize user + start session monitor
+    // -----------------------------------
+    // 🔄 Initialize and monitor session
+    // -----------------------------------
     useEffect(() => {
+        let stopMonitor: (() => void) | null = null;
+
         const initAuth = async () => {
             try {
                 const current = await getCurrentUser();
-                if (current) {
-                    const profile = await getUserProfile(current.id);
-                    const fullUser = { ...current, profile };
-                    setUser(fullUser);
-                    startSessionMonitor(() => {
-                        console.warn("Session expired — auto logout");
-                        handleLogout();
-                    });
-                } else {
+                if (!current) {
                     setUser(null);
+                    return;
                 }
+
+                const profile = await getUserProfile(current.$id);
+                setUser({
+                    id: current.$id,
+                    name: current.name,
+                    email: current.email,
+                    emailVerification: current.emailVerification,
+                    profile
+                });
+
+                stopMonitor = startSessionMonitor(handleLogout);
             } catch (error) {
-                console.error("Init auth error:", error);
+                console.error("Auth init error:", error);
                 setUser(null);
             } finally {
                 setLoading(false);
             }
         };
-        initAuth();
 
-        // Cleanup monitor on unmount
-        return () => stopSessionMonitor();
+        initAuth();
+        return () => stopMonitor && stopMonitor();
     }, []);
+
+    // -----------------------------------
+    // 🔐 Auth Actions
+    // -----------------------------------
+    const handleLogin = async (email: string, password: string) => {
+        try {
+            await createSession(email, password);
+            const current = await getCurrentUser();
+            const profile = await getUserProfile(current.$id);
+            setUser({
+                id: current.$id,
+                name: current.name,
+                email: current.email,
+                emailVerification: current.emailVerification,
+                profile
+            });
+        } catch (error) {
+            console.error("Login error:", error);
+            throw error;
+        }
+    };
 
     const handleRegister = async (
         email: string,
         password: string,
-        fullName: string,
-        role = "customer",
-        country = "Nigeria"
+        name: string
     ) => {
-        const newUser = await register(
-            email,
-            password,
-            fullName,
-            role,
-            country
-        );
-        if (newUser) {
-            setUser(newUser);
-            startSessionMonitor(() => handleLogout());
+        try {
+            const newUser = await registerUser(email, password, name);
+            await sendVerificationEmail(window.location.origin + "/verify");
+            setVerificationSent(true);
+            return newUser;
+        } catch (error) {
+            console.error("Register error:", error);
+            throw error;
         }
-        return newUser;
-    };
-
-    const handleLogin = async (email: string, password: string) => {
-        const loggedUser = await login(email, password);
-        if (loggedUser) {
-            setUser(loggedUser);
-            startSessionMonitor(() => handleLogout());
-        }
-        return loggedUser;
     };
 
     const handleLogout = async () => {
-        await logout();
+        await deleteSession();
         setUser(null);
-        stopSessionMonitor();
     };
 
-    const refreshUser = async () => {
-        const refreshed = await getCurrentUser();
-        if (refreshed) {
-            const profile = await getUserProfile(refreshed.id);
-            setUser({ ...refreshed, profile });
+    const resendVerification = async () => {
+        try {
+            await sendVerificationEmail(window.location.origin + "/verify");
+            setVerificationSent(true);
+        } catch (error) {
+            console.error("Resend verification error:", error);
         }
     };
 
+    // -----------------------------------
+    // 🧩 Context Provider
+    // -----------------------------------
     return (
         <AuthContext.Provider
             value={{
                 user,
                 loading,
-                register: handleRegister,
+                verificationSent,
                 login: handleLogin,
+                register: handleRegister,
                 logout: handleLogout,
-                refreshUser
+                resendVerification
             }}
         >
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 };
 
-export const useAuth = () => {
-    const ctx = useContext(AuthContext);
-    if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-    return ctx;
-};
+// Custom hook for easy use
+export const useAuth = () => useContext(AuthContext)!;

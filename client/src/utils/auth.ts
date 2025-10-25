@@ -1,12 +1,16 @@
 import {
     registerUser,
-    loginUser,
-    logoutUser,
-    getCurrentUser as getAppwriteUser,
+    createSession,
+    deleteSession,
+    getCurrentUser as appwriteGetCurrentUser,
     getUserProfile
 } from "@/lib/appwrite";
 import { User } from "@/types/auth";
 
+/**
+ * Register a new user account and database profile.
+ * Automatically creates a session and returns basic user info.
+ */
 export async function register(
     email: string,
     password: string,
@@ -15,20 +19,22 @@ export async function register(
     country: string = "Nigeria"
 ): Promise<User | null> {
     try {
-        const userAccount = await registerUser({
-            email,
-            password,
-            fullName,
-            role,
-            country
-        });
-        const profile = await getUserProfile(userAccount.$id);
+        const newUser = await registerUser(email, password, fullName);
+
+        // Fetch current session data
+        const current = await appwriteGetCurrentUser();
+        if (!current) return null;
+
+        // Fetch or auto-create profile document
+        const profile = await getUserProfile(current.$id);
+
         return {
-            id: userAccount.$id,
-            name: userAccount.name,
-            email: userAccount.email,
-            role: profile?.role ?? role,
-            country: profile?.country ?? country
+            id: current.$id,
+            name: current.name,
+            email: current.email,
+            role: role,
+            country: country,
+            profile
         };
     } catch (error: any) {
         console.error("Registration error:", error?.message || error);
@@ -36,22 +42,29 @@ export async function register(
     }
 }
 
+/**
+ * Log in user safely — destroys old session if one exists.
+ * Returns user + profile if successful.
+ */
 export async function login(
     email: string,
     password: string
 ): Promise<User | null> {
     try {
-        await loginUser(email, password);
-        const appwriteUser = await getAppwriteUser();
-        if (!appwriteUser) return null;
+        await createSession(email, password);
 
-        const profile = await getUserProfile(appwriteUser.$id);
+        const authUser = await appwriteGetCurrentUser();
+        if (!authUser) return null;
+
+        const profile = await getUserProfile(authUser.$id);
+
         return {
-            id: appwriteUser.$id,
-            name: appwriteUser.name,
-            email: appwriteUser.email,
-            role: profile?.role ?? "customer",
-            country: profile?.country ?? "Nigeria"
+            id: authUser.$id,
+            name: authUser.name,
+            email: authUser.email,
+            role: profile?.role || "customer",
+            country: profile?.country || "Nigeria",
+            profile
         };
     } catch (error: any) {
         console.error("Login error:", error?.message || error);
@@ -59,28 +72,37 @@ export async function login(
     }
 }
 
+/**
+ * End the active Appwrite session safely.
+ */
 export async function logout(): Promise<void> {
     try {
-        await logoutUser();
+        await deleteSession();
     } catch (error: any) {
         console.error("Logout failed:", error?.message || error);
     }
 }
 
+/**
+ * Returns the active user (if logged in) and associated profile document.
+ */
 export async function getCurrentUser(): Promise<User | null> {
     try {
-        const user = await getAppwriteUser();
+        const user = await appwriteGetCurrentUser();
         if (!user) return null;
 
         const profile = await getUserProfile(user.$id);
+
         return {
             id: user.$id,
             name: user.name,
             email: user.email,
-            role: profile?.role ?? "customer",
-            country: profile?.country ?? "Nigeria"
+            role: profile?.role || "customer",
+            country: profile?.country || "Nigeria",
+            profile
         };
-    } catch {
+    } catch (error: any) {
+        console.error("Get current user error:", error?.message || error);
         return null;
     }
 }
