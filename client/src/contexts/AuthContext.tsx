@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import {
     getCurrentUser,
@@ -42,14 +41,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 }
 
                 const profile = await getUserProfile(current.$id);
+
+                // ✅ Include role directly in user object
                 setUser({
                     id: current.$id,
                     name: current.name,
                     email: current.email,
                     emailVerification: current.emailVerification,
+                    role: profile.role || "customer", // fallback safety
                     profile
                 });
 
+                // start auto-session refresh
                 stopMonitor = startSessionMonitor(handleLogout);
             } catch (error) {
                 console.error("Auth init error:", error);
@@ -71,11 +74,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             await createSession(email, password);
             const current = await getCurrentUser();
             const profile = await getUserProfile(current.$id);
+
             setUser({
                 id: current.$id,
                 name: current.name,
                 email: current.email,
                 emailVerification: current.emailVerification,
+                role: profile.role || "customer",
                 profile
             });
         } catch (error) {
@@ -134,5 +139,5 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 };
 
-// Custom hook for easy use
+// ✅ Custom hook for easy use
 export const useAuth = () => useContext(AuthContext)!;
