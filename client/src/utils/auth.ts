@@ -5,7 +5,7 @@ import {
     getCurrentUser as appwriteGetCurrentUser,
     getUserProfile
 } from "@/lib/appwrite";
-import { User } from "@/types/auth";
+import { User, UserRole } from "@/types/auth";
 
 /**
  * Register a new user account and database profile.
@@ -14,92 +14,47 @@ import { User } from "@/types/auth";
 export async function register(
     email: string,
     password: string,
-    fullName: string,
-    role: string = "customer",
-    country: string = "Nigeria"
-): Promise<User | null> {
-    try {
-        const newUser = await registerUser(email, password, fullName);
-
-        // Fetch current session data
-        const current = await appwriteGetCurrentUser();
-        if (!current) return null;
-
-        // Fetch or auto-create profile document
-        const profile = await getUserProfile(current.$id);
-
-        return {
-            id: current.$id,
-            name: current.name,
-            email: current.email,
-            role: role,
-            country: country,
-            profile
-        };
-    } catch (error: any) {
-        console.error("Registration error:", error?.message || error);
-        return null;
-    }
+    name?: string
+): Promise<User> {
+    // registerUser should return the Appwrite user object (newUser)
+    const newUser = await registerUser(email, password, name);
+    // createUserProfile is handled inside lib/appwrite registerUser (looks like)
+    // return a normalized User shape expected by the app
+    return {
+        id: String(newUser.$id),
+        name: newUser.name ?? name ?? null,
+        email: newUser.email ?? null,
+        role: "customer", // default role for newly registered users; app profile may override later
+        country: "Nigeria",
+        profile: null
+    };
 }
 
 /**
- * Log in user safely — destroys old session if one exists.
- * Returns user + profile if successful.
- */
-export async function login(
-    email: string,
-    password: string
-): Promise<User | null> {
-    try {
-        await createSession(email, password);
-
-        const authUser = await appwriteGetCurrentUser();
-        if (!authUser) return null;
-
-        const profile = await getUserProfile(authUser.$id);
-
-        return {
-            id: authUser.$id,
-            name: authUser.name,
-            email: authUser.email,
-            role: profile?.role || "customer",
-            country: profile?.country || "Nigeria",
-            profile
-        };
-    } catch (error: any) {
-        console.error("Login error:", error?.message || error);
-        return null;
-    }
-}
-
-/**
- * End the active Appwrite session safely.
- */
-export async function logout(): Promise<void> {
-    try {
-        await deleteSession();
-    } catch (error: any) {
-        console.error("Logout failed:", error?.message || error);
-    }
-}
-
-/**
- * Returns the active user (if logged in) and associated profile document.
+ * Get the current logged in user, normalized to our User type (or null).
  */
 export async function getCurrentUser(): Promise<User | null> {
     try {
         const user = await appwriteGetCurrentUser();
         if (!user) return null;
 
-        const profile = await getUserProfile(user.$id);
+        const profile = await getUserProfile(user.$id).catch(() => null);
+
+        // profile?.role may be a string from DB; explicitly cast/narrow it
+        const rawRole = (profile && (profile.role as string)) || "customer";
+        const role = (
+            ["admin", "seller", "customer"].includes(rawRole)
+                ? (rawRole as UserRole)
+                : "customer"
+        ) as UserRole;
 
         return {
-            id: user.$id,
-            name: user.name,
-            email: user.email,
-            role: profile?.role || "customer",
-            country: profile?.country || "Nigeria",
-            profile
+            id: String(user.$id),
+            name: user.name ?? null,
+            email: user.email ?? null,
+            role,
+            country: profile?.country ?? "Nigeria",
+            profile: profile ?? null
         };
     } catch (error: any) {
         console.error("Get current user error:", error?.message || error);

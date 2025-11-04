@@ -77,9 +77,11 @@ export default function DashboardHeader({
                                 alt="Zemelix"
                                 className="h-10 w-10 object-contain rounded-full hidden dark:block shadow-md"
                             />
-                            <span className="font-semibold text-foreground">
+                            
+                              <span className="font-semibold text-foreground">
                                 Zemelix
                             </span>
+                          
                         </Link>
                     </div>
                     <div className="text-sm text-muted-foreground">
@@ -94,7 +96,7 @@ export default function DashboardHeader({
         <header className="bg-background border-b border-border sticky top-0 z-50 shadow-sm">
             <div className="mx-auto px-4 py-3 flex items-center justify-between">
                 {/* Left section */}
-                <div className="flex gap-6 items-center">
+                <div className="flex gap-2 items-center">
                     {/* Sidebar toggle for mobile */}
                     <button
                         onClick={onToggleSidebar}
@@ -123,7 +125,7 @@ export default function DashboardHeader({
                 </div>
 
                 {/* Right section */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
                     <ThemeToggle />
 
                     {/* Notifications */}

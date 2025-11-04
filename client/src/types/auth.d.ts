@@ -1,9 +1,10 @@
-export type UserRole = 'admin' | 'seller' | 'customer';
+export type UserRole = "admin" | "seller" | "customer";
 
 export interface User {
-  id: number;
-  name: string;
-  email: string;
-  password: string; 
-  role: UserRole;
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    role: UserRole;
+    country?: string;
+    profile?: Record<string, any> | null;
 }
