@@ -13,8 +13,9 @@ interface AuthContextType {
     user: any;
     loading: boolean;
     verificationSent: boolean;
+    isVerified: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (email: string, password: string, name: string) => Promise<void>;
+    register: (email: string, password: string, name: string) => Promise<any>;
     logout: () => Promise<void>;
     resendVerification: () => Promise<void>;
 }
@@ -119,6 +120,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    const isVerified = !!user?.emailVerification;
+
     // -----------------------------------
     // 🧩 Context Provider
     // -----------------------------------
@@ -128,6 +131,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 user,
                 loading,
                 verificationSent,
+                isVerified,
                 login: handleLogin,
                 register: handleRegister,
                 logout: handleLogout,
