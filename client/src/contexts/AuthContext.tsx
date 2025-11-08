@@ -6,7 +6,8 @@ import {
     registerUser,
     getUserProfile,
     sendVerificationEmail,
-    startSessionMonitor
+    startSessionMonitor,
+    validateSession
 } from "@/lib/appwrite";
 
 interface AuthContextType {
@@ -28,32 +29,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [verificationSent, setVerificationSent] = useState(false);
 
     // -----------------------------------
-    // 🔄 Initialize and monitor session
+    // 🔄 Initialize and validate session
     // -----------------------------------
     useEffect(() => {
         let stopMonitor: (() => void) | null = null;
 
         const initAuth = async () => {
             try {
+                // ✅ Step 1: Validate current session
+                const validSession = await validateSession();
+
+                if (!validSession) {
+                    // No active or valid session → logout state
+                    setUser(null);
+                    setLoading(false);
+                    return;
+                }
+
+                // ✅ Step 2: Fetch user data
                 const current = await getCurrentUser();
                 if (!current) {
                     setUser(null);
+                    setLoading(false);
                     return;
                 }
 
                 const profile = await getUserProfile(current.$id);
 
-                // ✅ Include role directly in user object
                 setUser({
                     id: current.$id,
                     name: current.name,
                     email: current.email,
                     emailVerification: current.emailVerification,
-                    role: profile.role || "customer", // fallback safety
+                    role: profile.role || "customer",
                     profile
                 });
 
-                // start auto-session refresh
+                // ✅ Step 3: Start periodic session monitor
                 stopMonitor = startSessionMonitor(handleLogout);
             } catch (error) {
                 console.error("Auth init error:", error);
