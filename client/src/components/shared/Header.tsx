@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { CartPreview } from "@/components/shared/CartPreview";
 import {
   ShoppingCart,
   User,
@@ -24,6 +25,8 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import ThemeToggle from "../ui/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/hooks/useCart";
+import { CartBadge } from "@/components/ui/CartBadge";
 
 interface HeaderProps {
   cartCount?: number;
@@ -35,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { count } = useCart();
 
   const handleLogout = () => {
     logout();
@@ -119,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
           {/* Theme Toggle */}
           <ThemeToggle />
 
-          {/* Account */}
+          {/* Account Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Account">
@@ -145,8 +149,7 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
                       to="/register"
                       className="flex items-center gap-2 text-foreground hover:bg-muted hover:text-foreground"
                     >
-                      <UserPlus className="w-4 h-4" />
-                      Sign Up
+                      <UserPlus className="w-4 h-4" /> Sign Up
                     </Link>
                   </DropdownMenuItem>
                 </>
@@ -184,32 +187,38 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
                       <Settings className="w-4 h-4" /> Settings
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      to="/login"
-                      className="text-foreground flex items-center gap-2 hover:bg-muted hover:text-foreground"
-                    >
+                  <DropdownMenuItem onSelect={handleLogout}>
+                    <div className="text-foreground flex items-center gap-2 hover:bg-muted hover:text-foreground cursor-pointer">
                       <LogOut className="w-4 h-4" /> Logout
-                    </Link>
+                    </div>
                   </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Cart */}
-          <Link to="/cart" className="relative">
-            <Button variant="ghost" size="icon" aria-label="Cart">
-              <ShoppingCart className="h-5 w-5" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs text-[var(--color-primary-foreground)] font-bold">
-                  {cartCount}
-                </span>
-              )}
-            </Button>
-          </Link>
+          {/* Cart Drawer Trigger with Live Badge */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                className="relative p-2"
+                aria-label="Open cart"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                <CartBadge count={count} />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:w-[420px]">
+              <CartPreview
+                onClose={() => {
+                  /* sheet auto-closes */
+                }}
+              />
+            </SheetContent>
+          </Sheet>
 
-          {/* Mobile Nav Trigger */}
+          {/* Mobile Navigation */}
           <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
@@ -219,49 +228,39 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
             <SheetContent side="left" className="bg-[var(--color-background)]">
               <nav className="flex flex-col mt-8">
                 <Link
-                  className=" p-2 hover:bg-muted hover:text-primary"
+                  className="p-2 hover:bg-muted hover:text-primary"
                   to="/collections"
                   onClick={() => setMobileNavOpen(false)}
                 >
                   Shop
                 </Link>
-                <span>
-                  <hr />
-                </span>
-
+                <hr />
                 <Link
-                  className="p-2   hover:bg-muted hover:text-primary"
+                  className="p-2 hover:bg-muted hover:text-primary"
                   to="/sellers"
                   onClick={() => setMobileNavOpen(false)}
                 >
                   Sellers
                 </Link>
-                <span>
-                  <hr />
-                </span>
-
+                <hr />
                 <Link
-                  className="p-2   hover:bg-muted hover:text-primary"
+                  className="p-2 hover:bg-muted hover:text-primary"
                   to="/blog"
                   onClick={() => setMobileNavOpen(false)}
                 >
                   Blog
                 </Link>
-                <span>
-                  <hr />
-                </span>
+                <hr />
                 <Link
-                  className="p-2   hover:bg-muted hover:text-primary"
+                  className="p-2 hover:bg-muted hover:text-primary"
                   to="/about"
                   onClick={() => setMobileNavOpen(false)}
                 >
                   About
                 </Link>
-                <span>
-                  <hr />
-                </span>
+                <hr />
                 <Link
-                  className="p-2   hover:bg-muted hover:text-primary"
+                  className="p-2 hover:bg-muted hover:text-primary"
                   to="/contact"
                   onClick={() => setMobileNavOpen(false)}
                 >
