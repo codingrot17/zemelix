@@ -200,21 +200,13 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
           {/* Cart Drawer Trigger with Live Badge */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                className="relative p-2"
-                aria-label="Open cart"
-              >
+              <Button variant="ghost" className="relative p-2" aria-label="Open cart">
                 <ShoppingCart className="h-5 w-5" />
                 <CartBadge count={count} />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-full sm:w-[420px]">
-              <CartPreview
-                onClose={() => {
-                  /* sheet auto-closes */
-                }}
-              />
+              <CartPreview onClose={() => { /* auto-close handled by Sheet */ }} />
             </SheetContent>
           </Sheet>
 
@@ -227,50 +219,16 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
             </SheetTrigger>
             <SheetContent side="left" className="bg-[var(--color-background)]">
               <nav className="flex flex-col mt-8">
-                <Link
-                  className="p-2 hover:bg-muted hover:text-primary"
-                  to="/collections"
-                  onClick={() => setMobileNavOpen(false)}
-                >
-                  Shop
-                </Link>
+                <Link className="p-2 hover:bg-muted hover:text-primary" to="/collections" onClick={() => setMobileNavOpen(false)}>Shop</Link>
                 <hr />
-                <Link
-                  className="p-2 hover:bg-muted hover:text-primary"
-                  to="/sellers"
-                  onClick={() => setMobileNavOpen(false)}
-                >
-                  Sellers
-                </Link>
+                <Link className="p-2 hover:bg-muted hover:text-primary" to="/sellers" onClick={() => setMobileNavOpen(false)}>Sellers</Link>
                 <hr />
-                <Link
-                  className="p-2 hover:bg-muted hover:text-primary"
-                  to="/blog"
-                  onClick={() => setMobileNavOpen(false)}
-                >
-                  Blog
-                </Link>
+                <Link className="p-2 hover:bg-muted hover:text-primary" to="/blog" onClick={() => setMobileNavOpen(false)}>Blog</Link>
                 <hr />
-                <Link
-                  className="p-2 hover:bg-muted hover:text-primary"
-                  to="/about"
-                  onClick={() => setMobileNavOpen(false)}
-                >
-                  About
-                </Link>
+                <Link className="p-2 hover:bg-muted hover:text-primary" to="/about" onClick={() => setMobileNavOpen(false)}>About</Link>
                 <hr />
-                <Link
-                  className="p-2 hover:bg-muted hover:text-primary"
-                  to="/contact"
-                  onClick={() => setMobileNavOpen(false)}
-                >
-                  Contact
-                </Link>
-                <Input
-                  type="search"
-                  placeholder="Search products…"
-                  className="mt-4 bg-[var(--color-card)] text-[var(--color-card-foreground)]"
-                />
+                <Link className="p-2 hover:bg-muted hover:text-primary" to="/contact" onClick={() => setMobileNavOpen(false)}>Contact</Link>
+                <Input type="search" placeholder="Search products…" className="mt-4 bg-[var(--color-card)] text-[var(--color-card-foreground)]" />
               </nav>
             </SheetContent>
           </Sheet>

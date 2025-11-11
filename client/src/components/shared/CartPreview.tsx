@@ -1,8 +1,11 @@
-// client/src/components/shared/CartPreview.tsx
 import React from "react";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 
+/**
+ * CartPreview — lightweight cart drawer content.
+ * Uses the shared useCart hook which syncs across the app.
+ */
 export const CartPreview: React.FC<{ onClose?: () => void }> = ({
     onClose
 }) => {
@@ -30,7 +33,7 @@ export const CartPreview: React.FC<{ onClose?: () => void }> = ({
                                     {it.title}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                    {it.qty} × ₦{it.price.toFixed(2)}
+                                    {it.qty} × ₦{Number(it.price).toFixed(2)}
                                 </div>
                             </div>
 
@@ -74,16 +77,11 @@ export const CartPreview: React.FC<{ onClose?: () => void }> = ({
                                 Subtotal
                             </div>
                             <div className="text-lg font-semibold">
-                                ₦{subtotal.toFixed(2)}
+                                ₦{Number(subtotal || 0).toFixed(2)}
                             </div>
                         </div>
                         <div className="flex flex-col gap-2">
-                            <Button
-                                onClick={() => {
-                                    if (onClose)
-                                        onClose(); /* navigate to checkout later */
-                                }}
-                            >
+                            <Button onClick={() => onClose && onClose()}>
                                 Checkout
                             </Button>
                             <Button variant="ghost" onClick={() => clear()}>

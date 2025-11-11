@@ -1,15 +1,14 @@
 import React from "react";
 
 interface CartBadgeProps {
-    count: number;
-}
+  count: number;}
 
 export const CartBadge: React.FC<CartBadgeProps> = ({ count }) => {
-    if (count <= 0) return null;
+  if (!count || count <= 0) return null;
 
-    return (
-        <span
-            className="
+  return (
+    <span
+      className="
         absolute -top-1 -right-1 
         flex items-center justify-center
         w-4 h-4 text-[10px] font-bold text-white 
@@ -17,8 +16,11 @@ export const CartBadge: React.FC<CartBadgeProps> = ({ count }) => {
         shadow-md
         dark:bg-red-500
       "
-        >
-            {count > 9 ? "9+" : count}
-        </span>
-    );
+      aria-hidden={count <= 0}
+      role="status"
+      aria-label={`Cart items: ${count}`}
+    >
+      {count > 9 ? "9+" : count}
+    </span>
+  );
 };

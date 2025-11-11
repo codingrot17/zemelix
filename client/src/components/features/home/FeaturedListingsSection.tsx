@@ -63,23 +63,11 @@ export function FeaturedListingsCarousel() {
                 opts={{ align: "start", loop: false }}
                 className="w-full relative"
             >
-                {/* Overlay Prev Button */}
-                <CarouselPrevious
-                    className="
-            absolute top-1/2 left-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition
-            focus:outline-none focus:ring-2 focus:ring-indigo-500
-          "
-                >
+                <CarouselPrevious className="absolute top-1/2 left-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <ChevronLeft className="w-6 h-6" />
                 </CarouselPrevious>
 
-                {/* Overlay Next Button */}
-                <CarouselNext
-                    className="
-            absolute top-1/2 right-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition
-            focus:outline-none focus:ring-2 focus:ring-indigo-500
-          "
-                >
+                <CarouselNext className="absolute top-1/2 right-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <ChevronRight className="w-6 h-6" />
                 </CarouselNext>
 
@@ -141,7 +129,6 @@ export function FeaturedListingsCarousel() {
                     ))}
                 </CarouselContent>
 
-                {/* Dot Indicators */}
                 <div className="flex justify-center gap-3 mt-6">
                     {scrollSnaps.map((_, index) => (
                         <button
@@ -158,7 +145,6 @@ export function FeaturedListingsCarousel() {
                 </div>
             </Carousel>
 
-            {/* View More Button */}
             <div className="flex justify-center mt-8">
                 <Button
                     className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-400 dark:hover:bg-indigo-500 px-8 py-3 text-base font-semibold rounded-full shadow-lg transition"
