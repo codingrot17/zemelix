@@ -1,38 +1,42 @@
-import { Client, Account, Databases, ID, Permission, Role } from "appwrite";
+// client/src/lib/appwrite.ts
+import {
+    Client,
+    Account,
+    Databases,
+    ID,
+    Permission,
+    Role,
+    Storage
+} from "appwrite";
 
-// ------------------------------
-// 🔧 Client Setup (Safe)
-// ------------------------------
 const client = new Client()
     .setEndpoint(
         import.meta.env.VITE_APPWRITE_ENDPOINT || "https://cloud.appwrite.io/v1"
     )
     .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID);
 
-// ✅ Keep only public values in frontend.
-// ❌ Never include .setKey() or private API keys here.
-
+// SDK instances
 export const account = new Account(client);
 export const databases = new Databases(client);
+export const storage = new Storage(client);
 
-// Safe environment references
-const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
-const USERS_COLLECTION_ID = import.meta.env.VITE_APPWRITE_USER_COLLECTION_ID;
+// Environment keys (standardized)
+export const DB_ID = import.meta.env.VITE_APPWRITE_DB_ID;
+export const USERS_COLLECTION_ID = import.meta.env
+    .VITE_APPWRITE_USER_COLLECTION_ID;
+export const STORAGE_BUCKET_ID =
+    import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID || "default";
 
 // ------------------------------
-// 🧠 Session Utilities (Hardened)
+// Session helpers
 // ------------------------------
-
-// Safely clear any stale cookies to prevent leaked or invalid sessions
 function clearAppwriteCookies() {
-    // Remove session cookies created by Appwrite in browser environment
-    if (typeof document !== "undefined") {
-        const cookies = document.cookie.split(";");
-        for (const cookie of cookies) {
-            const name = cookie.split("=")[0].trim();
-            if (name.startsWith("a_session_")) {
-                document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-            }
+    if (typeof document === "undefined") return;
+    const cookies = document.cookie.split(";");
+    for (const cookie of cookies) {
+        const name = cookie.split("=")[0].trim();
+        if (name.startsWith("a_session_")) {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
         }
     }
 }
@@ -47,7 +51,8 @@ export async function getCurrentUser() {
 
 export async function createSession(email: string, password: string) {
     try {
-        clearAppwriteCookies(); // ensure clean start
+        clearAppwriteCookies();
+        // delete any existing sessions first
         await account.deleteSessions().catch(() => {});
         const session = await account.createEmailPasswordSession(
             email,
@@ -64,38 +69,30 @@ export async function deleteSession() {
     try {
         await account.deleteSessions();
     } catch (error) {
-        console.warn("No active session:", error);
+        console.warn("deleteSession:", error);
     } finally {
-        clearAppwriteCookies(); // ensure no leftover tokens
+        clearAppwriteCookies();
     }
 }
 
 export async function validateSession() {
     try {
-        // Ask Appwrite for current session
         const session = await account.getSession("current");
-
-        // If expired or invalid, it’ll throw below
-        if (!session) {
-            await account.deleteSessions().catch(() => {});
-            return null;
-        }
-
-        return session; // valid session
+        return session;
     } catch (error: any) {
-        // Handles expired or invalid session tokens
-        if (error.code === 401) {
-            console.warn("⚠️ Session expired, clearing...");
-            await account.deleteSessions().catch(() => {});
+        if (error?.code === 401) {
+            // session expired or invalid
+            try {
+                await account.deleteSessions().catch(() => {});
+            } catch {}
             return null;
         }
-        console.error("Session validation error:", error);
         return null;
     }
 }
 
 // ------------------------------
-// 👤 Registration & Profile
+// Registration & profile helpers
 // ------------------------------
 export async function registerUser(
     email: string,
@@ -109,11 +106,13 @@ export async function registerUser(
             password,
             name
         );
+        // create session for the new user
         await createSession(email, password);
+        // create default user profile document in DB
         await createUserProfile(newUser.$id, email, name);
         return newUser;
     } catch (error) {
-        console.error("Appwrite registration error:", error);
+        console.error("registerUser error:", error);
         throw error;
     }
 }
@@ -138,19 +137,21 @@ export async function createUserProfile(
                 subscriptionPlan: "free",
                 storeStatus: "closed",
                 currency: "NGN",
+                featuresEnabled: [],
+                dashboardLayout: null,
                 $createdAt: new Date().toISOString()
             },
             [
-                // ✅ User can manage their own document
+                // owner can manage their document
                 Permission.read(Role.user(userId)),
                 Permission.update(Role.user(userId)),
                 Permission.delete(Role.user(userId)),
-                // ✅ All logged-in users can read (optional)
+                // optionally allow authenticated users to read public profile
                 Permission.read(Role.users())
             ]
         );
     } catch (error) {
-        console.error("Profile creation error:", error);
+        console.error("createUserProfile error:", error);
         throw error;
     }
 }
@@ -159,8 +160,8 @@ export async function getUserProfile(userId: string) {
     try {
         return await databases.getDocument(DB_ID, USERS_COLLECTION_ID, userId);
     } catch (error: any) {
-        if (error.code === 404) {
-            console.warn("User profile not found, creating a new one...");
+        // If no profile exists, try to create one from the account
+        if (error?.code === 404) {
             const current = await account.get();
             return await createUserProfile(
                 current.$id,
@@ -173,73 +174,72 @@ export async function getUserProfile(userId: string) {
 }
 
 // ------------------------------
-// 📧 Email Verification (Safe + Robust)
+// Email verification
 // ------------------------------
 export async function sendVerificationEmail(redirectUrl: string) {
     try {
-        const session = await account.get();
-        if (!session)
-            throw new Error("No active session – please log in first.");
         return await account.createVerification(redirectUrl);
     } catch (error: any) {
-        console.error("Verification email error:", error?.message || error);
-        throw new Error("Failed to send verification email. Please try again.");
+        console.error("sendVerificationEmail error:", error);
+        throw error;
     }
 }
 
 export async function verifyEmail(userId: string, secret: string) {
     try {
         const result = await account.updateVerification(userId, secret);
-        console.log("✅ Email verified successfully");
-
-        // Optional: refresh session silently for consistent state
+        // optional attempt to refresh session
         try {
             await account.updateSession("current");
-        } catch {
-            console.warn("Session refresh skipped or user logged out");
-        }
-
+        } catch {}
         return result;
     } catch (error: any) {
-        const message =
-            error?.code === 409
-                ? "This email has already been verified."
-                : error?.code === 401
-                ? "Verification link is invalid or expired."
-                : "Email verification failed. Please try again.";
-
-        console.error("Email verification error:", message);
-        throw new Error(message);
+        console.error("verifyEmail error:", error);
+        throw error;
     }
 }
 
 // ------------------------------
-// 🕒 Session Monitor (Safe Refresh)
+// Session monitor
 // ------------------------------
 export function startSessionMonitor(onExpire: () => void) {
-    const interval = 1000 * 60 * 10; // every 10 minutes
-
+    const interval = 1000 * 60 * 10; // 10 minutes
     const refresh = async () => {
         try {
-            const current = await account.get(); // confirm session validity
-            if (!current) return onExpire();
-
+            await account.get();
             try {
                 await account.updateSession("current");
-            } catch (error: any) {
-                if (error.code === 401) {
-                    console.warn("⚠️ Session expired during refresh");
-                    onExpire();
-                }
+            } catch (err: any) {
+                if (err?.code === 401) onExpire();
             }
-        } catch (error: any) {
-            // Handles network or unknown failures gracefully
-            if (error.code === 401) onExpire();
-            else
-                console.warn("Session check skipped:", error?.message || error);
+        } catch (err: any) {
+            if (err?.code === 401) onExpire();
         }
     };
-
     const timer = setInterval(refresh, interval);
     return () => clearInterval(timer);
+}
+
+// ------------------------------
+// Storage helpers (file upload + preview)
+// ------------------------------
+export async function uploadFileToBucket(file: File) {
+    if (!file) throw new Error("No file provided");
+    const bucket = import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID || "default";
+    const res = await storage.createFile(bucket, ID.unique(), file);
+    return res.$id;
+}
+
+// Helper: get preview URL — Appwrite SDK provides getFilePreview/getFileView methods, but in browser we can construct preview fetch
+export function getFilePreviewUrl(fileId: string, width = 400, height = 400) {
+    if (!fileId) return "";
+    // SDK method getFilePreview can be used, but returning a URL path compatible with Appwrite's endpoints:
+    const endpoint = (
+        import.meta.env.VITE_APPWRITE_ENDPOINT || "https://cloud.appwrite.io/v1"
+    ).replace(/\/v1\/?$/, "");
+    const project = import.meta.env.VITE_APPWRITE_PROJECT_ID;
+    // Appwrite file preview endpoint:
+    return `${endpoint}/storage/buckets/${
+        import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID || "default"
+    }/files/${fileId}/preview?project=${project}&width=${width}&height=${height}`;
 }

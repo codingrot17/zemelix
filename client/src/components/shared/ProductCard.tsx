@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Heart, Star, ShoppingCart, Bookmark } from "lucide-react";
-import type { Product } from "@/types/product";
+import type { Product } from "@/types";
 
 export default function ProductCard({ product }: { product: Product }) {
-    const [isWishlisted, setWishlisted] = useState(false);
+    const [wishlisted, setWishlisted] = useState(false);
 
     const toggleWishlist = () => {
         setWishlisted(prev => {
@@ -18,12 +18,8 @@ export default function ProductCard({ product }: { product: Product }) {
     };
 
     return (
-        <div
-            className="group relative flex flex-col bg-white/90 dark:bg-zinc-900/90 
-      border border-zinc-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm 
-      hover:shadow-lg transition-all duration-300 ease-out"
-        >
-            {/* Product Image */}
+        <div className="group relative flex flex-col bg-white/90 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ease-out">
+            {/* Image */}
             <div className="relative h-56 w-full overflow-hidden">
                 <img
                     src={product.imageUrl}
@@ -33,28 +29,24 @@ export default function ProductCard({ product }: { product: Product }) {
                 />
                 <button
                     onClick={toggleWishlist}
-                    className="absolute top-3 right-3 bg-white/70 backdrop-blur-md p-2 rounded-full shadow-sm 
-          hover:scale-110 transition"
+                    className="absolute top-3 right-3 bg-white/70 backdrop-blur-md p-2 rounded-full shadow-sm hover:scale-110 transition"
                 >
                     <Heart
                         className={`w-4 h-4 ${
-                            isWishlisted
+                            wishlisted
                                 ? "fill-red-500 text-red-500"
                                 : "text-zinc-600"
                         }`}
                     />
                 </button>
                 {product.badge && (
-                    <span
-                        className="absolute bottom-3 left-3 px-2 py-1 text-xs font-semibold 
-            bg-gradient-to-r from-indigo-500 to-pink-500 text-white rounded-full"
-                    >
+                    <span className="absolute bottom-3 left-3 px-2 py-1 text-xs font-semibold bg-gradient-to-r from-indigo-500 to-pink-500 text-white rounded-full">
                         {product.badge}
                     </span>
                 )}
             </div>
 
-            {/* Product Details */}
+            {/* Details */}
             <div className="flex flex-col justify-between flex-grow p-4 space-y-3">
                 <div>
                     <div className="flex items-center gap-2">
@@ -85,7 +77,6 @@ export default function ProductCard({ product }: { product: Product }) {
                     </p>
                 </div>
 
-                {/* Meta Info */}
                 <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-1 text-yellow-500">
                         <Star className="w-4 h-4 fill-yellow-400" />{" "}
@@ -96,17 +87,13 @@ export default function ProductCard({ product }: { product: Product }) {
                     </span>
                 </div>
 
-                {/* Stock/Bookings */}
                 <div className="flex items-center justify-between">
                     <p className="text-xs text-zinc-500">
                         {product.vendorType === "seller"
                             ? `${product.stock} in stock`
                             : `${product.stock} slots left`}
                     </p>
-                    <button
-                        className="flex items-center gap-1 px-3 py-1.5 bg-zinc-900 text-white 
-            rounded-full text-xs hover:bg-zinc-700 active:scale-95 transition"
-                    >
+                    <button className="flex items-center gap-1 px-3 py-1.5 bg-zinc-900 text-white rounded-full text-xs hover:bg-zinc-700 active:scale-95 transition">
                         {product.vendorType === "seller" ? (
                             <>
                                 <ShoppingCart className="w-4 h-4" /> Add to Cart
