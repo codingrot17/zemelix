@@ -21,19 +21,25 @@ export function useProducts() {
                 }
 
                 const res = await databases.listDocuments(DB_ID, COLLECTION_ID);
-                const items = res.documents.map((doc: any) => ({
+                const items: Product[] = res.documents.map((doc: any) => ({
                     id: doc.$id,
-                    title: doc.title,
-                    shortDescription: doc.shortDescription,
-                    imageUrl: doc.imageUrl,
-                    price: doc.price,
-                    vendorName: doc.vendorName,
-                    vendorType: doc.vendorType,
-                    vendorAvatar: doc.vendorAvatar,
-                    stock: doc.stock,
-                    rating: doc.rating,
-                    badge: doc.badge
+                    title: doc.title ?? "",
+                    shortDescription: doc.shortDescription ?? "",
+                    imageUrl: doc.imageUrl ?? "",
+                    price: doc.price ?? 0,
+                    vendorName: doc.vendorName ?? "",
+                    vendorType: doc.vendorType ?? "seller",
+                    vendorAvatar: doc.vendorAvatar ?? "",
+                    stock: doc.stock ?? 0,
+                    rating: doc.rating ?? 0,
+                    badge: doc.badge,
+                    category: doc.category ?? "general",
+                    tags: doc.tags ?? [],
+                    featured: doc.featured ?? false,
+                    vendorBio: doc.vendorBio ?? "",
+                    longDescription: doc.longDescription ?? ""
                 }));
+
                 setProducts(items);
             } catch (err) {
                 console.warn(
