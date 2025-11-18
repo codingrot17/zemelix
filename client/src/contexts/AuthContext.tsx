@@ -178,14 +178,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 };
 
 // export small helper util
-export const canUpgradeToVendor = (user: any | null) => {
+export const canUpgradeToVendor = (user: any): boolean => {
     if (!user) return false;
-    const isVerified = user.emailVerification === true;
-    return (
-        user.role === "customer" &&
-        isVerified &&
-        user.accountStatus === "active"
-    );
+
+    // Only customers can upgrade
+    if (user.role !== "customer") return false;
+
+    // Must be email verified
+    if (!user.emailVerification) return false;
+
+    // Must have an active profile
+    const status = user.profile?.accountStatus;
+    if (status !== "active") return false;
+
+    return true;
 };
 
 export const useAuth = () => {

@@ -47,7 +47,7 @@ const AppRoutes: React.FC = () => {
 
             {/* ---------------- Vendor Onboarding Wizard ---------------- */}
             <Route
-                path="/vendor-wizard"
+                path="/vendor/upgrade"
                 element={
                     <UpgradeGate>
                         <VendorWizardLayout />
