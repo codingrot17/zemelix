@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Heart, Star, ShoppingCart, Bookmark } from "lucide-react";
-import type { Product } from "@/types";
+import type { Product } from "@/types/product.ts";
 
 export default function ProductCard({ product }: { product: Product }) {
     const [wishlisted, setWishlisted] = useState(false);

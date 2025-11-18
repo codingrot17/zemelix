@@ -5,7 +5,7 @@ import { databases, storage } from "@/lib/appwrite";
 
 export default function ReviewStep() {
     const navigate = useNavigate();
-    const { user, refreshUser } = useAuth();
+    const { user, reloadUserProfile } = useAuth();
 
     const [businessInfo, setBusinessInfo] = useState(null);
     const [branding, setBranding] = useState(null);
@@ -41,7 +41,7 @@ export default function ReviewStep() {
             );
 
             // Refresh in context
-            await refreshUser();
+            await reloadUserProfile();
 
             // Cleanup
             localStorage.removeItem("vendor-onboarding-info");
