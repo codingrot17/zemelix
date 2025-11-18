@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { databases } from "@/lib/appwriteClient";
 import { products as dummyProducts } from "@/data/products"; // add if not present
-import type { Product } from "@/types";
+import type { Product } from "@/types/product";
 
 const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const COLLECTION_ID = import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION;
