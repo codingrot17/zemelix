@@ -14,7 +14,7 @@ const UpgradeGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     // email not verified
     if (!user.emailVerification) {
         // optionally: redirect to a verify email page or show message
-        return <Navigate to="/verify-email" replace />;
+        return <Navigate to="/verify" replace />;
     }
 
     // if already seller or admin, don't allow onboarding
