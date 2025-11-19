@@ -1,42 +1,46 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { canUpgradeToVendor } from "@/contexts/AuthContext";
+import { useAuth, canUpgradeToVendor } from "@/contexts/AuthContext";
 
+/**
+ * UpgradeGate — FINAL REFINED VERSION
+ *
+ * Rules:
+ * 1. Must be logged in
+ * 2. Must have verified email
+ * 3. Must NOT already be a vendor
+ * 4. Must be eligible to upgrade
+ *
+ * This version relies entirely on AuthContext (the correct source of truth).
+ */
 const UpgradeGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user, loading } = useAuth();
 
-    // Temporary debug logs (remove when satisfied)
-    console.log("USER ROLE:", user?.role);
-    console.log("EMAIL VERIFIED:", user?.emailVerification);
-    console.log("ACCOUNT STATUS:", user?.profile?.accountStatus);
-    console.log("ELIGIBLE:", canUpgradeToVendor(user));
-
-    // Still checking session
+    // Still checking auth
     if (loading) {
         return (
             <div className="p-6 text-center text-gray-600">
-                Checking account...
+                Checking account…
             </div>
         );
     }
 
-    // Not logged in → go to login
+    // Not logged in ⇒ go to login
     if (!user) {
         return <Navigate to="/login" replace />;
     }
 
-    // Must verify email first
+    // Email not verified ⇒ send to verify
     if (!user.emailVerification) {
         return <Navigate to="/verify" replace />;
     }
 
-    // Already seller → redirect to seller dashboard
-    if (user.role === "seller") {
-        return <Navigate to="/vendor/dashboard" replace />;
+    // Already a vendor ⇒ send to vendor dashboard
+    if (user.role === "vendor" || user.profile?.vendorId) {
+        return <Navigate to="/dashboard/vendor" replace />;
     }
 
-    // Customer but *not* eligible (should be rare now)
+    // Must be eligible to upgrade
     if (!canUpgradeToVendor(user)) {
         return (
             <div className="p-6 text-center text-red-500 font-medium">
@@ -45,7 +49,7 @@ const UpgradeGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         );
     }
 
-    // All green → allow access
+    // Allowed → render wizard
     return <>{children}</>;
 };
 

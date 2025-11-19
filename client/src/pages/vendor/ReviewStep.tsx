@@ -1,95 +1,54 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useVendorWizard } from "@/hooks/useVendorWizard";
 import { useAuth } from "@/contexts/AuthContext";
-import { databases, storage } from "@/lib/appwrite";
 
 export default function ReviewStep() {
     const navigate = useNavigate();
-    const { user, reloadUserProfile } = useAuth();
+    const { completeWizard, loading } = useVendorWizard();
+    const { user } = useAuth();
 
-    const [businessInfo, setBusinessInfo] = useState(null);
-    const [branding, setBranding] = useState(null);
-    const [submitting, setSubmitting] = useState(false);
-
-    useEffect(() => {
-        setBusinessInfo(
-            JSON.parse(localStorage.getItem("vendor-onboarding-info"))
-        );
-        setBranding(
-            JSON.parse(localStorage.getItem("vendor-onboarding-branding"))
-        );
-    }, []);
-
-    async function handleSubmit() {
-        setSubmitting(true);
-
-        try {
-            const updatedData = {
-                ...businessInfo,
-                slogan: branding.slogan,
-                role: "seller",
-                storeStatus: "closed",
-                verificationStatus: "pending"
-            };
-
-            // Update Appwrite user document
-            await databases.updateDocument(
-                user.$databaseId,
-                user.$tableId,
-                user.$id,
-                updatedData
-            );
-
-            // Refresh in context
-            await reloadUserProfile();
-
-            // Cleanup
-            localStorage.removeItem("vendor-onboarding-info");
-            localStorage.removeItem("vendor-onboarding-branding");
-
-            navigate("/vendor/dashboard");
-        } catch (err) {
-            console.error(err);
-        }
-
-        setSubmitting(false);
-    }
-
-    if (!businessInfo) {
-        return <p>Loading...</p>;
-    }
+    const handleFinish = async () => {
+        await completeWizard();
+        navigate("/dashboard/vendor");
+    };
 
     return (
         <div className="space-y-4">
             <h2 className="text-lg font-semibold">Review Your Information</h2>
 
-            <div className="p-3 border rounded bg-white space-y-1">
+            <div className="border rounded-lg p-4 space-y-2">
                 <p>
-                    <strong>Name:</strong> {businessInfo.businessName}
+                    <strong>Name:</strong> {user?.businessName}
                 </p>
                 <p>
-                    <strong>Type:</strong> {businessInfo.vendorType}
+                    <strong>Description:</strong> {user?.businessDescription}
                 </p>
                 <p>
-                    <strong>Category:</strong> {businessInfo.businessCategory}
+                    <strong>Vendor Type:</strong> {user?.vendorType}
                 </p>
-                <p className="text-sm">
-                    <strong>Description:</strong>{" "}
-                    {businessInfo.businessDescription}
-                </p>
-
                 <p>
-                    <strong>Slogan:</strong> {branding?.slogan}
+                    <strong>Country:</strong> {user?.country}
+                </p>
+                <p>
+                    <strong>Color:</strong> {user?.primaryColor}
                 </p>
             </div>
 
-            <button
-                disabled={submitting}
-                onClick={handleSubmit}
-                className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium"
-            >
-                {submitting ? "Submitting..." : "Confirm & Upgrade"}
-            </button>
+            <div className="flex gap-3">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="flex-1 py-3 border rounded-lg"
+                >
+                    Back
+                </button>
+
+                <button
+                    onClick={handleFinish}
+                    className="flex-1 py-3 bg-green-600 text-white rounded-lg"
+                >
+                    {loading ? "Finalizing..." : "Finish Setup"}
+                </button>
+            </div>
         </div>
     );
 }

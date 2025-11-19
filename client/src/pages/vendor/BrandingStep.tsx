@@ -1,98 +1,73 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useVendorWizard } from "@/hooks/useVendorWizard";
+import { storage } from "@/lib/appwrite"; // your existing storage instance
 
 export default function BrandingStep() {
     const navigate = useNavigate();
+    const { saveData, loading } = useVendorWizard();
 
-    const [form, setForm] = useState({
-        slogan: "",
-        logoFile: null,
-        coverFile: null,
-        logoPreview: "",
-        coverPreview: ""
-    });
+    const [logo, setLogo] = useState<File | null>(null);
+    const [banner, setBanner] = useState<File | null>(null);
+    const [primaryColor, setPrimaryColor] = useState("#1a73e8");
 
-    function handleFileChange(field, file) {
-        const preview = file ? URL.createObjectURL(file) : "";
-        setForm(prev => ({
-            ...prev,
-            [field]: file,
-            [`${field}Preview`]: preview
-        }));
-    }
-
-    function handleNext() {
-        // Save temporary data
-        const temp = {
-            slogan: form.slogan,
-            logo: form.logoFile ? "selected" : null,
-            cover: form.coverFile ? "selected" : null
-        };
-
-        localStorage.setItem(
-            "vendor-onboarding-branding",
-            JSON.stringify(temp)
+    const uploadFile = async (file: File) => {
+        const uploaded = await storage.createFile(
+            "brand-assets",
+            file.name + Date.now(),
+            file
         );
+        return uploaded.$id;
+    };
+
+    const handleNext = async () => {
+        let logoId = null;
+        let bannerId = null;
+
+        if (logo) logoId = await uploadFile(logo);
+        if (banner) bannerId = await uploadFile(banner);
+
+        await saveData(
+            {
+                logo: logoId,
+                coverImage: bannerId,
+                primaryColor,
+            },
+            2 // next → review
+        );
+
         navigate("/vendor/upgrade/review");
-    }
+    };
 
     return (
         <div className="space-y-4">
             <h2 className="text-lg font-semibold">Branding</h2>
 
             <div>
-                <label className="text-sm">Slogan</label>
-                <input
-                    value={form.slogan}
-                    onChange={e => setForm({ ...form, slogan: e.target.value })}
-                    className="w-full p-2 border rounded"
-                    placeholder="Your business slogan"
-                />
+                <label className="block mb-1 font-medium">Logo</label>
+                <input type="file" onChange={(e) => setLogo(e.target.files?.[0] || null)} />
             </div>
 
-            {/* logo */}
             <div>
-                <label className="text-sm">Logo</label>
-                <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e =>
-                        handleFileChange("logoFile", e.target.files[0])
-                    }
-                />
-
-                {form.logoPreview && (
-                    <img
-                        src={form.logoPreview}
-                        className="h-20 w-20 mt-2 rounded object-cover"
-                    />
-                )}
+                <label className="block mb-1 font-medium">Banner</label>
+                <input type="file" onChange={(e) => setBanner(e.target.files?.[0] || null)} />
             </div>
 
-            {/* cover image */}
             <div>
-                <label className="text-sm">Cover Image</label>
+                <label className="block mb-1 font-medium">Primary Color</label>
                 <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e =>
-                        handleFileChange("coverFile", e.target.files[0])
-                    }
+                    type="color"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="w-16 h-10"
                 />
-
-                {form.coverPreview && (
-                    <img
-                        src={form.coverPreview}
-                        className="h-28 w-full mt-2 rounded object-cover"
-                    />
-                )}
             </div>
 
             <button
-                className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium"
                 onClick={handleNext}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium"
             >
-                Continue
+                {loading ? "Uploading..." : "Continue"}
             </button>
         </div>
     );

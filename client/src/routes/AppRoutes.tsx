@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, Outlet } from "react-router-dom";
+import { Routes, Route, Outlet, Navigate } from "react-router-dom";
 
 import HomePage from "@/pages/home/Home";
 import { CollectionsPage } from "@/pages/collections/CollectionsPage";
@@ -12,15 +12,7 @@ import PageLayout from "@/components/layouts/PageLayout";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import Dashboard from "@/pages/dashboard/Dashboard";
 
-// Vendor upgrade protection
-import UpgradeGate from "@/components/vendor/UpgradeGate";
-
-// Vendor wizard screens
-import VendorWizardLayout from "@/pages/vendor/VendorWizardLayout";
-import VendorWizardStart from "@/pages/vendor/VendorWizardStart";
-import BusinessInfoStep from "@/pages/vendor/BusinessInfoStep";
-import BrandingStep from "@/pages/vendor/BrandingStep";
-import ReviewStep from "@/pages/vendor/ReviewStep";
+import { VendorUpgradeRoutes } from "@/routes/VendorUpgradeRoutes";
 
 import AdminUsers from "@/pages/dashboard/admin/Users";
 import SellerProducts from "@/pages/dashboard/seller/Products";
@@ -45,21 +37,9 @@ const AppRoutes: React.FC = () => {
                 />
             </Route>
 
-            {/* ---------------- Vendor Onboarding Wizard ---------------- */}
-            <Route
-                path="/vendor/upgrade"
-                element={
-                    <UpgradeGate>
-                        <VendorWizardLayout />
-                    </UpgradeGate>
-                }
-            >
-                {/* vendor onboarding steps */}
-                <Route index element={<VendorWizardStart />} />
-                <Route path="business-info" element={<BusinessInfoStep />} />
-                <Route path="branding" element={<BrandingStep />} />
-                <Route path="review" element={<ReviewStep />} />
-            </Route>
+            {/* Vendor Onboarding Wizard  */}
+
+            {VendorUpgradeRoutes}
 
             {/* Dashboard routes with role-based access */}
             <Route path="/dashboard" element={<DashboardLayout />}>
@@ -114,6 +94,7 @@ const AppRoutes: React.FC = () => {
                     {/* add more customer subroutes */}
                 </Route>
             </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
 };
