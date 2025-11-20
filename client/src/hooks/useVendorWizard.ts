@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { databases, DB_ID, USERS_COLLECTION_ID } from "@/lib/appwrite";
 
 export function useVendorWizard() {
-    const { user, refreshUser } = useAuth();
+    const { user, reloadUserProfile } = useAuth();
 
     const [step, setStep] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -33,13 +33,13 @@ export function useVendorWizard() {
                     { onboardingStep: newStep }
                 );
 
-                await refreshUser(); // sync global state
+                await reloadUserProfile(); // sync global state
                 setStep(newStep);
             } finally {
                 setBusy(false);
             }
         },
-        [user, busy, refreshUser]
+        [user, busy, reloadUserProfile]
     );
 
     // --------------------------
@@ -64,13 +64,13 @@ export function useVendorWizard() {
                     }
                 );
 
-                await refreshUser();
+                await reloadUserProfile();
                 if (nextStep !== undefined) setStep(nextStep);
             } finally {
                 setLoading(false);
             }
         },
-        [user, busy, refreshUser]
+        [user, busy, reloadUserProfile]
     );
 
     // --------------------------
@@ -92,12 +92,12 @@ export function useVendorWizard() {
                 }
             );
 
-            await refreshUser();
+            await reloadUserProfile();
             setStep(3);
         } finally {
             setLoading(false);
         }
-    }, [user, busy, refreshUser]);
+    }, [user, busy, reloadUserProfile]);
 
     return {
         step,

@@ -1,7 +1,9 @@
 export const vendorTypes = [
-    { id: "product", label: "Product Seller" },
-    { id: "service", label: "Service Provider" },
-    { id: "both", label: "Both" }
+    { id: "product-seller", label: "Product Seller" },
+    { id: "service-provider", label: "Service Provider" },
+    { id: "digital-creator", label: "Digital Creator" },
+    { id: "wholesaler", label: "Wholesaler" },
+    { id: "other", label: "Other" }
 ];
 
 export const businessCategories = [

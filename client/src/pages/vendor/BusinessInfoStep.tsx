@@ -1,50 +1,68 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useVendorWizard } from "@/hooks/useVendorWizard";
+import { vendorTypes } from "@/config/vendorCategories";
+import { isValidUrl } from "@/lib/validators"; // optional helper - implement small helper if missing
 
 export default function BusinessInfoStep() {
     const navigate = useNavigate();
     const { saveData, loading, step } = useVendorWizard();
 
+    // load initial values from user via AuthContext if you want; for MVP we keep local
     const [form, setForm] = useState({
         businessName: "",
         businessDescription: "",
-        vendorType: "",
+        vendorType: "", // should be one of vendorTypes.id
         country: "",
-        socialLinks: {
-            facebook: "",
-            instagram: "",
-            twitter: "",
-            website: ""
-        }
+        socialLinks: { facebook: "", instagram: "", twitter: "", website: "" }
     });
 
-    const updateField = (key: string, value: any) => {
-        setForm(prev => ({
-            ...prev,
-            [key]: value
-        }));
-    };
+    // helper: ensure we only send allowed vendorType
+    const allowedIds = vendorTypes.map(v => v.id);
+    const normalizeVendorType = (v: string) =>
+        allowedIds.includes(v) ? v : "other";
 
-    const updateSocial = (key: string, value: string) => {
+    const updateField = (key: string, val: any) =>
+        setForm(prev => ({ ...prev, [key]: val }));
+
+    const updateSocial = (key: string, val: string) =>
         setForm(prev => ({
             ...prev,
-            socialLinks: { ...prev.socialLinks, [key]: value }
+            socialLinks: { ...prev.socialLinks, [key]: val }
         }));
+
+    useEffect(() => {
+        // Optionally prefill from global user object by reading AuthContext (not shown here)
+    }, []);
+
+    const validate = () => {
+        if (!form.businessName.trim()) return "Business name is required";
+        if (!form.vendorType) return "Select vendor type";
+        if (!form.country.trim()) return "Country is required";
+        if (form.socialLinks.website && !isValidUrl(form.socialLinks.website))
+            return "Website must be a valid URL";
+        return null;
     };
 
     const handleNext = async () => {
-        // Required validation
-        if (!form.businessName.trim()) return alert("Business name required");
-        if (!form.vendorType.trim()) return alert("Select vendor type");
-        if (!form.country.trim()) return alert("Select your country");
+        const err = validate();
+        if (err) return alert(err);
 
-        await saveData(form, 1); // move to step 1 → Branding
+        // Normalize vendorType to allowed enum before sending to Appwrite
+        const payload = {
+            businessName: form.businessName.trim(),
+            businessDescription: form.businessDescription?.trim() || null,
+            vendorType: normalizeVendorType(form.vendorType),
+            country: form.country.trim(),
+            socialLinks: JSON.stringify(form.socialLinks) // store JSON string in USER.socialLinks
+        };
+
+        await saveData(payload, 1);
         navigate("/vendor/upgrade/branding");
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 p-3">
             <h2 className="text-lg font-semibold">Business Information</h2>
 
             <input
@@ -69,11 +87,12 @@ export default function BusinessInfoStep() {
                 value={form.vendorType}
                 onChange={e => updateField("vendorType", e.target.value)}
             >
-                <option value="">Select Vendor Type *</option>
-                <option value="fashion">Fashion</option>
-                <option value="tech">Tech</option>
-                <option value="beauty">Beauty</option>
-                <option value="services">Services</option>
+                <option value="">Select vendor type *</option>
+                {vendorTypes.map(v => (
+                    <option key={v.id} value={v.id}>
+                        {v.label}
+                    </option>
+                ))}
             </select>
 
             <input
@@ -85,14 +104,13 @@ export default function BusinessInfoStep() {
 
             <div className="space-y-2">
                 <h3 className="font-medium text-gray-700">Social Links</h3>
-
-                {["facebook", "instagram", "twitter", "website"].map(key => (
+                {["facebook", "instagram", "twitter", "website"].map(k => (
                     <input
-                        key={key}
+                        key={k}
                         className="w-full border p-3 rounded-lg"
-                        placeholder={key.charAt(0).toUpperCase() + key.slice(1)}
-                        value={(form.socialLinks as any)[key]}
-                        onChange={e => updateSocial(key, e.target.value)}
+                        placeholder={k.charAt(0).toUpperCase() + k.slice(1)}
+                        value={(form.socialLinks as any)[k]}
+                        onChange={e => updateSocial(k, e.target.value)}
                     />
                 ))}
             </div>
