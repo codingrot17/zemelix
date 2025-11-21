@@ -1,4 +1,3 @@
-// client/src/lib/appwrite.ts
 import {
     Client,
     Account,

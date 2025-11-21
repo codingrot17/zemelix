@@ -1,110 +1,200 @@
-import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useCallback, useEffect, useState } from "react";
 import { databases, DB_ID, USERS_COLLECTION_ID } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
+
+const LOCAL_KEY = "vendorWizardDraft_v1";
 
 export function useVendorWizard() {
     const { user, reloadUserProfile } = useAuth();
 
-    const [step, setStep] = useState(0);
+    const [localDraft, setLocalDraft] = useState<Record<string, any> | null>(
+        null
+    );
     const [loading, setLoading] = useState(false);
     const [busy, setBusy] = useState(false);
 
-    // --------------------------
-    // INIT — sync with DB value
-    // --------------------------
+    // saved step presence flag (for UI to ask "Continue where you left off?")
+    const [savedStep, setSavedStep] = useState<number | null>(null);
+    const [hasSavedProgress, setHasSavedProgress] = useState(false);
+
     useEffect(() => {
-        if (!user) return;
-        setStep(user.onboardingStep ?? 0);
+        try {
+            const raw = localStorage.getItem(LOCAL_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                setLocalDraft(parsed);
+                setHasSavedProgress(true);
+                setSavedStep(
+                    typeof parsed.step === "number" ? parsed.step : null
+                );
+                return;
+            }
+
+            if (user) {
+                const seed = {
+                    step: 0,
+                    vendorType:
+                        user.vendorType ?? user.profile?.vendorType ?? null,
+                    businessCategory:
+                        user.businessCategory ??
+                        user.profile?.businessCategory ??
+                        null,
+                    businessName:
+                        user.businessName ?? user.profile?.businessName ?? null,
+                    businessDescription:
+                        user.businessDescription ??
+                        user.profile?.businessDescription ??
+                        null,
+                    socialLinks:
+                        user.socialLinks ?? user.profile?.socialLinks ?? {},
+                    primaryColor:
+                        user.primaryColor ??
+                        user.profile?.primaryColor ??
+                        "#1a73e8",
+                    logoFileId:
+                        user.logo ??
+                        user.profile?.vendorProfile?.logoFileId ??
+                        null,
+                    bannerFileId:
+                        user.coverImage ??
+                        user.profile?.vendorProfile?.bannerFileId ??
+                        null,
+                    slogan: user.slogan ?? user.profile?.slogan ?? null
+                };
+                setLocalDraft(seed);
+            } else {
+                setLocalDraft({ step: 0 });
+            }
+        } catch (err) {
+            console.warn("useVendorWizard init error", err);
+            setLocalDraft({ step: 0 });
+        }
     }, [user]);
 
-    // --------------------------
-    // SAVE PROGRESS (step only)
-    // --------------------------
-    const saveStep = useCallback(
-        async (newStep: number) => {
-            if (!user || busy) return;
-
-            setBusy(true);
+    const saveLocal = useCallback(
+        (partial: Record<string, any>) => {
+            const next = { ...(localDraft ?? {}), ...partial };
+            setLocalDraft(next);
             try {
-                await databases.updateDocument(
-                    DB_ID,
-                    USERS_COLLECTION_ID,
-                    user.$id,
-                    { onboardingStep: newStep }
+                localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
+                setHasSavedProgress(true);
+                setSavedStep(typeof next.step === "number" ? next.step : null);
+            } catch (err) {
+                console.warn(
+                    "Failed to write localStorage vendorWizardDraft",
+                    err
                 );
-
-                await reloadUserProfile(); // sync global state
-                setStep(newStep);
-            } finally {
-                setBusy(false);
             }
+            return next;
         },
-        [user, busy, reloadUserProfile]
+        [localDraft]
     );
 
-    // --------------------------
-    // SAVE FORM DATA (step + data)
-    // --------------------------
-    const saveData = useCallback(
-        async (payload: Record<string, any>, nextStep?: number) => {
-            if (!user || busy) return;
+    const clearLocal = useCallback(() => {
+        localStorage.removeItem(LOCAL_KEY);
+        setLocalDraft(null);
+        setHasSavedProgress(false);
+        setSavedStep(null);
+    }, []);
 
+    const finalSubmit = useCallback(
+        async (
+            opts: {
+                uploadFn?: (file: File, filename?: string) => Promise<string>;
+                onProgress?: (p: number) => void;
+            } = {}
+        ) => {
+            if (!user) throw new Error("Not authenticated");
+            setBusy(true);
             setLoading(true);
 
             try {
+                const draft = localDraft ?? {};
+
+                let logoFileId = draft.logoFileId ?? null;
+                let bannerFileId = draft.bannerFileId ?? null;
+
+                if (draft.logoFile && typeof opts.uploadFn === "function") {
+                    logoFileId = await opts.uploadFn(
+                        draft.logoFile,
+                        `vendor-logo-${user.$id}`
+                    );
+                }
+                if (draft.bannerFile && typeof opts.uploadFn === "function") {
+                    bannerFileId = await opts.uploadFn(
+                        draft.bannerFile,
+                        `vendor-banner-${user.$id}`
+                    );
+                }
+
+                const payload: Record<string, any> = {
+                    role: "vendor",
+                    vendorType: draft.vendorType ?? null,
+                    businessCategory:
+                        draft.businessCategory ?? draft.vendorType ?? null,
+                    businessName: draft.businessName ?? null,
+                    businessDescription: draft.businessDescription ?? null,
+                    logo: logoFileId ?? null,
+                    coverImage: bannerFileId ?? null,
+                    primaryColor: draft.primaryColor ?? null,
+                    socialLinks: draft.socialLinks ?? null,
+                    slogan: draft.slogan ?? null,
+
+                    // statuses per user's choice
+                    vendorStatus: "pending",
+                    storeStatus: "closed",
+                    verificationStatus: "unverified",
+                    onboardingStep: 99
+                };
+
                 await databases.updateDocument(
                     DB_ID,
                     USERS_COLLECTION_ID,
                     user.$id,
-                    {
-                        ...payload,
-                        ...(nextStep !== undefined
-                            ? { onboardingStep: nextStep }
-                            : {})
-                    }
+                    payload
                 );
 
-                await reloadUserProfile();
-                if (nextStep !== undefined) setStep(nextStep);
-            } finally {
+                clearLocal();
+
+                try {
+                    await reloadUserProfile();
+                } catch (err) {
+                    console.warn(
+                        "reloadUserProfile failed after finalSubmit",
+                        err
+                    );
+                }
+
                 setLoading(false);
+                setBusy(false);
+                return { ok: true };
+            } catch (err) {
+                console.error("finalSubmit error:", err);
+                setLoading(false);
+                setBusy(false);
+                throw err;
             }
         },
-        [user, busy, reloadUserProfile]
+        [user, localDraft, clearLocal, reloadUserProfile]
     );
 
-    // --------------------------
-    // FINALIZE ONBOARDING
-    // --------------------------
-    const completeWizard = useCallback(async () => {
-        if (!user || busy) return;
-
-        setLoading(true);
-
-        try {
-            await databases.updateDocument(
-                DB_ID,
-                USERS_COLLECTION_ID,
-                user.$id,
-                {
-                    vendorStatus: "pending", // waits for admin review
-                    onboardingStep: 3
-                }
-            );
-
-            await reloadUserProfile();
-            setStep(3);
-        } finally {
-            setLoading(false);
-        }
-    }, [user, busy, reloadUserProfile]);
+    const setStep = useCallback(
+        (step: number) => {
+            return saveLocal({ step });
+        },
+        [saveLocal]
+    );
 
     return {
-        step,
+        localDraft,
+        saveLocal,
+        clearLocal,
+        finalSubmit,
         loading,
         busy,
-        saveStep,
-        saveData,
-        completeWizard
+        // helpers for UI behavior
+        hasSavedProgress,
+        savedStep,
+        setStep
     };
 }

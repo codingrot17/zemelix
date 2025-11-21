@@ -1,93 +1,114 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useVendorWizard } from "@/hooks/useVendorWizard";
+import { useAuth } from "@/contexts/AuthContext";
 import { vendorTypes } from "@/config/vendorCategories";
-import { isValidUrl } from "@/lib/validators"; // optional helper - implement small helper if missing
+
+function isValidUrl(val?: string) {
+    if (!val) return true;
+    try {
+        new URL(val);
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 export default function BusinessInfoStep() {
     const navigate = useNavigate();
-    const { saveData, loading, step } = useVendorWizard();
+    const { localDraft, saveLocal, setStep } = useVendorWizard();
+    const { user } = useAuth();
 
-    // load initial values from user via AuthContext if you want; for MVP we keep local
+    const initial = localDraft ?? {
+        businessName: user?.businessName ?? "",
+        businessDescription: user?.businessDescription ?? "",
+        vendorType: user?.vendorType ?? "",
+        businessCategory: user?.businessCategory ?? "",
+        country: user?.country ?? "",
+        socialLinks: user?.socialLinks ?? {}
+    };
+
     const [form, setForm] = useState({
-        businessName: "",
-        businessDescription: "",
-        vendorType: "", // should be one of vendorTypes.id
-        country: "",
-        socialLinks: { facebook: "", instagram: "", twitter: "", website: "" }
+        businessName: initial.businessName ?? "",
+        businessDescription: initial.businessDescription ?? "",
+        vendorType: initial.vendorType ?? "",
+        businessCategory: initial.businessCategory ?? "",
+        country: initial.country ?? "",
+        socialLinks: initial.socialLinks ?? {}
     });
 
-    // helper: ensure we only send allowed vendorType
-    const allowedIds = vendorTypes.map(v => v.id);
-    const normalizeVendorType = (v: string) =>
-        allowedIds.includes(v) ? v : "other";
-
-    const updateField = (key: string, val: any) =>
-        setForm(prev => ({ ...prev, [key]: val }));
-
-    const updateSocial = (key: string, val: string) =>
-        setForm(prev => ({
-            ...prev,
-            socialLinks: { ...prev.socialLinks, [key]: val }
-        }));
-
     useEffect(() => {
-        // Optionally prefill from global user object by reading AuthContext (not shown here)
+        setForm(prev => ({ ...prev, ...initial }));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const validate = () => {
-        if (!form.businessName.trim()) return "Business name is required";
-        if (!form.vendorType) return "Select vendor type";
-        if (!form.country.trim()) return "Country is required";
-        if (form.socialLinks.website && !isValidUrl(form.socialLinks.website))
-            return "Website must be a valid URL";
-        return null;
-    };
+    function updateField(path: string, val: any) {
+        if (path.startsWith("social.")) {
+            const key = path.split(".")[1];
+            setForm(prev => ({
+                ...prev,
+                socialLinks: { ...(prev.socialLinks || {}), [key]: val }
+            }));
+            return;
+        }
+        setForm(prev => ({ ...prev, [path]: val }));
+    }
 
-    const handleNext = async () => {
+    function validate() {
+        const errs: string[] = [];
+        // only vendorType is required per user's choice
+        if (!form.vendorType) errs.push("Vendor type is required");
+        // validate provided social links
+        for (const [k, v] of Object.entries(form.socialLinks || {})) {
+            if (v && !isValidUrl(v)) errs.push(`${k} link is invalid`);
+        }
+        return errs;
+    }
+
+    async function handleNext() {
         const err = validate();
-        if (err) return alert(err);
+        if (err.length) return alert(err.join("\n"));
 
-        // Normalize vendorType to allowed enum before sending to Appwrite
-        const payload = {
-            businessName: form.businessName.trim(),
-            businessDescription: form.businessDescription?.trim() || null,
-            vendorType: normalizeVendorType(form.vendorType),
-            country: form.country.trim(),
-            socialLinks: JSON.stringify(form.socialLinks) // store JSON string in USER.socialLinks
-        };
+        await saveLocal({
+            businessName: form.businessName,
+            businessDescription: form.businessDescription,
+            vendorType: form.vendorType,
+            businessCategory: form.businessCategory,
+            country: form.country,
+            socialLinks: form.socialLinks,
+            step: 1
+        });
 
-        await saveData(payload, 1);
+        setStep(1);
         navigate("/vendor/upgrade/branding");
-    };
+    }
 
     return (
-        <div className="space-y-4 p-3">
-            <h2 className="text-lg font-semibold">Business Information</h2>
+        <div>
+            <h2 className="text-xl font-semibold mb-4">Business information</h2>
 
             <input
-                className="w-full border p-3 rounded-lg"
-                placeholder="Business Name *"
                 value={form.businessName}
                 onChange={e => updateField("businessName", e.target.value)}
+                className="w-full border p-3 rounded mb-2"
+                placeholder="Business name (optional)"
             />
 
             <textarea
-                className="w-full border p-3 rounded-lg"
-                placeholder="Business Description"
-                rows={4}
                 value={form.businessDescription}
                 onChange={e =>
                     updateField("businessDescription", e.target.value)
                 }
+                className="w-full border p-3 rounded mb-2"
+                placeholder="Short description (optional)"
             />
 
             <select
-                className="w-full border p-3 rounded-lg"
                 value={form.vendorType}
                 onChange={e => updateField("vendorType", e.target.value)}
+                className="w-full border p-3 rounded mb-2"
             >
-                <option value="">Select vendor type *</option>
+                <option value="">Choose vendor type</option>
                 {vendorTypes.map(v => (
                     <option key={v.id} value={v.id}>
                         {v.label}
@@ -96,32 +117,33 @@ export default function BusinessInfoStep() {
             </select>
 
             <input
-                className="w-full border p-3 rounded-lg"
-                placeholder="Country *"
-                value={form.country}
-                onChange={e => updateField("country", e.target.value)}
+                value={form.businessCategory || ""}
+                onChange={e => updateField("businessCategory", e.target.value)}
+                className="w-full border p-3 rounded mb-2"
+                placeholder="Business category (optional)"
             />
 
-            <div className="space-y-2">
-                <h3 className="font-medium text-gray-700">Social Links</h3>
-                {["facebook", "instagram", "twitter", "website"].map(k => (
-                    <input
-                        key={k}
-                        className="w-full border p-3 rounded-lg"
-                        placeholder={k.charAt(0).toUpperCase() + k.slice(1)}
-                        value={(form.socialLinks as any)[k]}
-                        onChange={e => updateSocial(k, e.target.value)}
-                    />
-                ))}
-            </div>
+            <input
+                value={form.country || ""}
+                onChange={e => updateField("country", e.target.value)}
+                className="w-full border p-3 rounded mb-2"
+                placeholder="Country (optional)"
+            />
 
-            <button
-                onClick={handleNext}
-                disabled={loading}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium"
-            >
-                {loading ? "Saving..." : "Continue"}
-            </button>
+            <div className="flex gap-3">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="flex-1 py-3 border rounded"
+                >
+                    Back
+                </button>
+                <button
+                    onClick={handleNext}
+                    className="flex-1 py-3 bg-blue-600 text-white rounded"
+                >
+                    Continue
+                </button>
+            </div>
         </div>
     );
 }
