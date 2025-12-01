@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "seller" | "customer";
+export type UserRole = "admin" | "vendor" | "customer";
 
 export interface User {
     id: string;
@@ -6,5 +6,5 @@ export interface User {
     email?: string | null;
     role: UserRole;
     country?: string;
-    profile?: Record<string, any> | null;
+    profile?: Record<string, any> | null; // DB profile document
 }

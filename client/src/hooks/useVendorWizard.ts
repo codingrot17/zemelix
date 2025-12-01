@@ -13,10 +13,13 @@ export function useVendorWizard() {
     const [loading, setLoading] = useState(false);
     const [busy, setBusy] = useState(false);
 
-    // saved step presence flag (for UI to ask "Continue where you left off?")
+    // UI helper
     const [savedStep, setSavedStep] = useState<number | null>(null);
     const [hasSavedProgress, setHasSavedProgress] = useState(false);
 
+    const isWizardComplete = user?.onboardingStep === 99;
+
+    // Init local draft
     useEffect(() => {
         try {
             const raw = localStorage.getItem(LOCAL_KEY);
@@ -80,10 +83,7 @@ export function useVendorWizard() {
                 setHasSavedProgress(true);
                 setSavedStep(typeof next.step === "number" ? next.step : null);
             } catch (err) {
-                console.warn(
-                    "Failed to write localStorage vendorWizardDraft",
-                    err
-                );
+                console.warn("Failed to write vendorWizardDraft", err);
             }
             return next;
         },
@@ -98,12 +98,7 @@ export function useVendorWizard() {
     }, []);
 
     const finalSubmit = useCallback(
-        async (
-            opts: {
-                uploadFn?: (file: File, filename?: string) => Promise<string>;
-                onProgress?: (p: number) => void;
-            } = {}
-        ) => {
+        async (opts: { uploadFn?: (file: File) => Promise<string> } = {}) => {
             if (!user) throw new Error("Not authenticated");
             setBusy(true);
             setLoading(true);
@@ -114,20 +109,14 @@ export function useVendorWizard() {
                 let logoFileId = draft.logoFileId ?? null;
                 let bannerFileId = draft.bannerFileId ?? null;
 
-                if (draft.logoFile && typeof opts.uploadFn === "function") {
-                    logoFileId = await opts.uploadFn(
-                        draft.logoFile,
-                        `vendor-logo-${user.$id}`
-                    );
+                if (draft.logoFile && opts.uploadFn) {
+                    logoFileId = await opts.uploadFn(draft.logoFile);
                 }
-                if (draft.bannerFile && typeof opts.uploadFn === "function") {
-                    bannerFileId = await opts.uploadFn(
-                        draft.bannerFile,
-                        `vendor-banner-${user.$id}`
-                    );
+                if (draft.bannerFile && opts.uploadFn) {
+                    bannerFileId = await opts.uploadFn(draft.bannerFile);
                 }
 
-                const payload: Record<string, any> = {
+                const payload = {
                     role: "vendor",
                     vendorType: draft.vendorType ?? null,
                     businessCategory:
@@ -139,8 +128,6 @@ export function useVendorWizard() {
                     primaryColor: draft.primaryColor ?? null,
                     socialLinks: draft.socialLinks ?? null,
                     slogan: draft.slogan ?? null,
-
-                    // statuses per user's choice
                     vendorStatus: "pending",
                     storeStatus: "closed",
                     verificationStatus: "unverified",
@@ -155,23 +142,15 @@ export function useVendorWizard() {
                 );
 
                 clearLocal();
+                await reloadUserProfile();
 
-                try {
-                    await reloadUserProfile();
-                } catch (err) {
-                    console.warn(
-                        "reloadUserProfile failed after finalSubmit",
-                        err
-                    );
-                }
-
-                setLoading(false);
                 setBusy(false);
+                setLoading(false);
                 return { ok: true };
             } catch (err) {
                 console.error("finalSubmit error:", err);
-                setLoading(false);
                 setBusy(false);
+                setLoading(false);
                 throw err;
             }
         },
@@ -179,9 +158,7 @@ export function useVendorWizard() {
     );
 
     const setStep = useCallback(
-        (step: number) => {
-            return saveLocal({ step });
-        },
+        (step: number) => saveLocal({ step }),
         [saveLocal]
     );
 
@@ -192,9 +169,9 @@ export function useVendorWizard() {
         finalSubmit,
         loading,
         busy,
-        // helpers for UI behavior
         hasSavedProgress,
         savedStep,
-        setStep
+        setStep,
+        isWizardComplete
     };
 }

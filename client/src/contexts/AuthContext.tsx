@@ -7,13 +7,13 @@ import {
     getUserProfile,
     sendVerificationEmail,
     startSessionMonitor,
-    validateSession,
-    DB_ID,
-    USERS_COLLECTION_ID
+    validateSession
 } from "@/lib/appwrite";
 
+import { getCurrentAccount } from "@/lib/userPrefs";
+
 interface AuthContextType {
-    user: any | null; // shape: { id, name, email, emailVerification, role, profile }
+    user: any | null;
     loading: boolean;
     verificationSent: boolean;
     isVerified: boolean;
@@ -22,6 +22,7 @@ interface AuthContextType {
     logout: () => Promise<void>;
     resendVerification: () => Promise<void>;
     reloadUserProfile: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +32,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState<boolean>(true);
     const [verificationSent, setVerificationSent] = useState<boolean>(false);
 
+    // -------------------------------------------------
+    // INITIAL BOOTSTRAP (validate session + load account)
+    // -------------------------------------------------
     useEffect(() => {
         let stopMonitor: (() => void) | null = null;
 
@@ -39,14 +43,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 const valid = await validateSession();
                 if (!valid) {
                     setUser(null);
-                    setLoading(false);
                     return;
                 }
 
-                const current = await getCurrentUser();
+                const current = await getCurrentAccount();
                 if (!current) {
                     setUser(null);
-                    setLoading(false);
                     return;
                 }
 
@@ -75,20 +77,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return () => stopMonitor && stopMonitor();
     }, []);
 
-    // -------------------
-    // Auth actions
-    // -------------------
+    // -----------------------
+    // LOGIN
+    // -----------------------
     const handleLogin = async (email: string, password: string) => {
         try {
             await createSession(email, password);
-            const current = await getCurrentUser();
-            const profile = await getUserProfile(current.$id);
+            const acc = await getCurrentAccount();
+            const profile = await getUserProfile(acc.$id);
 
             setUser({
-                id: current.$id,
-                name: current.name,
-                email: current.email,
-                emailVerification: current.emailVerification,
+                id: acc.$id,
+                $id: acc.$id,
+                name: acc.name,
+                email: acc.email,
+                emailVerification: acc.emailVerification,
                 role: profile.role || "customer",
                 profile
             });
@@ -98,6 +101,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    // -----------------------
+    // REGISTER
+    // -----------------------
     const handleRegister = async (
         email: string,
         password: string,
@@ -105,7 +111,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     ) => {
         try {
             const newUser = await registerUser(email, password, name);
-            // send verification email with redirect (adjust path if necessary)
             await sendVerificationEmail(window.location.origin + "/verify");
             setVerificationSent(true);
             return newUser;
@@ -115,6 +120,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    // -----------------------
+    // LOGOUT
+    // -----------------------
     const handleLogout = async () => {
         try {
             await deleteSession();
@@ -125,6 +133,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    // -----------------------
+    // RESEND VERIFICATION
+    // -----------------------
     const resendVerification = async () => {
         try {
             await sendVerificationEmail(window.location.origin + "/verify");
@@ -137,20 +148,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const isVerified = !!user?.emailVerification;
 
+    // -----------------------
+    // HARD PROFILE RELOAD
+    // -----------------------
     const reloadUserProfile = async () => {
         try {
-            const current = await getCurrentUser();
-            if (!current) {
+            const acc = await getCurrentAccount();
+            if (!acc) {
                 setUser(null);
                 return;
             }
-            const profile = await getUserProfile(current.$id);
+
+            const profile = await getUserProfile(acc.$id);
+
             setUser({
-                id: current.$id,
-                $id: current.$id,
-                name: current.name,
-                email: current.email,
-                emailVerification: current.emailVerification,
+                id: acc.$id,
+                $id: acc.$id,
+                name: acc.name,
+                email: acc.email,
+                emailVerification: acc.emailVerification,
                 role: profile.role || "customer",
                 profile
             });
@@ -159,7 +175,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
-    // Provide the context
+    // -----------------------
+    // NEW: FULL REFRESH (prefs + profile)
+    // -----------------------
+    const refreshUser = async () => {
+        try {
+            const acc = await getCurrentAccount();
+            if (!acc) {
+                setUser(null);
+                return;
+            }
+
+            const profile = await getUserProfile(acc.$id);
+
+            setUser({
+                id: acc.$id,
+                $id: acc.$id,
+                name: acc.name,
+                email: acc.email,
+                emailVerification: acc.emailVerification,
+                role: profile.role || "customer",
+                profile
+            });
+        } catch (err) {
+            console.warn("refreshUser failed:", err);
+        }
+    };
+
     const value: AuthContextType = {
         user,
         loading,
@@ -169,7 +211,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         register: handleRegister,
         logout: handleLogout,
         resendVerification,
-        reloadUserProfile
+        reloadUserProfile,
+        refreshUser
     };
 
     return (
@@ -177,17 +220,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 };
 
-// export small helper util
+// -----------------------------------------------------
+// VENDOR UPGRADE UTIL
+// -----------------------------------------------------
 export const canUpgradeToVendor = (user: any): boolean => {
     if (!user) return false;
 
-    // Only customers can upgrade
     if (user.role !== "customer") return false;
-
-    // Must be email verified
     if (!user.emailVerification) return false;
 
-    // Must have an active profile
     const status = user.profile?.accountStatus;
     if (status !== "active") return false;
 
