@@ -1,217 +1,283 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+// client/src/contexts/AuthContext.tsx
+/**
+ * AuthContext - Single source of truth for authentication state
+ *
+ * Responsibilities:
+ * - Load user on mount
+ * - Provide login/logout/register methods
+ * - Monitor session expiry
+ * - Expose verification status
+ */
+
+import React, {
+    createContext,
+    useContext,
+    useEffect,
+    useState,
+    useCallback
+} from "react";
 import {
-    getCurrentUser,
+    getCurrentAccount,
+    getUserProfile,
     createSession,
     deleteSession,
     registerUser,
-    getUserProfile,
     sendVerificationEmail,
-    startSessionMonitor,
-    validateSession
+    validateSession,
+    startSessionMonitor
 } from "@/lib/appwrite";
+import { normalizeRole } from "@/lib/authHelpers";
 
-import { getCurrentAccount } from "@/lib/userPrefs";
+// --------------------------------------------------
+// TYPES
+// --------------------------------------------------
+interface AuthUser {
+    id: string;
+    $id: string;
+    name: string;
+    email: string;
+    emailVerification: boolean;
+    role: "admin" | "seller" | "customer";
+    profile: any; // Full DB document
+}
 
 interface AuthContextType {
-    user: any | null;
+    user: AuthUser | null;
     loading: boolean;
     verificationSent: boolean;
     isVerified: boolean;
+
     login: (email: string, password: string) => Promise<void>;
-    register: (email: string, password: string, name: string) => Promise<any>;
+    register: (email: string, password: string, name: string) => Promise<void>;
     logout: () => Promise<void>;
     resendVerification: () => Promise<void>;
-    reloadUserProfile: () => Promise<void>;
     refreshUser: () => Promise<void>;
 }
 
+// --------------------------------------------------
+// CONTEXT
+// --------------------------------------------------
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const [user, setUser] = useState<any | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [verificationSent, setVerificationSent] = useState<boolean>(false);
+// --------------------------------------------------
+// PROVIDER
+// --------------------------------------------------
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+    children
+}) => {
+    const [user, setUser] = useState<AuthUser | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [verificationSent, setVerificationSent] = useState(false);
 
-    // -------------------------------------------------
-    // INITIAL BOOTSTRAP (validate session + load account)
-    // -------------------------------------------------
+    // --------------------------------------------------
+    // INITIALIZATION
+    // --------------------------------------------------
     useEffect(() => {
         let stopMonitor: (() => void) | null = null;
 
-        const initAuth = async () => {
+        async function initAuth() {
             try {
-                const valid = await validateSession();
-                if (!valid) {
+                // 1. Check if session exists
+                const isValid = await validateSession();
+                if (!isValid) {
                     setUser(null);
+                    setLoading(false);
                     return;
                 }
 
-                const current = await getCurrentAccount();
-                if (!current) {
+                // 2. Fetch account
+                const account = await getCurrentAccount();
+                if (!account) {
                     setUser(null);
+                    setLoading(false);
                     return;
                 }
 
-                const profile = await getUserProfile(current.$id);
+                // 3. Fetch profile
+                const profile = await getUserProfile(account.$id);
 
-                setUser({
-                    id: current.$id,
-                    $id: current.$id,
-                    name: current.name,
-                    email: current.email,
-                    emailVerification: current.emailVerification,
-                    role: profile.role || "customer",
+                // 4. Build user object
+                const authUser: AuthUser = {
+                    id: account.$id,
+                    $id: account.$id,
+                    name: account.name,
+                    email: account.email,
+                    emailVerification: account.emailVerification,
+                    role: normalizeRole({ profile, role: profile?.role }),
                     profile
-                });
+                };
 
-                stopMonitor = startSessionMonitor(handleLogout);
-            } catch (err) {
-                console.error("Auth init error:", err);
+                setUser(authUser);
+
+                // 5. Start session monitor
+                stopMonitor = startSessionMonitor(handleSessionExpired);
+            } catch (error) {
+                console.error("Auth init error:", error);
                 setUser(null);
             } finally {
                 setLoading(false);
             }
-        };
+        }
 
         initAuth();
-        return () => stopMonitor && stopMonitor();
+
+        return () => {
+            if (stopMonitor) stopMonitor();
+        };
     }, []);
 
-    // -----------------------
+    // --------------------------------------------------
+    // SESSION EXPIRY HANDLER
+    // --------------------------------------------------
+    const handleSessionExpired = useCallback(() => {
+        console.log("Session expired");
+        setUser(null);
+        // Optional: Show notification to user
+    }, []);
+
+    // --------------------------------------------------
     // LOGIN
-    // -----------------------
-    const handleLogin = async (email: string, password: string) => {
+    // --------------------------------------------------
+    const login = useCallback(async (email: string, password: string) => {
         try {
+            // 1. Create session
             await createSession(email, password);
-            const acc = await getCurrentAccount();
-            const profile = await getUserProfile(acc.$id);
 
-            setUser({
-                id: acc.$id,
-                $id: acc.$id,
-                name: acc.name,
-                email: acc.email,
-                emailVerification: acc.emailVerification,
-                role: profile.role || "customer",
+            // 2. Fetch account
+            const account = await getCurrentAccount();
+            if (!account) throw new Error("Failed to get account after login");
+
+            // 3. Fetch profile
+            const profile = await getUserProfile(account.$id);
+
+            // 4. Update state
+            const authUser: AuthUser = {
+                id: account.$id,
+                $id: account.$id,
+                name: account.name,
+                email: account.email,
+                emailVerification: account.emailVerification,
+                role: normalizeRole({ profile, role: profile?.role }),
                 profile
-            });
-        } catch (err) {
-            console.error("Login error:", err);
-            throw err;
-        }
-    };
+            };
 
-    // -----------------------
+            setUser(authUser);
+        } catch (error: any) {
+            console.error("Login error:", error);
+            throw new Error(error?.message || "Login failed");
+        }
+    }, []);
+
+    // --------------------------------------------------
     // REGISTER
-    // -----------------------
-    const handleRegister = async (
-        email: string,
-        password: string,
-        name: string
-    ) => {
-        try {
-            const newUser = await registerUser(email, password, name);
-            await sendVerificationEmail(window.location.origin + "/verify");
-            setVerificationSent(true);
-            return newUser;
-        } catch (err) {
-            console.error("Register error:", err);
-            throw err;
-        }
-    };
+    // --------------------------------------------------
+    const register = useCallback(
+        async (email: string, password: string, name: string) => {
+            try {
+                // 1. Register user (creates account + profile + session)
+                await registerUser(email, password, name);
 
-    // -----------------------
+                // 2. Send verification email
+                const redirectUrl = `${window.location.origin}/verify`;
+                await sendVerificationEmail(redirectUrl);
+                setVerificationSent(true);
+
+                // 3. Fetch fresh data
+                const account = await getCurrentAccount();
+                if (!account)
+                    throw new Error("Failed to get account after registration");
+
+                const profile = await getUserProfile(account.$id);
+
+                // 4. Update state
+                const authUser: AuthUser = {
+                    id: account.$id,
+                    $id: account.$id,
+                    name: account.name,
+                    email: account.email,
+                    emailVerification: account.emailVerification,
+                    role: normalizeRole({ profile, role: profile?.role }),
+                    profile
+                };
+
+                setUser(authUser);
+            } catch (error: any) {
+                console.error("Registration error:", error);
+                throw new Error(error?.message || "Registration failed");
+            }
+        },
+        []
+    );
+
+    // --------------------------------------------------
     // LOGOUT
-    // -----------------------
-    const handleLogout = async () => {
+    // --------------------------------------------------
+    const logout = useCallback(async () => {
         try {
             await deleteSession();
-        } catch (err) {
-            console.warn("Logout error:", err);
+        } catch (error) {
+            console.warn("Logout warning:", error);
         } finally {
             setUser(null);
+            setVerificationSent(false);
         }
-    };
+    }, []);
 
-    // -----------------------
+    // --------------------------------------------------
     // RESEND VERIFICATION
-    // -----------------------
-    const resendVerification = async () => {
+    // --------------------------------------------------
+    const resendVerification = useCallback(async () => {
         try {
-            await sendVerificationEmail(window.location.origin + "/verify");
+            const redirectUrl = `${window.location.origin}/verify`;
+            await sendVerificationEmail(redirectUrl);
             setVerificationSent(true);
-        } catch (err) {
-            console.error("resendVerification error:", err);
-            throw err;
+        } catch (error: any) {
+            console.error("Resend verification error:", error);
+            throw new Error(error?.message || "Failed to resend verification");
         }
-    };
+    }, []);
 
-    const isVerified = !!user?.emailVerification;
-
-    // -----------------------
-    // HARD PROFILE RELOAD
-    // -----------------------
-    const reloadUserProfile = async () => {
+    // --------------------------------------------------
+    // REFRESH USER
+    // --------------------------------------------------
+    const refreshUser = useCallback(async () => {
         try {
-            const acc = await getCurrentAccount();
-            if (!acc) {
+            const account = await getCurrentAccount();
+            if (!account) {
                 setUser(null);
                 return;
             }
 
-            const profile = await getUserProfile(acc.$id);
+            const profile = await getUserProfile(account.$id);
 
-            setUser({
-                id: acc.$id,
-                $id: acc.$id,
-                name: acc.name,
-                email: acc.email,
-                emailVerification: acc.emailVerification,
-                role: profile.role || "customer",
+            const authUser: AuthUser = {
+                id: account.$id,
+                $id: account.$id,
+                name: account.name,
+                email: account.email,
+                emailVerification: account.emailVerification,
+                role: normalizeRole({ profile, role: profile?.role }),
                 profile
-            });
-        } catch (err) {
-            console.warn("Failed to reload user profile:", err);
+            };
+
+            setUser(authUser);
+        } catch (error) {
+            console.warn("Refresh user error:", error);
         }
-    };
+    }, []);
 
-    // -----------------------
-    // NEW: FULL REFRESH (prefs + profile)
-    // -----------------------
-    const refreshUser = async () => {
-        try {
-            const acc = await getCurrentAccount();
-            if (!acc) {
-                setUser(null);
-                return;
-            }
-
-            const profile = await getUserProfile(acc.$id);
-
-            setUser({
-                id: acc.$id,
-                $id: acc.$id,
-                name: acc.name,
-                email: acc.email,
-                emailVerification: acc.emailVerification,
-                role: profile.role || "customer",
-                profile
-            });
-        } catch (err) {
-            console.warn("refreshUser failed:", err);
-        }
-    };
-
+    // --------------------------------------------------
+    // CONTEXT VALUE
+    // --------------------------------------------------
     const value: AuthContextType = {
         user,
         loading,
         verificationSent,
-        isVerified,
-        login: handleLogin,
-        register: handleRegister,
-        logout: handleLogout,
+        isVerified: user?.emailVerification ?? false,
+        login,
+        register,
+        logout,
         resendVerification,
-        reloadUserProfile,
         refreshUser
     };
 
@@ -220,23 +286,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 };
 
-// -----------------------------------------------------
-// VENDOR UPGRADE UTIL
-// -----------------------------------------------------
-export const canUpgradeToVendor = (user: any): boolean => {
-    if (!user) return false;
+// --------------------------------------------------
+// HOOK
+// --------------------------------------------------
+export function useAuth() {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error("useAuth must be used within AuthProvider");
+    }
+    return context;
+}
 
-    if (user.role !== "customer") return false;
-    if (!user.emailVerification) return false;
-
-    const status = user.profile?.accountStatus;
-    if (status !== "active") return false;
-
-    return true;
-};
-
-export const useAuth = () => {
-    const ctx = useContext(AuthContext);
-    if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-    return ctx;
-};
+// --------------------------------------------------
+// RE-EXPORT HELPERS
+// --------------------------------------------------
+export { canUpgradeToVendor, hasRole } from "@/lib/authHelpers";

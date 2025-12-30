@@ -1,38 +1,41 @@
+// client/src/routes/AppRoutes.tsx
 import React from "react";
-import { Routes, Route, Outlet, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
+// Layouts
+import PageLayout from "@/components/layouts/PageLayout";
+import DashboardLayout from "@/components/layouts/DashboardLayout";
+
+// Public Pages
 import HomePage from "@/pages/home/Home";
 import { CollectionsPage } from "@/pages/collections/CollectionsPage";
 import { SingleCollectionPage } from "@/pages/collections/SingleCollectionPage";
 
+// Auth Pages
 import LoginPage from "@/pages/auth/login";
-import SignupPage from "@/pages/auth/register";
+import RegisterPage from "@/pages/auth/register";
 import Unauthorized from "@/pages/auth/Unauthorized";
 import Verify from "@/pages/auth/Verify";
 
-import PageLayout from "@/components/layouts/PageLayout";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
+// Dashboard Pages
 import Dashboard from "@/pages/dashboard/Dashboard";
-
-import RequireRole from "@/components/RequireRole";
-
 import AdminUsers from "@/pages/dashboard/admin/Users";
 import SellerProducts from "@/pages/dashboard/seller/Products";
 import CustomerOrders from "@/pages/dashboard/customer/Orders";
 
-// Vendor wizard routes
-import VendorUpgradeRoutes from "@/routes/VendorUpgradeRoutes";
+// Guards
+import ProtectedRoute from "@/components/ProtectedRoute";
 
-const AppRoutes: React.FC = () => {
+// Vendor Upgrade
+import VendorSetupForm from "@/pages/vendor/VendorSetupForm";
+import UpgradeGate from "@/components/vendor/UpgradeGate";
+
+export default function AppRoutes() {
     return (
         <Routes>
-            {/* Public Auth */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<SignupPage />} />
-            <Route path="/unauthorized" element={<Unauthorized />} />
-            <Route path="/verify" element={<Verify />} />
-
-            {/* Public pages */}
+            {/* ========================================
+                PUBLIC ROUTES
+            ======================================== */}
             <Route path="/" element={<PageLayout />}>
                 <Route index element={<HomePage />} />
                 <Route path="collections" element={<CollectionsPage />} />
@@ -42,64 +45,61 @@ const AppRoutes: React.FC = () => {
                 />
             </Route>
 
-            {/* Vendor Upgrade */}
-            {VendorUpgradeRoutes}
+            {/* ========================================
+                AUTH ROUTES (NO GUARD)
+            ======================================== */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="/verify" element={<Verify />} />
 
-            {/* Dashboard */}
+            {/* ========================================
+                VENDOR UPGRADE (SPECIAL GUARD)
+            ======================================== */}
+            <Route
+                path="/vendor/upgrade"
+                element={
+                    <UpgradeGate>
+                        <VendorSetupForm />
+                    </UpgradeGate>
+                }
+            />
+
+            {/* ========================================
+                DASHBOARD (PROTECTED)
+            ======================================== */}
             <Route path="/dashboard" element={<DashboardLayout />}>
-                {/* Visible to all authenticated roles */}
-                <Route
-                    index
-                    element={
-                        <RequireRole
-                            allowedRoles={["admin", "seller", "customer"]}
-                        >
-                            <Dashboard />
-                        </RequireRole>
-                    }
-                />
-
-                {/* Admin */}
-                <Route
-                    path="admin"
-                    element={
-                        <RequireRole allowedRoles={["admin"]}>
-                            <Outlet />
-                        </RequireRole>
-                    }
-                >
-                    <Route path="users" element={<AdminUsers />} />
+                {/* Main Dashboard - All authenticated users */}
+                <Route element={<ProtectedRoute />}>
+                    <Route index element={<Dashboard />} />
                 </Route>
 
-                {/* Seller */}
-                <Route
-                    path="seller"
-                    element={
-                        <RequireRole allowedRoles={["seller"]}>
-                            <Outlet />
-                        </RequireRole>
-                    }
-                >
-                    <Route path="products" element={<SellerProducts />} />
+                {/* Admin Routes */}
+                <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+                    <Route path="admin/users" element={<AdminUsers />} />
+                    {/* Add more admin routes here */}
                 </Route>
 
-                {/* Customer */}
-                <Route
-                    path="user"
-                    element={
-                        <RequireRole allowedRoles={["customer"]}>
-                            <Outlet />
-                        </RequireRole>
-                    }
-                >
-                    <Route path="orders" element={<CustomerOrders />} />
+                {/* Seller Routes */}
+                <Route element={<ProtectedRoute allowedRoles={["seller"]} />}>
+                    <Route
+                        path="seller/products"
+                        element={<SellerProducts />}
+                    />
+                    {/* Add more seller routes here */}
+                </Route>
+
+                {/* Customer Routes */}
+                <Route element={<ProtectedRoute allowedRoles={["customer"]} />}>
+                    <Route path="user/orders" element={<CustomerOrders />} />
+                    {/* Add more customer routes here */}
                 </Route>
             </Route>
 
-            {/* 404 → Home */}
+            {/* ========================================
+                404 FALLBACK
+            ======================================== */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
-};
-
-export default AppRoutes;
+}

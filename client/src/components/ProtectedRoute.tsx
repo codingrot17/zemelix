@@ -1,50 +1,85 @@
-// src/components/ProtectedRoute.tsx
+// client/src/components/ProtectedRoute.tsx
+/**
+ * Unified route protection component
+ * Replaces both ProtectedRoute and RequireRole
+ */
+
 import React from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { UserRole } from "../types/auth";
+import { useAuth } from "@/contexts/AuthContext";
+import { hasRole } from "@/lib/authHelpers";
+import type { UserRole } from "@/types/auth";
 
 interface ProtectedRouteProps {
-    allowedRoles?: UserRole[]; // optional: if omitted, any authenticated user is allowed
+    /**
+     * Allowed roles for this route
+     * If empty/undefined, any authenticated user can access
+     */
+    allowedRoles?: UserRole[];
+
+    /**
+     * Require email verification
+     */
+    requireVerification?: boolean;
+
+    /**
+     * Redirect path for unauthorized users
+     */
+    unauthorizedRedirect?: string;
 }
 
-/**
- * ProtectedRoute guards routes based on authentication and optional role list.
- *
- * Behavior:
- * - While auth is loading: render a placeholder (prevent premature redirect).
- * - If not authenticated: redirect to /auth/login with `redirect=` query param.
- * - If allowedRoles is provided and the user's role is not included: redirect to /auth/unauthorized.
- * - Otherwise: render nested routes (Outlet).
- */
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
-    const { user, loading } = useAuth() as any;
+export default function ProtectedRoute({
+    allowedRoles,
+    requireVerification = false,
+    unauthorizedRedirect = "/unauthorized"
+}: ProtectedRouteProps) {
+    const { user, loading } = useAuth();
     const location = useLocation();
 
-    // Wait until auth finished initializing to avoid false negatives
+    // --------------------------------------------------
+    // LOADING STATE
+    // --------------------------------------------------
     if (loading) {
-        // return a small loader or null to avoid flashing redirects
-        return <div aria-live="polite">Loading...</div>;
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400">
+                        Loading...
+                    </p>
+                </div>
+            </div>
+        );
     }
 
-    // Not logged in -> redirect to login, preserving intended path
+    // --------------------------------------------------
+    // NOT AUTHENTICATED
+    // --------------------------------------------------
     if (!user) {
-        const redirectTo = `/auth/login?redirect=${encodeURIComponent(
-            location.pathname
+        const redirectPath = `/login?redirect=${encodeURIComponent(
+            location.pathname + location.search
         )}`;
-        return <Navigate to={redirectTo} replace />;
+        return <Navigate to={redirectPath} replace />;
     }
 
-    // If allowedRoles is provided, check membership; if not provided, allow all authenticated users
-    if (Array.isArray(allowedRoles) && allowedRoles.length > 0) {
-        const userRole = user?.profile?.role ?? user?.role ?? null;
-        if (!userRole || !allowedRoles.includes(userRole)) {
-            return <Navigate to="/auth/unauthorized" replace />;
+    // --------------------------------------------------
+    // REQUIRE EMAIL VERIFICATION
+    // --------------------------------------------------
+    if (requireVerification && !user.emailVerification) {
+        return <Navigate to="/verify" replace />;
+    }
+
+    // --------------------------------------------------
+    // ROLE CHECK
+    // --------------------------------------------------
+    if (allowedRoles && allowedRoles.length > 0) {
+        if (!hasRole(user, allowedRoles)) {
+            return <Navigate to={unauthorizedRedirect} replace />;
         }
     }
 
-    // Authenticated and authorized → render children / nested routes
+    // --------------------------------------------------
+    // AUTHORIZED - RENDER CHILDREN
+    // --------------------------------------------------
     return <Outlet />;
-};
-
-export default ProtectedRoute;
+}
