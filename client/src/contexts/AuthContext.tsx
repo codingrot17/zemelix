@@ -1,4 +1,3 @@
-// client/src/contexts/AuthContext.tsx
 /**
  * AuthContext - Single source of truth for authentication state
  *
@@ -27,6 +26,7 @@ import {
     startSessionMonitor
 } from "@/lib/appwrite";
 import { normalizeRole } from "@/lib/authHelpers";
+import type { UserRole } from "@/types/auth";
 
 // --------------------------------------------------
 // TYPES
@@ -37,8 +37,8 @@ interface AuthUser {
     name: string;
     email: string;
     emailVerification: boolean;
-    role: "admin" | "seller" | "customer";
-    profile: any; // Full DB document
+    role: UserRole;
+    profile: Record<string, any> | null;
 }
 
 interface AuthContextType {
@@ -51,14 +51,36 @@ interface AuthContextType {
     register: (email: string, password: string, name: string) => Promise<void>;
     logout: () => Promise<void>;
     resendVerification: () => Promise<void>;
-    refreshUser: () => Promise<void>;
+    reloadUserProfile: () => Promise<void>;
 }
 
 // --------------------------------------------------
 // CONTEXT
 // --------------------------------------------------
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
+// --------------------------------------------------
+// HELPER
+// --------------------------------------------------
+function buildAuthUser(
+    account: {
+        $id: string;
+        name: string;
+        email: string;
+        emailVerification: boolean;
+    },
+    profile: Record<string, any> | null
+): AuthUser {
+    return {
+        id: account.$id,
+        $id: account.$id,
+        name: account.name,
+        email: account.email,
+        emailVerification: account.emailVerification,
+        // ✅ Pass the correct object shape to normalizeRole
+        role: normalizeRole({ profile, role: profile?.role }),
+        profile
+    };
+}
 // --------------------------------------------------
 // PROVIDER
 // --------------------------------------------------
@@ -95,19 +117,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
                 // 3. Fetch profile
                 const profile = await getUserProfile(account.$id);
-
                 // 4. Build user object
-                const authUser: AuthUser = {
-                    id: account.$id,
-                    $id: account.$id,
-                    name: account.name,
-                    email: account.email,
-                    emailVerification: account.emailVerification,
-                    role: normalizeRole({ profile, role: profile?.role }),
-                    profile
-                };
-
-                setUser(authUser);
+                setUser(buildAuthUser(account, profile));
 
                 // 5. Start session monitor
                 stopMonitor = startSessionMonitor(handleSessionExpired);
@@ -130,42 +141,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // SESSION EXPIRY HANDLER
     // --------------------------------------------------
     const handleSessionExpired = useCallback(() => {
-        console.log("Session expired");
         setUser(null);
-        // Optional: Show notification to user
     }, []);
 
     // --------------------------------------------------
     // LOGIN
     // --------------------------------------------------
     const login = useCallback(async (email: string, password: string) => {
-        try {
-            // 1. Create session
-            await createSession(email, password);
+        // 1. Create session
+        await createSession(email, password);
 
-            // 2. Fetch account
-            const account = await getCurrentAccount();
-            if (!account) throw new Error("Failed to get account after login");
+        // 2. Fetch account
+        const account = await getCurrentAccount();
+        if (!account) throw new Error("Failed to get account after login");
 
-            // 3. Fetch profile
-            const profile = await getUserProfile(account.$id);
-
-            // 4. Update state
-            const authUser: AuthUser = {
-                id: account.$id,
-                $id: account.$id,
-                name: account.name,
-                email: account.email,
-                emailVerification: account.emailVerification,
-                role: normalizeRole({ profile, role: profile?.role }),
-                profile
-            };
-
-            setUser(authUser);
-        } catch (error: any) {
-            console.error("Login error:", error);
-            throw new Error(error?.message || "Login failed");
-        }
+        // 3. Fetch profile
+        const profile = await getUserProfile(account.$id);
+        setUser(buildAuthUser(account, profile));
     }, []);
 
     // --------------------------------------------------
@@ -173,38 +165,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // --------------------------------------------------
     const register = useCallback(
         async (email: string, password: string, name: string) => {
-            try {
-                // 1. Register user (creates account + profile + session)
-                await registerUser(email, password, name);
+            // 1. Register user (creates account + profile + session)
+            await registerUser(email, password, name);
 
-                // 2. Send verification email
-                const redirectUrl = `${window.location.origin}/verify`;
-                await sendVerificationEmail(redirectUrl);
-                setVerificationSent(true);
+            // 2. Send verification email
+            const redirectUrl =
+                import.meta.env.VITE_APPWRITE_VERIFICATION_REDIRECT_URL ||
+                `${window.location.origin}/verify`;
+            await sendVerificationEmail(redirectUrl);
+            setVerificationSent(true);
 
-                // 3. Fetch fresh data
-                const account = await getCurrentAccount();
-                if (!account)
-                    throw new Error("Failed to get account after registration");
+            // 3. Fetch fresh data
+            const account = await getCurrentAccount();
+            if (!account)
+                throw new Error("Failed to get account after registration");
 
-                const profile = await getUserProfile(account.$id);
+            const profile = await getUserProfile(account.$id);
 
-                // 4. Update state
-                const authUser: AuthUser = {
-                    id: account.$id,
-                    $id: account.$id,
-                    name: account.name,
-                    email: account.email,
-                    emailVerification: account.emailVerification,
-                    role: normalizeRole({ profile, role: profile?.role }),
-                    profile
-                };
-
-                setUser(authUser);
-            } catch (error: any) {
-                console.error("Registration error:", error);
-                throw new Error(error?.message || "Registration failed");
-            }
+            setUser(buildAuthUser(account, profile));
         },
         []
     );
@@ -227,14 +205,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     // RESEND VERIFICATION
     // --------------------------------------------------
     const resendVerification = useCallback(async () => {
-        try {
-            const redirectUrl = `${window.location.origin}/verify`;
-            await sendVerificationEmail(redirectUrl);
-            setVerificationSent(true);
-        } catch (error: any) {
-            console.error("Resend verification error:", error);
-            throw new Error(error?.message || "Failed to resend verification");
-        }
+        const redirectUrl =
+            import.meta.env.VITE_APPWRITE_VERIFICATION_REDIRECT_URL ||
+            `${window.location.origin}/verify`;
+        await sendVerificationEmail(redirectUrl);
+        setVerificationSent(true);
     }, []);
 
     // --------------------------------------------------
@@ -250,17 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
             const profile = await getUserProfile(account.$id);
 
-            const authUser: AuthUser = {
-                id: account.$id,
-                $id: account.$id,
-                name: account.name,
-                email: account.email,
-                emailVerification: account.emailVerification,
-                role: normalizeRole({ profile, role: profile?.role }),
-                profile
-            };
-
-            setUser(authUser);
+            setUser(buildAuthUser(account, profile));
         } catch (error) {
             console.warn("Refresh user error:", error);
         }
@@ -278,7 +243,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         register,
         logout,
         resendVerification,
-        refreshUser
+        refreshUser,
+        reloadUserProfile: refreshUser
     };
 
     return (

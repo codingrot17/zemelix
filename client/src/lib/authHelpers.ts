@@ -1,4 +1,3 @@
-// client/src/lib/authHelpers.ts
 /**
  * Pure helper functions for auth logic
  * No side effects, no API calls - just business rules
@@ -6,6 +5,33 @@
 
 import type { User, UserRole } from "@/types/auth";
 
+const VALID_ROLES: UserRole[] = ["admin", "seller", "customer"];
+const ROLE_ALIASES: Record<string, UserRole> = {
+    vendor: "seller",
+    seller: "seller",
+    admin: "admin",
+    customer: "customer",
+    user: "customer"
+};
+
+export function normalizeRole(
+    user: {
+        profile?: Record<string, any> | null;
+        role?: string | null;
+    } | null
+): UserRole {
+    if (!user) return "customer";
+    const raw: string | null | undefined =
+        user.profile?.role ?? user.role ?? null;
+
+    if (!raw) return "customer";
+    const mapped = ROLE_ALIASES[raw.toLowerCase()];
+    if (mapped) return mapped;
+
+    if (VALID_ROLES.includes(raw as UserRole)) return raw as UserRole;
+
+    return "customer";
+}
 /**
  * Check if user has any of the required roles
  */
@@ -13,7 +39,10 @@ export function hasRole(user: User | null, roles: UserRole[]): boolean {
     if (!user) return false;
 
     // Prioritize profile.role over top-level role
-    const userRole = user.profile?.role ?? user.role;
+    const userRole = normalizeRole({
+        profile: user.profile,
+        role: user.role
+    });
     return roles.includes(userRole);
 }
 
@@ -30,7 +59,7 @@ export function canUpgradeToVendor(user: any): boolean {
     if (!user) return false;
 
     // Must be customer
-    const role = user.profile?.role ?? user.role;
+    const role = normalizeRole({ profile: user.profile, role: user.role });
     if (role !== "customer") return false;
 
     // Must have verified email
@@ -44,33 +73,17 @@ export function canUpgradeToVendor(user: any): boolean {
 }
 
 /**
- * Normalize user role from various sources
- */
-export function normalizeRole(user: any): UserRole {
-    if (!user) return "customer";
-
-    const rawRole = user.profile?.role ?? user.role ?? "customer";
-
-    // Validate against allowed roles
-    if (["admin", "seller", "customer"].includes(rawRole)) {
-        return rawRole as UserRole;
-    }
-
-    return "customer";
-}
-
-/**
  * Check if email is valid
  */
 export function isValidEmail(email: string): boolean {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
 /**
  * Check if password meets requirements
  */
 export function isValidPassword(password: string): boolean {
-    return password.length >= 6;
+    return typeof password === "string" && password.length >= 6;
 }
 
 /**
@@ -89,7 +102,7 @@ export function getUserInitials(user: User | null): string {
 
     return user.name
         .split(" ")
-        .map(n => n[0])
+        .map((n) => n[0])
         .join("")
         .slice(0, 2)
         .toUpperCase();

@@ -1,4 +1,3 @@
-// client/src/lib/appwrite.ts
 /**
  * Appwrite SDK wrapper - handles all API communication
  * This is the ONLY place that directly call Appwrite SDKs

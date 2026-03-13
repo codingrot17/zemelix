@@ -39,6 +39,21 @@ const steps = [
 
 const LOCAL_STORAGE_KEY = "vendor_wizard_draft_v2";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface FormData {
+    vendorType: string;
+    businessName: string;
+    businessCategory: string;
+    businessDescription: string;
+    slogan: string;
+    primaryColor: string;
+    socialLinks: {
+        website: string;
+        facebook: string;
+        instagram: string;
+        twitter: string;
+    };
+}
 export default function VendorWizard() {
     const { user, refreshUser } = useAuth();
     const navigate = useNavigate();
@@ -50,7 +65,7 @@ export default function VendorWizard() {
     const [success, setSuccess] = useState(false);
 
     // Form data
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<FormData>({
         vendorType: "",
         businessName: "",
         businessCategory: "",
@@ -78,11 +93,9 @@ export default function VendorWizard() {
             if (saved) {
                 const parsed = JSON.parse(saved);
                 setFormData(prev => ({ ...prev, ...parsed }));
-                setCurrentStep(parsed.step || 0);
+                setCurrentStep(parsed.step ?? 0);
             }
-        } catch (err) {
-            console.warn("Failed to load draft:", err);
-        }
+        } catch {}
     }, []);
 
     // Save draft whenever formData changes
@@ -92,12 +105,10 @@ export default function VendorWizard() {
                 LOCAL_STORAGE_KEY,
                 JSON.stringify({ ...formData, step: currentStep })
             );
-        } catch (err) {
-            console.warn("Failed to save draft:", err);
-        }
+        } catch {}
     }, [formData, currentStep]);
 
-    const updateField = (field: string, value: any) => {
+    const updateField = (field: keyof FormData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
         setError(null);
     };
@@ -111,28 +122,35 @@ export default function VendorWizard() {
 
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                setError("Logo must be less than 2MB");
-                return;
-            }
-            setLogoFile(file);
-            setLogoPreview(URL.createObjectURL(file));
-            setError(null);
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+            setError("Logo must be less than 2MB");
+            return;
         }
+        setLogoFile(file);
+        setLogoPreview(URL.createObjectURL(file));
+        setError(null);
     };
 
+    const handleLogoRemove = () => {
+        setLogoFile(null);
+        setLogoPreview(null);
+    };
     const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                setError("Banner must be less than 5MB");
-                return;
-            }
-            setBannerFile(file);
-            setBannerPreview(URL.createObjectURL(file));
-            setError(null);
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            setError("Banner must be less than 5MB");
+            return;
         }
+        setBannerFile(file);
+        setBannerPreview(URL.createObjectURL(file));
+        setError(null);
+    };
+
+    const handleBannerRemove = () => {
+        setBannerFile(null);
+        setBannerPreview(null);
     };
 
     const validateStep = (step: number): boolean => {
@@ -199,56 +217,46 @@ export default function VendorWizard() {
             let bannerFileId: string | null = null;
 
             if (logoFile) {
-                try {
-                    const logoResult = await storage.createFile(
-                        STORAGE_BUCKET_ID,
-                        ID.unique(),
-                        logoFile
-                    );
-                    logoFileId = logoResult.$id;
-                } catch (err: any) {
-                    throw new Error(`Logo upload failed: ${err.message}`);
-                }
+                const res = await storage.createFile(
+                    STORAGE_BUCKET_ID,
+                    ID.unique(),
+                    logoFile
+                );
+                logoFileId = res.$id;
             }
 
             if (bannerFile) {
-                try {
-                    const bannerResult = await storage.createFile(
-                        STORAGE_BUCKET_ID,
-                        ID.unique(),
-                        bannerFile
-                    );
-                    bannerFileId = bannerResult.$id;
-                } catch (err: any) {
-                    throw new Error(`Banner upload failed: ${err.message}`);
-                }
+                const res = await storage.createFile(
+                    STORAGE_BUCKET_ID,
+                    ID.unique(),
+                    bannerFile
+                );
+                bannerFileId = res.$id;
             }
 
             // 2. Update user profile in database
-            const payload = {
-                role: "seller", // Match your enum: customer, admin, seller
-                vendorType: formData.vendorType, // Match your enum
-                businessCategory: formData.businessCategory,
-                businessName: formData.businessName,
-                businessDescription: formData.businessDescription,
-                slogan: formData.slogan || null,
-                logo: logoFileId,
-                coverImage: bannerFileId,
-                primaryColor: formData.primaryColor,
-                socialLinks: JSON.stringify(formData.socialLinks), // Already stringified in your schema
-                vendorStatus: "pending", // Match your enum: pending, draft, active, rejected
-                storeStatus: "closed", // Match your enum: closed, open, maintenance
-                onboardingStep: 99, // Completed
-                currency: "NGN", // Your default
-                subscriptionPlan: "free", // Your default enum value
-                accountStatus: "active" // Maintain existing status
-            };
-
             await databases.updateDocument(
                 DB_ID,
                 USERS_COLLECTION_ID,
                 user.$id,
-                payload
+                {
+                    role: "seller", // Match your enum: customer, admin, seller
+                    vendorType: formData.vendorType, // Match your enum
+                    businessCategory: formData.businessCategory,
+                    businessName: formData.businessName,
+                    businessDescription: formData.businessDescription,
+                    slogan: formData.slogan || null,
+                    logo: logoFileId,
+                    coverImage: bannerFileId,
+                    primaryColor: formData.primaryColor,
+                    socialLinks: JSON.stringify(formData.socialLinks), // Already stringified in your schema
+                    vendorStatus: "pending", // Match your enum: pending, draft, active, rejected
+                    storeStatus: "closed", // Match your enum: closed, open, maintenance
+                    onboardingStep: 99, // Completed
+                    currency: "NGN", // Your default
+                    subscriptionPlan: "free", // Your default enum value
+                    accountStatus: "active" // Maintain existing status
+                }
             );
 
             // 3. Refresh user data
@@ -397,12 +405,12 @@ export default function VendorWizard() {
                                 formData={formData}
                                 updateField={updateField}
                                 updateSocialLink={updateSocialLink}
-                                logoFile={logoFile}
                                 logoPreview={logoPreview}
-                                bannerFile={bannerFile}
                                 bannerPreview={bannerPreview}
                                 onLogoChange={handleLogoChange}
+                                onLogoRemove={handleLogoRemove}
                                 onBannerChange={handleBannerChange}
+                                onBannerRemove={handleBannerRemove}
                             />
                         )}
                         {currentStep === 3 && (
@@ -455,7 +463,13 @@ export default function VendorWizard() {
 }
 
 // Step 1: Business Type
-function StepBusinessType({ formData, updateField }) {
+function StepBusinessType({
+    formData,
+    updateField
+}: {
+    formData: FormData;
+    updateField: (field: keyof FormData, value: any) => void;
+}) {
     return (
         <div>
             <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
@@ -501,31 +515,39 @@ function StepBusinessType({ formData, updateField }) {
 }
 
 // Step 2: Business Info
-function StepBusinessInfo({ formData, updateField }) {
+function StepBusinessInfo({
+    formData,
+    updateField
+}: (field: typeof FormData, value: any) => void) {
     const [categorySearch, setCategorySearch] = useState("");
     const [filteredCategories, setFilteredCategories] = useState<
         BusinessCategory[]
     >([]);
 
     useEffect(() => {
-        if (formData.vendorType) {
-            const categories = getCategoriesForType(formData.vendorType);
-            setFilteredCategories(categories);
-        }
+        const base = formData.vendorType
+            ? getCategoriesForType(formData.vendorType)
+            : [];
+        setFilteredCategories(base);
     }, [formData.vendorType]);
 
     useEffect(() => {
         if (categorySearch.trim()) {
-            const results = searchCategories(
-                categorySearch,
-                formData.vendorType
+            setFilteredCategories(
+                searchCategories(categorySearch, formData.vendorType)
             );
-            setFilteredCategories(results);
-        } else if (formData.vendorType) {
-            const categories = getCategoriesForType(formData.vendorType);
-            setFilteredCategories(categories);
+        } else {
+            setFilteredCategories(
+                formData.vendorType
+                    ? getCategoriesForType(formData.vendorType)
+                    : []
+            );
         }
     }, [categorySearch, formData.vendorType]);
+
+    const selectedCatName = filteredCategories.find(
+        c => c.id === formData.businessCategory
+    )?.name;
 
     return (
         <div>
@@ -552,7 +574,7 @@ function StepBusinessInfo({ formData, updateField }) {
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                        {formData.businessName.length}/100 characters
+                        {formData.businessName.length}/100
                     </p>
                 </div>
 
@@ -599,15 +621,10 @@ function StepBusinessInfo({ formData, updateField }) {
                             ))
                         )}
                     </div>
-                    {formData.businessCategory && (
+                    {formData.businessCategory && selectedCatName && (
                         <p className="text-xs text-green-600 dark:text-green-400 mt-2 flex items-center gap-1">
                             <CheckCircle className="w-3 h-3" />
-                            Selected:{" "}
-                            {
-                                filteredCategories.find(
-                                    c => c.id === formData.businessCategory
-                                )?.name
-                            }
+                            Selected:{selectedCatName}
                         </p>
                     )}
                 </div>
@@ -627,8 +644,7 @@ function StepBusinessInfo({ formData, updateField }) {
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                        {formData.businessDescription.length}/500 characters
-                        (minimum 20)
+                        {formData.businessDescription.length}/500 (min 20)
                     </p>
                 </div>
 
@@ -651,17 +667,31 @@ function StepBusinessInfo({ formData, updateField }) {
 }
 
 // Step 3: Branding
+interface StepBrandingProps {
+    formData: FormData;
+    updateField: (field: keyof FormData, value: any) => void;
+    updateSocialLink: (platform: string, value: string) => void;
+    logoPreview: string | null;
+    bannerPreview: string | null;
+    onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onLogoRemove: () => void; // ← FIX: was calling setLogoFile(null) directly
+    onBannerChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onBannerRemove: () => void; // ← FIX: was calling setBannerFile(null) directly
+}
+
 function StepBranding({
     formData,
     updateField,
     updateSocialLink,
-    logoFile,
+
     logoPreview,
-    bannerFile,
+
     bannerPreview,
     onLogoChange,
-    onBannerChange
-}) {
+    onLogoRemove,
+    onBannerChange,
+    onBannerRemove
+}: StepBrandingProps) {
     return (
         <div>
             <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
@@ -686,10 +716,8 @@ function StepBranding({
                                     className="w-24 h-24 object-cover rounded-lg border-2 border-gray-300"
                                 />
                                 <button
-                                    onClick={() => {
-                                        setLogoFile(null);
-                                        setLogoPreview(null);
-                                    }}
+                                    type="button"
+                                    onClick={onLogoRemove}
                                     className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                                 >
                                     <X className="w-4 h-4" />
@@ -733,10 +761,8 @@ function StepBranding({
                                     className="w-full h-32 object-cover rounded-lg border-2 border-gray-300"
                                 />
                                 <button
-                                    onClick={() => {
-                                        setBannerFile(null);
-                                        setBannerPreview(null);
-                                    }}
+                                    type="button"
+                                    onClick={onBannerRemove}
                                     className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                                 >
                                     <X className="w-4 h-4" />
@@ -797,27 +823,29 @@ function StepBranding({
                         Social Media Links (Optional)
                     </label>
                     <div className="space-y-3">
-                        {["website", "facebook", "instagram", "twitter"].map(
-                            platform => (
-                                <input
-                                    key={platform}
-                                    type="url"
-                                    value={formData.socialLinks[platform]}
-                                    onChange={e =>
-                                        updateSocialLink(
-                                            platform,
-                                            e.target.value
-                                        )
-                                    }
-                                    placeholder={`https://${
-                                        platform === "website"
-                                            ? "yoursite.com"
-                                            : platform + ".com/yourpage"
-                                    }`}
-                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
-                                />
-                            )
-                        )}
+                        {(
+                            [
+                                "website",
+                                "facebook",
+                                "instagram",
+                                "twitter"
+                            ] as const
+                        ).map(platform => (
+                            <input
+                                key={platform}
+                                type="url"
+                                value={formData.socialLinks[platform]}
+                                onChange={e =>
+                                    updateSocialLink(platform, e.target.value)
+                                }
+                                placeholder={`https://${
+                                    platform === "website"
+                                        ? "yoursite.com"
+                                        : platform + ".com/yourpage"
+                                }`}
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                            />
+                        ))}
                     </div>
                 </div>
             </div>
@@ -826,12 +854,20 @@ function StepBranding({
 }
 
 // Step 4: Review
-function StepReview({ formData, logoPreview, bannerPreview }) {
-    const selectedCategory = getCategoriesForType(formData.vendorType).find(
-        c => c.id === formData.businessCategory
-    );
+function StepReview({
+    formData,
+    logoPreview,
+    bannerPreview
+}: {
+    formData: FormData;
+    logoPreview: string | null;
+    bannerPreview: string | null;
+}) {
     const selectedType = vendorTypeOptions.find(
         t => t.id === formData.vendorType
+    );
+    const selectedCategory = getCategoriesForType(formData.vendorType).find(
+        c => c.id === formData.businessCategory
     );
 
     return (
@@ -869,12 +905,14 @@ function StepReview({ formData, logoPreview, bannerPreview }) {
                                     backgroundColor: formData.primaryColor
                                 }}
                             >
-                                {formData.businessName.charAt(0).toUpperCase()}
+                                {formData.businessName
+                                    .charAt(0)
+                                    .toUpperCase() || "?"}
                             </div>
                         )}
                         <div className="flex-1">
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                                {formData.businessName}
+                                {formData.businessName || "Your Business Name"}
                             </h3>
                             {formData.slogan && (
                                 <p className="text-sm text-gray-600 dark:text-gray-400 italic mt-1">
@@ -882,12 +920,16 @@ function StepReview({ formData, logoPreview, bannerPreview }) {
                                 </p>
                             )}
                             <div className="flex items-center gap-2 mt-2">
-                                <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
-                                    {selectedType?.label}
-                                </span>
-                                <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                    {selectedCategory?.name}
-                                </span>
+                                {selectedType && (
+                                    <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+                                        {selectedType?.label}
+                                    </span>
+                                )}
+                                {selectedCategory && (
+                                    <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                        {selectedCategory?.name}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -895,36 +937,6 @@ function StepReview({ formData, logoPreview, bannerPreview }) {
                     <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                         {formData.businessDescription}
                     </p>
-
-                    {Object.values(formData.socialLinks).some(link => link) && (
-                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-                                Connect With Us:
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                                {formData.socialLinks.website && (
-                                    <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
-                                        🌐 Website
-                                    </span>
-                                )}
-                                {formData.socialLinks.facebook && (
-                                    <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
-                                        📘 Facebook
-                                    </span>
-                                )}
-                                {formData.socialLinks.instagram && (
-                                    <span className="text-xs px-2 py-1 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300 rounded">
-                                        📷 Instagram
-                                    </span>
-                                )}
-                                {formData.socialLinks.twitter && (
-                                    <span className="text-xs px-2 py-1 bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 rounded">
-                                        🐦 Twitter
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* Details List */}
@@ -997,15 +1009,21 @@ function StepReview({ formData, logoPreview, bannerPreview }) {
     );
 }
 
-function DetailRow({ label, value, fullWidth = false }) {
+function DetailRow({
+    label,
+    value,
+    fullWidth = false
+}: {
+    label: string;
+    value: React.ReactNode;
+    fullWidth?: boolean;
+}) {
     return (
-        <div className={`${fullWidth ? "col-span-2" : ""}`}>
+        <div className={fullWidth ? "col-span-2" : ""}>
             <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                 {label}
             </div>
-            <div className="text-sm text-gray-900 dark:text-white">
-                {typeof value === "string" ? value : value}
-            </div>
+            <div className="text-sm text-gray-900 dark:text-white">{value}</div>
         </div>
     );
 }
