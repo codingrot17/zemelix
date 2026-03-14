@@ -1,11 +1,5 @@
 /**
  * AuthContext - Single source of truth for authentication state
- *
- * Responsibilities:
- * - Load user on mount
- * - Provide login/logout/register methods
- * - Monitor session expiry
- * - Expose verification status
  */
 
 import React, {
@@ -31,7 +25,7 @@ import type { UserRole } from "@/types/auth";
 // --------------------------------------------------
 // TYPES
 // --------------------------------------------------
-interface AuthUser {
+export interface AuthUser {
     id: string;
     $id: string;
     name: string;
@@ -39,6 +33,7 @@ interface AuthUser {
     emailVerification: boolean;
     role: UserRole;
     profile: Record<string, any> | null;
+    // Vendor profile fields (sourced from profile document)
     vendorType?: string | null;
     businessCategory?: string | null;
     businessName?: string | null;
@@ -61,6 +56,7 @@ interface AuthContextType {
     register: (email: string, password: string, name: string) => Promise<void>;
     logout: () => Promise<void>;
     resendVerification: () => Promise<void>;
+    refreshUser: () => Promise<void>;
     reloadUserProfile: () => Promise<void>;
 }
 
@@ -68,6 +64,7 @@ interface AuthContextType {
 // CONTEXT
 // --------------------------------------------------
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
 // --------------------------------------------------
 // HELPER
 // --------------------------------------------------
@@ -86,9 +83,9 @@ function buildAuthUser(
         name: account.name,
         email: account.email,
         emailVerification: account.emailVerification,
-        // ✅ Pass the correct object shape to normalizeRole
         role: normalizeRole({ profile, role: profile?.role }),
         profile,
+        // Flatten vendor fields from profile for easy access
         vendorType: profile?.vendorType ?? null,
         businessCategory: profile?.businessCategory ?? null,
         businessName: profile?.businessName ?? null,
@@ -101,6 +98,7 @@ function buildAuthUser(
         onboardingStep: profile?.onboardingStep ?? null
     };
 }
+
 // --------------------------------------------------
 // PROVIDER
 // --------------------------------------------------
@@ -111,15 +109,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const [loading, setLoading] = useState(true);
     const [verificationSent, setVerificationSent] = useState(false);
 
-    // --------------------------------------------------
-    // INITIALIZATION
-    // --------------------------------------------------
     useEffect(() => {
         let stopMonitor: (() => void) | null = null;
 
         async function initAuth() {
             try {
-                // 1. Check if session exists
                 const isValid = await validateSession();
                 if (!isValid) {
                     setUser(null);
@@ -127,7 +121,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                     return;
                 }
 
-                // 2. Fetch account
                 const account = await getCurrentAccount();
                 if (!account) {
                     setUser(null);
@@ -135,12 +128,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                     return;
                 }
 
-                // 3. Fetch profile
                 const profile = await getUserProfile(account.$id);
-                // 4. Build user object
                 setUser(buildAuthUser(account, profile));
-
-                // 5. Start session monitor
                 stopMonitor = startSessionMonitor(handleSessionExpired);
             } catch (error) {
                 console.error("Auth init error:", error);
@@ -151,65 +140,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
 
         initAuth();
-
         return () => {
             if (stopMonitor) stopMonitor();
         };
     }, []);
 
-    // --------------------------------------------------
-    // SESSION EXPIRY HANDLER
-    // --------------------------------------------------
     const handleSessionExpired = useCallback(() => {
         setUser(null);
     }, []);
 
-    // --------------------------------------------------
-    // LOGIN
-    // --------------------------------------------------
     const login = useCallback(async (email: string, password: string) => {
-        // 1. Create session
         await createSession(email, password);
-
-        // 2. Fetch account
         const account = await getCurrentAccount();
         if (!account) throw new Error("Failed to get account after login");
-
-        // 3. Fetch profile
         const profile = await getUserProfile(account.$id);
         setUser(buildAuthUser(account, profile));
     }, []);
 
-    // --------------------------------------------------
-    // REGISTER
-    // --------------------------------------------------
     const register = useCallback(
         async (email: string, password: string, name: string) => {
-            // 1. Register user (creates account + profile + session)
             await registerUser(email, password, name);
-
-            // 2. Send verification email
             const redirectUrl =
                 import.meta.env.VITE_APPWRITE_VERIFICATION_REDIRECT_URL ||
                 `${window.location.origin}/verify`;
             await sendVerificationEmail(redirectUrl);
             setVerificationSent(true);
-
-            // 3. Fetch fresh data
             const account = await getCurrentAccount();
             if (!account)
                 throw new Error("Failed to get account after registration");
-
             const profile = await getUserProfile(account.$id);
-
             setUser(buildAuthUser(account, profile));
         },
         []
     );
 
-    // --------------------------------------------------
-    // LOGOUT
-    // --------------------------------------------------
     const logout = useCallback(async () => {
         try {
             await deleteSession();
@@ -221,9 +185,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
     }, []);
 
-    // --------------------------------------------------
-    // RESEND VERIFICATION
-    // --------------------------------------------------
     const resendVerification = useCallback(async () => {
         const redirectUrl =
             import.meta.env.VITE_APPWRITE_VERIFICATION_REDIRECT_URL ||
@@ -232,9 +193,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setVerificationSent(true);
     }, []);
 
-    // --------------------------------------------------
-    // REFRESH USER
-    // --------------------------------------------------
     const refreshUser = useCallback(async () => {
         try {
             const account = await getCurrentAccount();
@@ -242,18 +200,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                 setUser(null);
                 return;
             }
-
             const profile = await getUserProfile(account.$id);
-
             setUser(buildAuthUser(account, profile));
         } catch (error) {
             console.warn("Refresh user error:", error);
         }
     }, []);
 
-    // --------------------------------------------------
-    // CONTEXT VALUE
-    // --------------------------------------------------
     const value: AuthContextType = {
         user,
         loading,
@@ -283,7 +236,4 @@ export function useAuth() {
     return context;
 }
 
-// --------------------------------------------------
-// RE-EXPORT HELPERS
-// --------------------------------------------------
 export { canUpgradeToVendor, hasRole } from "@/lib/authHelpers";
