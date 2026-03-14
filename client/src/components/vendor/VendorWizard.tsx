@@ -39,8 +39,9 @@ const steps = [
 
 const LOCAL_STORAGE_KEY = "vendor_wizard_draft_v2";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface FormData {
+// ─── Types ─────────────────────────────────────────────────────────────────────
+// Renamed from FormData → VendorFormData to avoid conflict with browser built-in
+interface VendorFormData {
     vendorType: string;
     businessName: string;
     businessCategory: string;
@@ -54,39 +55,31 @@ interface FormData {
         twitter: string;
     };
 }
+
 export default function VendorWizard() {
     const { user, refreshUser } = useAuth();
     const navigate = useNavigate();
 
-    // Wizard state
     const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
 
-    // Form data
-    const [formData, setFormData] = useState<FormData>({
+    const [formData, setFormData] = useState<VendorFormData>({
         vendorType: "",
         businessName: "",
         businessCategory: "",
         businessDescription: "",
         slogan: "",
         primaryColor: "#6366f1",
-        socialLinks: {
-            website: "",
-            facebook: "",
-            instagram: "",
-            twitter: ""
-        }
+        socialLinks: { website: "", facebook: "", instagram: "", twitter: "" }
     });
 
-    // File uploads
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
-    // Load saved draft on mount
     useEffect(() => {
         try {
             const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -98,7 +91,6 @@ export default function VendorWizard() {
         } catch {}
     }, []);
 
-    // Save draft whenever formData changes
     useEffect(() => {
         try {
             localStorage.setItem(
@@ -108,7 +100,7 @@ export default function VendorWizard() {
         } catch {}
     }, [formData, currentStep]);
 
-    const updateField = (field: keyof FormData, value: any) => {
+    const updateField = (field: keyof VendorFormData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
         setError(null);
     };
@@ -136,6 +128,7 @@ export default function VendorWizard() {
         setLogoFile(null);
         setLogoPreview(null);
     };
+
     const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -183,9 +176,6 @@ export default function VendorWizard() {
                     return false;
                 }
                 return true;
-            case 2:
-                // Branding is optional but validate format
-                return true;
             default:
                 return true;
         }
@@ -207,12 +197,10 @@ export default function VendorWizard() {
             setError("User not authenticated");
             return;
         }
-
         setLoading(true);
         setError(null);
 
         try {
-            // 1. Upload files if present
             let logoFileId: string | null = null;
             let bannerFileId: string | null = null;
 
@@ -224,7 +212,6 @@ export default function VendorWizard() {
                 );
                 logoFileId = res.$id;
             }
-
             if (bannerFile) {
                 const res = await storage.createFile(
                     STORAGE_BUCKET_ID,
@@ -234,14 +221,13 @@ export default function VendorWizard() {
                 bannerFileId = res.$id;
             }
 
-            // 2. Update user profile in database
             await databases.updateDocument(
                 DB_ID,
                 USERS_COLLECTION_ID,
                 user.$id,
                 {
-                    role: "seller", // Match your enum: customer, admin, seller
-                    vendorType: formData.vendorType, // Match your enum
+                    role: "seller",
+                    vendorType: formData.vendorType,
                     businessCategory: formData.businessCategory,
                     businessName: formData.businessName,
                     businessDescription: formData.businessDescription,
@@ -249,29 +235,20 @@ export default function VendorWizard() {
                     logo: logoFileId,
                     coverImage: bannerFileId,
                     primaryColor: formData.primaryColor,
-                    socialLinks: JSON.stringify(formData.socialLinks), // Already stringified in your schema
-                    vendorStatus: "pending", // Match your enum: pending, draft, active, rejected
-                    storeStatus: "closed", // Match your enum: closed, open, maintenance
-                    onboardingStep: 99, // Completed
-                    currency: "NGN", // Your default
-                    subscriptionPlan: "free", // Your default enum value
-                    accountStatus: "active" // Maintain existing status
+                    socialLinks: JSON.stringify(formData.socialLinks),
+                    vendorStatus: "pending",
+                    storeStatus: "closed",
+                    onboardingStep: 99,
+                    currency: "NGN",
+                    subscriptionPlan: "free",
+                    accountStatus: "active"
                 }
             );
 
-            // 3. Refresh user data
             await refreshUser();
-
-            // 4. Clear draft
             localStorage.removeItem(LOCAL_STORAGE_KEY);
-
-            // 5. Show success
             setSuccess(true);
-
-            // 6. Redirect after 2 seconds
-            setTimeout(() => {
-                navigate("/dashboard");
-            }, 2000);
+            setTimeout(() => navigate("/dashboard"), 2000);
         } catch (err: any) {
             console.error("Vendor setup failed:", err);
             setError(
@@ -310,31 +287,17 @@ export default function VendorWizard() {
                             const Icon = step.icon;
                             const isActive = idx === currentStep;
                             const isCompleted = idx < currentStep;
-
                             return (
                                 <div
                                     key={step.id}
                                     className="flex flex-col items-center flex-1 relative"
                                 >
                                     <div
-                                        className={`
-                      w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all z-10
-                      ${
-                          isCompleted
-                              ? "bg-green-500 border-green-500 text-white"
-                              : ""
-                      }
-                      ${
-                          isActive
-                              ? "bg-indigo-600 border-indigo-600 text-white scale-110 shadow-lg"
-                              : ""
-                      }
-                      ${
-                          !isActive && !isCompleted
-                              ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-400"
-                              : ""
-                      }
-                    `}
+                                        className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all z-10
+                                        ${isCompleted ? "bg-green-500 border-green-500 text-white" : ""}
+                                        ${isActive ? "bg-indigo-600 border-indigo-600 text-white scale-110 shadow-lg" : ""}
+                                        ${!isActive && !isCompleted ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-400" : ""}
+                                    `}
                                     >
                                         {isCompleted ? (
                                             <Check className="w-6 h-6" />
@@ -343,21 +306,13 @@ export default function VendorWizard() {
                                         )}
                                     </div>
                                     <span
-                                        className={`mt-2 text-xs font-medium text-center ${
-                                            isActive
-                                                ? "text-indigo-700 dark:text-indigo-300"
-                                                : "text-gray-500"
-                                        }`}
+                                        className={`mt-2 text-xs font-medium text-center ${isActive ? "text-indigo-700 dark:text-indigo-300" : "text-gray-500"}`}
                                     >
                                         {step.title}
                                     </span>
                                     {idx < steps.length - 1 && (
                                         <div
-                                            className={`hidden sm:block absolute top-6 left-1/2 w-full h-0.5 -z-0 ${
-                                                isCompleted
-                                                    ? "bg-green-500"
-                                                    : "bg-gray-300 dark:bg-gray-700"
-                                            }`}
+                                            className={`hidden sm:block absolute top-6 left-1/2 w-full h-0.5 -z-0 ${isCompleted ? "bg-green-500" : "bg-gray-300 dark:bg-gray-700"}`}
                                         />
                                     )}
                                 </div>
@@ -366,15 +321,12 @@ export default function VendorWizard() {
                     </div>
                 </div>
 
-                {/* Error Alert */}
                 {error && (
                     <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                                {error}
-                            </p>
-                        </div>
+                        <p className="text-sm font-medium text-red-800 dark:text-red-200 flex-1">
+                            {error}
+                        </p>
                         <button
                             onClick={() => setError(null)}
                             className="text-red-600 hover:text-red-800"
@@ -384,9 +336,7 @@ export default function VendorWizard() {
                     </div>
                 )}
 
-                {/* Card Container */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8 min-h-[500px] flex flex-col">
-                    {/* Step Content */}
                     <div className="flex-1">
                         {currentStep === 0 && (
                             <StepBusinessType
@@ -422,7 +372,6 @@ export default function VendorWizard() {
                         )}
                     </div>
 
-                    {/* Navigation */}
                     <div className="flex justify-between mt-8 pt-6 border-t">
                         <button
                             onClick={prevStep}
@@ -431,7 +380,6 @@ export default function VendorWizard() {
                         >
                             <ArrowLeft className="w-4 h-4" /> Back
                         </button>
-
                         {currentStep < 3 ? (
                             <button
                                 onClick={nextStep}
@@ -462,13 +410,13 @@ export default function VendorWizard() {
     );
 }
 
-// Step 1: Business Type
+// ─── Step 1: Business Type ──────────────────────────────────────────────────────
 function StepBusinessType({
     formData,
     updateField
 }: {
-    formData: FormData;
-    updateField: (field: keyof FormData, value: any) => void;
+    formData: VendorFormData;
+    updateField: (field: keyof VendorFormData, value: any) => void;
 }) {
     return (
         <div>
@@ -478,20 +426,13 @@ function StepBusinessType({
             <p className="text-gray-600 dark:text-gray-400 mb-6">
                 Choose the option that best describes your business
             </p>
-
             <div className="grid gap-4">
                 {vendorTypeOptions.map(type => (
                     <button
                         key={type.id}
                         onClick={() => updateField("vendorType", type.id)}
-                        className={`
-              p-6 rounded-xl border-2 text-left transition-all hover:shadow-lg
-              ${
-                  formData.vendorType === type.id
-                      ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 shadow-md"
-                      : "border-gray-200 dark:border-gray-700 hover:border-indigo-300"
-              }
-            `}
+                        className={`p-6 rounded-xl border-2 text-left transition-all hover:shadow-lg
+                            ${formData.vendorType === type.id ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 shadow-md" : "border-gray-200 dark:border-gray-700 hover:border-indigo-300"}`}
                     >
                         <div className="flex items-start gap-4">
                             <span className="text-4xl">{type.icon}</span>
@@ -514,11 +455,14 @@ function StepBusinessType({
     );
 }
 
-// Step 2: Business Info
+// ─── Step 2: Business Info ──────────────────────────────────────────────────────
 function StepBusinessInfo({
     formData,
     updateField
-}: (field: typeof FormData, value: any) => void) {
+}: {
+    formData: VendorFormData;
+    updateField: (field: keyof VendorFormData, value: any) => void;
+}) {
     const [categorySearch, setCategorySearch] = useState("");
     const [filteredCategories, setFilteredCategories] = useState<
         BusinessCategory[]
@@ -557,7 +501,6 @@ function StepBusinessInfo({
             <p className="text-gray-600 dark:text-gray-400 mb-6">
                 This information will appear on your store profile
             </p>
-
             <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">
@@ -577,7 +520,6 @@ function StepBusinessInfo({
                         {formData.businessName.length}/100
                     </p>
                 </div>
-
                 <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">
                         Business Category *
@@ -605,11 +547,7 @@ function StepBusinessInfo({
                                         updateField("businessCategory", cat.id);
                                         setCategorySearch("");
                                     }}
-                                    className={`w-full text-left px-4 py-3 border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition ${
-                                        formData.businessCategory === cat.id
-                                            ? "bg-indigo-50 dark:bg-indigo-900/30"
-                                            : ""
-                                    }`}
+                                    className={`w-full text-left px-4 py-3 border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition ${formData.businessCategory === cat.id ? "bg-indigo-50 dark:bg-indigo-900/30" : ""}`}
                                 >
                                     <div className="font-medium text-sm text-gray-900 dark:text-white">
                                         {cat.name}
@@ -623,12 +561,11 @@ function StepBusinessInfo({
                     </div>
                     {formData.businessCategory && selectedCatName && (
                         <p className="text-xs text-green-600 dark:text-green-400 mt-2 flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" />
-                            Selected:{selectedCatName}
+                            <CheckCircle className="w-3 h-3" /> Selected:{" "}
+                            {selectedCatName}
                         </p>
                     )}
                 </div>
-
                 <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">
                         Business Description *
@@ -647,7 +584,6 @@ function StepBusinessInfo({
                         {formData.businessDescription.length}/500 (min 20)
                     </p>
                 </div>
-
                 <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">
                         Business Slogan (Optional)
@@ -666,26 +602,24 @@ function StepBusinessInfo({
     );
 }
 
-// Step 3: Branding
+// ─── Step 3: Branding ───────────────────────────────────────────────────────────
 interface StepBrandingProps {
-    formData: FormData;
-    updateField: (field: keyof FormData, value: any) => void;
+    formData: VendorFormData;
+    updateField: (field: keyof VendorFormData, value: any) => void;
     updateSocialLink: (platform: string, value: string) => void;
     logoPreview: string | null;
     bannerPreview: string | null;
     onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    onLogoRemove: () => void; // ← FIX: was calling setLogoFile(null) directly
+    onLogoRemove: () => void;
     onBannerChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    onBannerRemove: () => void; // ← FIX: was calling setBannerFile(null) directly
+    onBannerRemove: () => void;
 }
 
 function StepBranding({
     formData,
     updateField,
     updateSocialLink,
-
     logoPreview,
-
     bannerPreview,
     onLogoChange,
     onLogoRemove,
@@ -698,11 +632,10 @@ function StepBranding({
                 Brand Your Store
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Upload your logo and customize your brand colors
+                Upload your logo and customise your brand colours
             </p>
-
             <div className="space-y-6">
-                {/* Logo Upload */}
+                {/* Logo */}
                 <div>
                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         Logo (Optional)
@@ -746,55 +679,50 @@ function StepBranding({
                         </div>
                     </div>
                 </div>
-
-                {/* Banner Upload */}
+                {/* Banner */}
                 <div>
                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         Cover Banner (Optional)
                     </label>
-                    <div className="space-y-4">
-                        {bannerPreview ? (
-                            <div className="relative">
-                                <img
-                                    src={bannerPreview}
-                                    alt="Banner preview"
-                                    className="w-full h-32 object-cover rounded-lg border-2 border-gray-300"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={onBannerRemove}
-                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
+                    {bannerPreview ? (
+                        <div className="relative">
+                            <img
+                                src={bannerPreview}
+                                alt="Banner preview"
+                                className="w-full h-32 object-cover rounded-lg border-2 border-gray-300"
+                            />
+                            <button
+                                type="button"
+                                onClick={onBannerRemove}
+                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ) : (
+                        <label className="cursor-pointer block">
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={onBannerChange}
+                                className="hidden"
+                            />
+                            <div className="w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center hover:border-indigo-500 transition">
+                                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    Click to upload banner
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    PNG, JPG up to 5MB. 16:9 ratio recommended.
+                                </p>
                             </div>
-                        ) : (
-                            <label className="cursor-pointer block">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={onBannerChange}
-                                    className="hidden"
-                                />
-                                <div className="w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center hover:border-indigo-500 transition">
-                                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Click to upload banner
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        PNG, JPG up to 5MB. 16:9 ratio
-                                        recommended.
-                                    </p>
-                                </div>
-                            </label>
-                        )}
-                    </div>
+                        </label>
+                    )}
                 </div>
-
-                {/* Brand Color */}
+                {/* Brand Colour */}
                 <div>
                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                        Primary Brand Color
+                        Primary Brand Colour
                     </label>
                     <div className="flex gap-3 items-center">
                         <input
@@ -816,7 +744,6 @@ function StepBranding({
                         />
                     </div>
                 </div>
-
                 {/* Social Links */}
                 <div>
                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
@@ -838,11 +765,7 @@ function StepBranding({
                                 onChange={e =>
                                     updateSocialLink(platform, e.target.value)
                                 }
-                                placeholder={`https://${
-                                    platform === "website"
-                                        ? "yoursite.com"
-                                        : platform + ".com/yourpage"
-                                }`}
+                                placeholder={`https://${platform === "website" ? "yoursite.com" : platform + ".com/yourpage"}`}
                                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                             />
                         ))}
@@ -853,13 +776,13 @@ function StepBranding({
     );
 }
 
-// Step 4: Review
+// ─── Step 4: Review ─────────────────────────────────────────────────────────────
 function StepReview({
     formData,
     logoPreview,
     bannerPreview
 }: {
-    formData: FormData;
+    formData: VendorFormData;
     logoPreview: string | null;
     bannerPreview: string | null;
 }) {
@@ -878,9 +801,7 @@ function StepReview({
             <p className="text-gray-600 dark:text-gray-400 mb-6">
                 Please confirm everything looks correct before submitting
             </p>
-
             <div className="space-y-6">
-                {/* Preview Card */}
                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-lg p-6 border-2 border-gray-200 dark:border-gray-700">
                     {bannerPreview && (
                         <img
@@ -889,7 +810,6 @@ function StepReview({
                             className="w-full h-32 object-cover rounded-lg mb-4"
                         />
                     )}
-
                     <div className="flex items-start gap-4 mb-4">
                         {logoPreview ? (
                             <img
@@ -922,24 +842,21 @@ function StepReview({
                             <div className="flex items-center gap-2 mt-2">
                                 {selectedType && (
                                     <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
-                                        {selectedType?.label}
+                                        {selectedType.label}
                                     </span>
                                 )}
                                 {selectedCategory && (
                                     <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                        {selectedCategory?.name}
+                                        {selectedCategory.name}
                                     </span>
                                 )}
                             </div>
                         </div>
                     </div>
-
                     <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                         {formData.businessDescription}
                     </p>
                 </div>
-
-                {/* Details List */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg border p-6 space-y-4">
                     <DetailRow
                         label="Vendor Type"
@@ -962,7 +879,7 @@ function StepReview({
                         <DetailRow label="Slogan" value={formData.slogan} />
                     )}
                     <DetailRow
-                        label="Brand Color"
+                        label="Brand Colour"
                         value={
                             <div className="flex items-center gap-2">
                                 <div
@@ -986,20 +903,18 @@ function StepReview({
                         value={bannerPreview ? "✅ Uploaded" : "Not uploaded"}
                     />
                 </div>
-
-                {/* Important Note */}
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                     <div className="flex gap-3">
                         <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1">
+                        <div>
                             <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">
                                 Important Information
                             </p>
                             <p className="text-sm text-yellow-700 dark:text-yellow-300">
                                 After submission, your vendor account will be
                                 pending review. You'll receive an email
-                                notification once your account is approved. This
-                                typically takes 1-2 business days.
+                                notification once approved. This typically takes
+                                1–2 business days.
                             </p>
                         </div>
                     </div>

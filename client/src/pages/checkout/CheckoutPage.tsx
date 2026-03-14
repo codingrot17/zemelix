@@ -16,16 +16,63 @@ import {
     Loader2
 } from "lucide-react";
 
+// ─── Types ─────────────────────────────────────────────────────────────────────
+type CheckoutStep = "shipping" | "payment" | "success";
+
+interface ShippingInfo {
+    fullName: string;
+    email: string;
+    phone: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+}
+
+type PaymentMethod = "card" | "bank_transfer";
+
+// ─── Step indicator ─────────────────────────────────────────────────────────────
+function Step({
+    number,
+    label,
+    active,
+    completed = false
+}: {
+    number: number;
+    label: string;
+    active: boolean;
+    completed?: boolean;
+}) {
+    return (
+        <div className="flex items-center gap-2">
+            <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    completed
+                        ? "bg-green-500 text-white"
+                        : active
+                          ? "bg-indigo-600 text-white"
+                          : "bg-gray-200 dark:bg-gray-700 text-gray-600"
+                }`}
+            >
+                {completed ? <CheckCircle className="w-5 h-5" /> : number}
+            </div>
+            <span
+                className={`text-sm font-medium ${active ? "text-gray-900 dark:text-white" : "text-gray-500"}`}
+            >
+                {label}
+            </span>
+        </div>
+    );
+}
+
+// ─── Main component ─────────────────────────────────────────────────────────────
 export default function CheckoutPage() {
     const { items, subtotal, clear } = useCart();
     const navigate = useNavigate();
-    const [step, setStep] = useState<"shipping" | "payment" | "success">(
-        "shipping"
-    );
+    const [step, setStep] = useState<CheckoutStep>("shipping");
     const [loading, setLoading] = useState(false);
 
-    // Form state
-    const [shippingInfo, setShippingInfo] = useState({
+    const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
         fullName: "",
         email: "",
         phone: "",
@@ -35,16 +82,20 @@ export default function CheckoutPage() {
         zipCode: ""
     });
 
-    const [paymentMethod, setPaymentMethod] = useState<
-        "card" | "bank_transfer"
-    >("card");
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
 
     const deliveryFee = 1500;
-    const tax = subtotal * 0.075; // 7.5% VAT
+    const tax = subtotal * 0.075;
     const total = subtotal + deliveryFee + tax;
 
     const validateShipping = () => {
-        const required = ["fullName", "email", "phone", "address", "city"];
+        const required: (keyof ShippingInfo)[] = [
+            "fullName",
+            "email",
+            "phone",
+            "address",
+            "city"
+        ];
         return required.every(field => shippingInfo[field]?.trim());
     };
 
@@ -58,18 +109,14 @@ export default function CheckoutPage() {
 
     const handlePayment = async () => {
         setLoading(true);
-
-        // Simulate payment processing
+        // Simulate processing — replace with Paystack/Flutterwave when ready
         await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // In production, integrate Paystack/Flutterwave here
-        // const response = await initiatePayment({ amount: total, email: shippingInfo.email });
-
         setLoading(false);
+        clear();
         setStep("success");
-        clear(); // Clear cart after successful order
     };
 
+    // ── Empty cart guard ───────────────────────────────────────────────────────
     if (items.length === 0 && step !== "success") {
         return (
             <div className="min-h-screen flex items-center justify-center p-4">
@@ -88,19 +135,17 @@ export default function CheckoutPage() {
         );
     }
 
+    // ── Success screen ─────────────────────────────────────────────────────────
     if (step === "success") {
         return (
             <div className="min-h-screen flex items-center justify-center p-4">
                 <div className="max-w-md w-full text-center">
-                    <div className="mb-6">
-                        <CheckCircle className="w-20 h-20 text-green-500 mx-auto animate-bounce" />
-                    </div>
+                    <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6 animate-bounce" />
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                         Order Confirmed!
                     </h1>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
-                        Thank you for your purchase. We've sent a confirmation
-                        email to{" "}
+                        Thank you! We've sent a confirmation to{" "}
                         <span className="font-medium">
                             {shippingInfo.email}
                         </span>
@@ -131,10 +176,10 @@ export default function CheckoutPage() {
         );
     }
 
+    // ── Main checkout ──────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
             <div className="max-w-6xl mx-auto">
-                {/* Back Button */}
                 <Button
                     variant="ghost"
                     onClick={() =>
@@ -142,34 +187,29 @@ export default function CheckoutPage() {
                     }
                     className="mb-6"
                 >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Back
                 </Button>
 
                 <div className="grid lg:grid-cols-3 gap-8">
-                    {/* Main Content */}
+                    {/* Main */}
                     <div className="lg:col-span-2">
-                        {/* Progress Steps */}
-                        <div className="mb-8">
-                            <div className="flex items-center justify-between mb-4">
-                                <Step
-                                    number={1}
-                                    label="Shipping"
-                                    active={step === "shipping"}
-                                    completed={
-                                        step === "payment" || step === "success"
-                                    }
-                                />
-                                <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 mx-4" />
-                                <Step
-                                    number={2}
-                                    label="Payment"
-                                    active={step === "payment"}
-                                />
-                            </div>
+                        {/* Progress */}
+                        <div className="flex items-center justify-between mb-8">
+                            <Step
+                                number={1}
+                                label="Shipping"
+                                active={step === "shipping"}
+                                completed={step === "payment"}
+                            />
+                            <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 mx-4" />
+                            <Step
+                                number={2}
+                                label="Payment"
+                                active={step === "payment"}
+                            />
                         </div>
 
-                        {/* Shipping Info */}
+                        {/* Shipping Form */}
                         {step === "shipping" && (
                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
                                 <div className="flex items-center gap-2 mb-6">
@@ -178,7 +218,6 @@ export default function CheckoutPage() {
                                         Shipping Information
                                     </h2>
                                 </div>
-
                                 <div className="space-y-4">
                                     <div>
                                         <Label htmlFor="fullName">
@@ -200,7 +239,6 @@ export default function CheckoutPage() {
                                             />
                                         </div>
                                     </div>
-
                                     <div className="grid sm:grid-cols-2 gap-4">
                                         <div>
                                             <Label htmlFor="email">
@@ -246,7 +284,6 @@ export default function CheckoutPage() {
                                             </div>
                                         </div>
                                     </div>
-
                                     <div>
                                         <Label htmlFor="address">
                                             Street Address *
@@ -264,7 +301,6 @@ export default function CheckoutPage() {
                                             rows={3}
                                         />
                                     </div>
-
                                     <div className="grid sm:grid-cols-3 gap-4">
                                         <div>
                                             <Label htmlFor="city">City *</Label>
@@ -311,7 +347,6 @@ export default function CheckoutPage() {
                                         </div>
                                     </div>
                                 </div>
-
                                 <Button
                                     onClick={handleProceedToPayment}
                                     className="w-full mt-6"
@@ -321,7 +356,7 @@ export default function CheckoutPage() {
                             </div>
                         )}
 
-                        {/* Payment */}
+                        {/* Payment Form */}
                         {step === "payment" && (
                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                                 <div className="flex items-center gap-2 mb-6">
@@ -330,64 +365,43 @@ export default function CheckoutPage() {
                                         Payment Method
                                     </h2>
                                 </div>
-
                                 <div className="space-y-4 mb-6">
-                                    <button
-                                        onClick={() => setPaymentMethod("card")}
-                                        className={`w-full p-4 rounded-lg border-2 transition ${
-                                            paymentMethod === "card"
-                                                ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
-                                                : "border-gray-200 dark:border-gray-700"
-                                        }`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <CreditCard className="w-6 h-6" />
-                                                <div className="text-left">
-                                                    <p className="font-semibold">
-                                                        Card Payment
-                                                    </p>
-                                                    <p className="text-sm text-gray-500">
-                                                        Debit/Credit Card
-                                                    </p>
+                                    {(
+                                        [
+                                            "card",
+                                            "bank_transfer"
+                                        ] as PaymentMethod[]
+                                    ).map(method => (
+                                        <button
+                                            key={method}
+                                            onClick={() =>
+                                                setPaymentMethod(method)
+                                            }
+                                            className={`w-full p-4 rounded-lg border-2 transition ${paymentMethod === method ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20" : "border-gray-200 dark:border-gray-700"}`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <CreditCard className="w-6 h-6" />
+                                                    <div className="text-left">
+                                                        <p className="font-semibold">
+                                                            {method === "card"
+                                                                ? "Card Payment"
+                                                                : "Bank Transfer"}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            {method === "card"
+                                                                ? "Debit/Credit Card"
+                                                                : "Direct bank payment"}
+                                                        </p>
+                                                    </div>
                                                 </div>
+                                                {paymentMethod === method && (
+                                                    <CheckCircle className="w-5 h-5 text-indigo-600" />
+                                                )}
                                             </div>
-                                            {paymentMethod === "card" && (
-                                                <CheckCircle className="w-5 h-5 text-indigo-600" />
-                                            )}
-                                        </div>
-                                    </button>
-
-                                    <button
-                                        onClick={() =>
-                                            setPaymentMethod("bank_transfer")
-                                        }
-                                        className={`w-full p-4 rounded-lg border-2 transition ${
-                                            paymentMethod === "bank_transfer"
-                                                ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
-                                                : "border-gray-200 dark:border-gray-700"
-                                        }`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <MapPin className="w-6 h-6" />
-                                                <div className="text-left">
-                                                    <p className="font-semibold">
-                                                        Bank Transfer
-                                                    </p>
-                                                    <p className="text-sm text-gray-500">
-                                                        Direct bank payment
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {paymentMethod ===
-                                                "bank_transfer" && (
-                                                <CheckCircle className="w-5 h-5 text-indigo-600" />
-                                            )}
-                                        </div>
-                                    </button>
+                                        </button>
+                                    ))}
                                 </div>
-
                                 <Button
                                     onClick={handlePayment}
                                     disabled={loading}
@@ -403,105 +417,74 @@ export default function CheckoutPage() {
                                         `Pay ₦${total.toLocaleString()}`
                                     )}
                                 </Button>
-
                                 <p className="text-xs text-center text-gray-500 mt-4">
-                                    Secure payment powered by Paystack
+                                    Secure payment — contact seller directly to
+                                    arrange transfer
                                 </p>
                             </div>
                         )}
                     </div>
 
                     {/* Order Summary */}
-                    <div>
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 sticky top-6">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                                Order Summary
-                            </h3>
-
-                            <div className="space-y-3 mb-4">
-                                {items.map(item => (
-                                    <div key={item.id} className="flex gap-3">
-                                        <img
-                                            src={
-                                                item.imageUrl ||
-                                                "/images/placeholder.svg"
-                                            }
-                                            alt={item.title}
-                                            className="w-16 h-16 rounded object-cover"
-                                        />
-                                        <div className="flex-1">
-                                            <p className="font-medium text-sm">
-                                                {item.title}
-                                            </p>
-                                            <p className="text-xs text-gray-500">
-                                                Qty: {item.qty}
-                                            </p>
-                                            <p className="text-sm font-semibold">
-                                                ₦
-                                                {(
-                                                    item.price * item.qty
-                                                ).toFixed(2)}
-                                            </p>
-                                        </div>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 sticky top-6 h-fit">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                            Order Summary
+                        </h3>
+                        <div className="space-y-3 mb-4">
+                            {items.map(item => (
+                                <div key={item.id} className="flex gap-3">
+                                    <img
+                                        src={
+                                            item.imageUrl ||
+                                            "/images/placeholder.svg"
+                                        }
+                                        alt={item.title}
+                                        className="w-16 h-16 rounded object-cover"
+                                    />
+                                    <div className="flex-1">
+                                        <p className="font-medium text-sm">
+                                            {item.title}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            Qty: {item.qty}
+                                        </p>
+                                        <p className="text-sm font-semibold">
+                                            ₦
+                                            {(item.price * item.qty).toFixed(2)}
+                                        </p>
                                     </div>
-                                ))}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="border-t pt-4 space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span>Subtotal</span>
+                                <span className="font-medium">
+                                    ₦{subtotal.toFixed(2)}
+                                </span>
                             </div>
-
-                            <div className="border-t pt-4 space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <span>Subtotal</span>
-                                    <span className="font-medium">
-                                        ₦{subtotal.toFixed(2)}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Delivery</span>
-                                    <span className="font-medium">
-                                        ₦{deliveryFee.toFixed(2)}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Tax (7.5%)</span>
-                                    <span className="font-medium">
-                                        ₦{tax.toFixed(2)}
-                                    </span>
-                                </div>
-                                <div className="border-t pt-2 flex justify-between text-lg font-bold">
-                                    <span>Total</span>
-                                    <span className="text-indigo-600">
-                                        ₦{total.toFixed(2)}
-                                    </span>
-                                </div>
+                            <div className="flex justify-between">
+                                <span>Delivery</span>
+                                <span className="font-medium">
+                                    ₦{deliveryFee.toFixed(2)}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Tax (7.5%)</span>
+                                <span className="font-medium">
+                                    ₦{tax.toFixed(2)}
+                                </span>
+                            </div>
+                            <div className="border-t pt-2 flex justify-between text-lg font-bold">
+                                <span>Total</span>
+                                <span className="text-indigo-600">
+                                    ₦{total.toFixed(2)}
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    );
-}
-
-function Step({ number, label, active, completed = false }) {
-    return (
-        <div className="flex items-center gap-2">
-            <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                    completed
-                        ? "bg-green-500 text-white"
-                        : active
-                        ? "bg-indigo-600 text-white"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-600"
-                }`}
-            >
-                {completed ? <CheckCircle className="w-5 h-5" /> : number}
-            </div>
-            <span
-                className={`text-sm font-medium ${
-                    active ? "text-gray-900 dark:text-white" : "text-gray-500"
-                }`}
-            >
-                {label}
-            </span>
         </div>
     );
 }

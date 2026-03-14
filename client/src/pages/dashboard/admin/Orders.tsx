@@ -1,9 +1,12 @@
-import React from 'react'
+import React from "react";
+import ComingSoon from "@/components/ui/ComingSoon";
 
-const AdminOrders = () => {
-  return (
-    <div></div>
-  )
+export default function AdminOrders() {
+    return (
+        <ComingSoon
+            title="Admin Orders"
+            backTo="/dashboard/admin"
+            backLabel="Back to Dashboard"
+        />
+    );
 }
-
-export default Orders

@@ -39,6 +39,16 @@ interface AuthUser {
     emailVerification: boolean;
     role: UserRole;
     profile: Record<string, any> | null;
+    vendorType?: string | null;
+    businessCategory?: string | null;
+    businessName?: string | null;
+    businessDescription?: string | null;
+    socialLinks?: Record<string, string> | null;
+    primaryColor?: string | null;
+    logo?: string | null;
+    coverImage?: string | null;
+    slogan?: string | null;
+    onboardingStep?: number | null;
 }
 
 interface AuthContextType {
@@ -78,7 +88,17 @@ function buildAuthUser(
         emailVerification: account.emailVerification,
         // ✅ Pass the correct object shape to normalizeRole
         role: normalizeRole({ profile, role: profile?.role }),
-        profile
+        profile,
+        vendorType: profile?.vendorType ?? null,
+        businessCategory: profile?.businessCategory ?? null,
+        businessName: profile?.businessName ?? null,
+        businessDescription: profile?.businessDescription ?? null,
+        socialLinks: profile?.socialLinks ?? null,
+        primaryColor: profile?.primaryColor ?? null,
+        logo: profile?.logo ?? null,
+        coverImage: profile?.coverImage ?? null,
+        slogan: profile?.slogan ?? null,
+        onboardingStep: profile?.onboardingStep ?? null
     };
 }
 // --------------------------------------------------

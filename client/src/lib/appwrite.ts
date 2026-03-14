@@ -10,7 +10,8 @@ import {
     ID,
     Permission,
     Role,
-    Storage
+    Storage,
+    Query
 } from "appwrite";
 
 // --------------------------------------------------
@@ -38,7 +39,7 @@ const client = new Client().setEndpoint(ENDPOINT).setProject(PROJECT_ID);
 export const account = new Account(client);
 export const databases = new Databases(client);
 export const storage = new Storage(client);
-export { ID };
+export { ID, Query };
 
 // --------------------------------------------------
 // COOKIE MANAGEMENT

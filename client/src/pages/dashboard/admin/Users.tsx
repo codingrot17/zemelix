@@ -1,7 +1,12 @@
 import React from "react";
+import ComingSoon from "@/components/ui/ComingSoon";
 
-function AdminUsers() {
-    return <ComingSoon title="Admin Users" backTo="/" backLabel="Back" />;
+export default function AdminUsers() {
+    return (
+        <ComingSoon
+            title="Admin Users"
+            backTo="/dashboard/admin"
+            backLabel="Back to Dashboard"
+        />
+    );
 }
-
-export default AdminUsers;
