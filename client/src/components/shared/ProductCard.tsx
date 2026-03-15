@@ -51,12 +51,12 @@ export default function ProductCard({ product }: { product: Product }) {
                 <div>
                     <div className="flex items-center gap-2">
                         <img
-                            src={product.vendorAvatar}
-                            alt={product.vendorName}
+                            src={product.sellerAvatar}
+                            alt={product.sellerName}
                             className="h-6 w-6 rounded-full border"
                         />
                         <p className="text-sm font-medium">
-                            {product.vendorName}
+                            {product.sellerName}
                         </p>
                         <p
                             className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
