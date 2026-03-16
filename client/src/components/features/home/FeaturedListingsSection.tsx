@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { products } from "@/data/products";
-import { useCart } from "@/hooks/useCart";
-
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import {
     Carousel,
     CarouselContent,
@@ -12,16 +10,31 @@ import {
 } from "@/components/ui/carousel";
 import type { CarouselApi } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { useProducts } from "@/hooks/useProducts";
+import { useCart } from "@/hooks/useCart";
+import {
+    BadgeChip,
+    SellerStrip,
+    StockLabel,
+    ListingActionButton
+} from "@/components/shared/ListingPrimitives";
+import type { Product } from "@/types/product";
 
 export function FeaturedListingsCarousel() {
     const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+    const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+
     const navigate = useNavigate();
     const { add } = useCart();
+    const { products, loading, isFallback } = useProducts({
+        featuredOnly: false,
+        limit: 12,
+        activeOnly: true
+    });
 
-    // Setup carousel handlers
+    // ── Carousel setup ──────────────────────────────────────────────────────────
     const onSelect = useCallback(() => {
         if (!carouselApi) return;
         setSelectedIndex(carouselApi.selectedScrollSnap());
@@ -39,120 +52,233 @@ export function FeaturedListingsCarousel() {
         };
     }, [carouselApi, onSelect]);
 
-    function scrollTo(index: number) {
-        if (!carouselApi) return;
-        carouselApi.scrollTo(index);
-    }
+    const scrollTo = (index: number) => carouselApi?.scrollTo(index);
 
-    if (!products || products.length === 0) {
+    // ── Cart action ─────────────────────────────────────────────────────────────
+    const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+        e.stopPropagation();
+        if (product.vendorType === "service") {
+            navigate(`/product/${product.id}`);
+            return;
+        }
+        add({
+            id: product.id,
+            title: product.title,
+            price: product.price,
+            imageUrl: product.imageUrl
+        });
+        setAddedIds(prev => new Set(prev).add(product.id));
+        setTimeout(
+            () =>
+                setAddedIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(product.id);
+                    return next;
+                }),
+            2000
+        );
+    };
+
+    if (!loading && products.length === 0) {
         return (
-            <div className="max-w-7xl mx-auto px-4 py-10 text-center text-gray-500">
-                No featured products available yet.
+            <div className="max-w-7xl mx-auto px-4 py-10 text-center text-gray-500 text-sm">
+                No featured listings available yet.
             </div>
         );
     }
 
     return (
-        <section className="max-w-7xl mx-auto px-3 sm:px-6 py-8 relative">
-            <h2 className="text-2xl font-semibold mb-6 text-primary dark:text-primary-light text-center animate-fade-in">
-                Featured Listings
-            </h2>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                        Featured Listings
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        Products and services from verified sellers
+                    </p>
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/collections")}
+                    className="hidden sm:flex"
+                >
+                    View All
+                </Button>
+            </div>
 
-            <Carousel
-                setApi={setCarouselApi}
-                opts={{ align: "start", loop: false }}
-                className="w-full relative"
-            >
-                <CarouselPrevious className="absolute top-1/2 left-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <ChevronLeft className="w-6 h-6" />
-                </CarouselPrevious>
+            {/* Fallback notice */}
+            {isFallback && (
+                <div className="mb-4 px-3 py-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-xs text-yellow-700 dark:text-yellow-300">
+                    Showing demo listings — add products via the Seller
+                    Dashboard to show live data.
+                </div>
+            )}
 
-                <CarouselNext className="absolute top-1/2 right-2 -translate-y-1/2 z-20 rounded-full bg-black/30 hover:bg-black/50 text-white p-2 cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <ChevronRight className="w-6 h-6" />
-                </CarouselNext>
-
-                <CarouselContent>
-                    {products.map(product => (
-                        <CarouselItem
-                            key={product.id}
-                            className="pl-5 md:basis-1/2 lg:basis-1/3"
-                        >
-                            <div className="min-h-[420px] animate-fade-in flex flex-col border rounded-lg overflow-hidden hover:shadow-md transition">
-                                <img
-                                    src={product.imageUrl}
-                                    alt={product.title}
-                                    className="w-full h-56 object-cover"
-                                />
-                                <div className="p-4 flex flex-col flex-1">
-                                    <h3 className="font-medium text-base mb-1">
-                                        {product.title}
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground mb-2">
-                                        {product.category}
-                                    </p>
-                                    <p className="text-sm font-semibold mb-3">
-                                        ₦{product.price.toLocaleString()}
-                                    </p>
-
-                                    <div className="mt-auto flex justify-between items-center">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="text-sm"
-                                            onClick={() =>
-                                                add({
-                                                    id: product.id,
-                                                    title: product.title,
-                                                    price: product.price,
-                                                    imageUrl: product.imageUrl
-                                                })
-                                            }
-                                        >
-                                            <ShoppingCart className="w-4 h-4 mr-2" />
-                                            Add to Cart
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            className="text-sm"
-                                            onClick={() =>
-                                                navigate(
-                                                    `/product/${product.id}`
-                                                )
-                                            }
-                                        >
-                                            View
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-
-                <div className="flex justify-center gap-3 mt-6">
-                    {scrollSnaps.map((_, index) => (
-                        <button
-                            key={index}
-                            onClick={() => scrollTo(index)}
-                            className={`w-3 h-3 rounded-full transition-colors ${
-                                selectedIndex === index
-                                    ? "bg-indigo-600 dark:bg-indigo-400 scale-125"
-                                    : "bg-gray-300 dark:bg-gray-700"
-                            }`}
-                            aria-label={`Go to slide ${index + 1}`}
+            {/* Carousel */}
+            {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {[1, 2, 3].map(i => (
+                        <div
+                            key={i}
+                            className="h-80 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse"
                         />
                     ))}
                 </div>
-            </Carousel>
-
-            <div className="flex justify-center mt-8">
-                <Button
-                    className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-400 dark:hover:bg-indigo-500 px-8 py-3 text-base font-semibold rounded-full shadow-lg transition"
-                    onClick={() => navigate("/collections")}
+            ) : (
+                <Carousel
+                    setApi={setCarouselApi}
+                    opts={{ align: "start", loop: false }}
+                    className="w-full relative"
                 >
-                    View More Products & Services
+                    <CarouselPrevious className="absolute top-1/2 -left-4 -translate-y-1/2 z-20 rounded-full bg-white dark:bg-gray-800 shadow-md border">
+                        <ChevronLeft className="w-5 h-5" />
+                    </CarouselPrevious>
+                    <CarouselNext className="absolute top-1/2 -right-4 -translate-y-1/2 z-20 rounded-full bg-white dark:bg-gray-800 shadow-md border">
+                        <ChevronRight className="w-5 h-5" />
+                    </CarouselNext>
+
+                    <CarouselContent>
+                        {products.map(product => (
+                            <CarouselItem
+                                key={product.id}
+                                className="pl-4 basis-full sm:basis-1/2 lg:basis-1/3"
+                            >
+                                <FeaturedCard
+                                    product={product}
+                                    added={addedIds.has(product.id)}
+                                    onAction={e => handleAddToCart(e, product)}
+                                    onView={() =>
+                                        navigate(`/product/${product.id}`)
+                                    }
+                                />
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+
+                    {/* Dot indicators */}
+                    <div className="flex justify-center gap-2 mt-6">
+                        {scrollSnaps.map((_, index) => (
+                            <button
+                                key={index}
+                                onClick={() => scrollTo(index)}
+                                className={`w-2.5 h-2.5 rounded-full transition-all ${
+                                    selectedIndex === index
+                                        ? "bg-indigo-600 dark:bg-indigo-400 scale-125"
+                                        : "bg-gray-300 dark:bg-gray-600"
+                                }`}
+                                aria-label={`Go to slide ${index + 1}`}
+                            />
+                        ))}
+                    </div>
+                </Carousel>
+            )}
+
+            {/* Mobile view all */}
+            <div className="flex justify-center mt-6 sm:hidden">
+                <Button
+                    variant="outline"
+                    onClick={() => navigate("/collections")}
+                    className="w-full"
+                >
+                    View All Listings
                 </Button>
             </div>
         </section>
+    );
+}
+
+// ── FeaturedCard ───────────────────────────────────────────────────────────────
+function FeaturedCard({
+    product,
+    added,
+    onAction,
+    onView
+}: {
+    product: Product;
+    added: boolean;
+    onAction: (e: React.MouseEvent) => void;
+    onView: () => void;
+}) {
+    const isService = product.vendorType === "service";
+    const outOfStock = product.stock === 0;
+
+    return (
+        <div
+            className="flex flex-col border rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer group"
+            onClick={onView}
+        >
+            {/* Image */}
+            <div className="relative h-52 overflow-hidden">
+                <img
+                    src={product.imageUrl || "/images/placeholder.svg"}
+                    alt={product.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                />
+                {isService && (
+                    <div className="absolute inset-0 bg-teal-900/10 pointer-events-none" />
+                )}
+                {product.badge && (
+                    <div className="absolute top-3 left-3">
+                        <BadgeChip badge={product.badge} />
+                    </div>
+                )}
+                {outOfStock && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <span className="bg-white text-gray-800 text-xs font-bold px-3 py-1 rounded-full">
+                            Out of Stock
+                        </span>
+                    </div>
+                )}
+            </div>
+
+            {/* Body */}
+            <div className="p-4 flex flex-col gap-2 flex-1">
+                <SellerStrip
+                    name={product.sellerName}
+                    avatar={product.sellerAvatar}
+                    vendorType={product.vendorType}
+                />
+
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2">
+                    {product.title}
+                </h3>
+
+                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                    {product.shortDescription}
+                </p>
+
+                {/* Rating row */}
+                <div className="flex items-center gap-1 text-yellow-400">
+                    <Star className="w-3.5 h-3.5 fill-yellow-400" />
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {product.rating > 0 ? product.rating.toFixed(1) : "New"}
+                    </span>
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100 dark:border-zinc-800">
+                    <div>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">
+                            ₦{Number(product.price).toLocaleString()}
+                        </p>
+                        <StockLabel
+                            vendorType={product.vendorType}
+                            stock={product.stock}
+                        />
+                    </div>
+                    <ListingActionButton
+                        vendorType={product.vendorType}
+                        outOfStock={outOfStock}
+                        added={added}
+                        onClick={onAction}
+                        size="sm"
+                    />
+                </div>
+            </div>
+        </div>
     );
 }

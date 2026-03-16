@@ -1,109 +1,157 @@
 import { useState } from "react";
-import { Heart, Star, ShoppingCart, Bookmark } from "lucide-react";
+import { Heart, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
+import { useCart } from "@/hooks/useCart";
+import {
+    BadgeChip,
+    SellerStrip,
+    StockLabel,
+    ListingActionButton
+} from "@/components/shared/ListingPrimitives";
 
 export default function ProductCard({ product }: { product: Product }) {
+    const navigate = useNavigate();
+    const { add } = useCart();
     const [wishlisted, setWishlisted] = useState(false);
+    const [added, setAdded] = useState(false);
 
-    const toggleWishlist = () => {
+    const isService = product.vendorType === "service";
+    const outOfStock = product.stock === 0;
+
+    const handleAction = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (outOfStock || isService) {
+            navigate(`/product/${product.id}`);
+            return;
+        }
+        add({
+            id: product.id,
+            title: product.title,
+            price: product.price,
+            imageUrl: product.imageUrl
+        });
+        setAdded(true);
+        setTimeout(() => setAdded(false), 2000);
+    };
+
+    const toggleWishlist = (e: React.MouseEvent) => {
+        e.stopPropagation();
         setWishlisted(prev => {
             const next = !prev;
-            const stored = JSON.parse(localStorage.getItem("wishlist") || "[]");
-            const updated = next
-                ? [...stored, product.id]
-                : stored.filter((id: string) => id !== product.id);
-            localStorage.setItem("wishlist", JSON.stringify(updated));
+            try {
+                const stored: string[] = JSON.parse(
+                    localStorage.getItem("wishlist") || "[]"
+                );
+                const updated = next
+                    ? [...stored, product.id]
+                    : stored.filter(id => id !== product.id);
+                localStorage.setItem("wishlist", JSON.stringify(updated));
+            } catch {}
             return next;
         });
     };
 
     return (
-        <div className="group relative flex flex-col bg-white/90 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ease-out">
-            {/* Image */}
-            <div className="relative h-56 w-full overflow-hidden">
+        <div
+            className="group relative flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+            onClick={() => navigate(`/product/${product.id}`)}
+        >
+            {/* ── Image ── */}
+            <div className="relative h-52 w-full overflow-hidden">
                 <img
-                    src={product.imageUrl}
+                    src={product.imageUrl || "/images/placeholder.svg"}
                     alt={product.title}
-                    className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                 />
+
+                {/* Service overlay tint */}
+                {isService && (
+                    <div className="absolute inset-0 bg-teal-900/10 pointer-events-none" />
+                )}
+
+                {/* Badge */}
+                {product.badge && (
+                    <div className="absolute top-3 left-3">
+                        <BadgeChip badge={product.badge} />
+                    </div>
+                )}
+
+                {/* Wishlist */}
                 <button
                     onClick={toggleWishlist}
-                    className="absolute top-3 right-3 bg-white/70 backdrop-blur-md p-2 rounded-full shadow-sm hover:scale-110 transition"
+                    className="absolute top-3 right-3 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-full p-1.5 shadow hover:scale-110 transition"
+                    aria-label="Wishlist"
                 >
                     <Heart
-                        className={`w-4 h-4 ${
+                        className={`w-4 h-4 transition ${
                             wishlisted
                                 ? "fill-red-500 text-red-500"
-                                : "text-zinc-600"
+                                : "text-zinc-400"
                         }`}
                     />
                 </button>
-                {product.badge && (
-                    <span className="absolute bottom-3 left-3 px-2 py-1 text-xs font-semibold bg-gradient-to-r from-indigo-500 to-pink-500 text-white rounded-full">
-                        {product.badge}
-                    </span>
+
+                {/* Out of stock overlay */}
+                {outOfStock && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <span className="bg-white text-gray-800 text-xs font-bold px-3 py-1 rounded-full">
+                            Out of Stock
+                        </span>
+                    </div>
                 )}
             </div>
 
-            {/* Details */}
-            <div className="flex flex-col justify-between flex-grow p-4 space-y-3">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <img
-                            src={product.sellerAvatar}
-                            alt={product.sellerName}
-                            className="h-6 w-6 rounded-full border"
-                        />
-                        <p className="text-sm font-medium">
-                            {product.sellerName}
-                        </p>
-                        <p
-                            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                product.vendorType === "seller"
-                                    ? "bg-emerald-100 text-emerald-700"
-                                    : "bg-blue-100 text-blue-700"
-                            }`}
-                        >
-                            {product.vendorType}
-                        </p>
-                    </div>
+            {/* ── Content ── */}
+            <div className="flex flex-col flex-1 p-4 gap-3">
+                {/* Seller strip */}
+                <SellerStrip
+                    name={product.sellerName}
+                    avatar={product.sellerAvatar}
+                    vendorType={product.vendorType}
+                />
 
-                    <h3 className="mt-2 text-base font-semibold text-zinc-800 dark:text-zinc-100 line-clamp-1">
-                        {product.title}
-                    </h3>
-                    <p className="text-sm text-zinc-500 line-clamp-2">
+                {/* Title */}
+                <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 line-clamp-2 leading-snug">
+                    {product.title}
+                </h3>
+
+                {/* Short description */}
+                {product.shortDescription && (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">
                         {product.shortDescription}
                     </p>
-                </div>
+                )}
 
-                <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-1 text-yellow-500">
-                        <Star className="w-4 h-4 fill-yellow-400" />{" "}
-                        {product.rating}
+                {/* Rating + Price row */}
+                <div className="flex items-center justify-between mt-auto">
+                    <div className="flex items-center gap-1 text-yellow-400">
+                        <Star className="w-3.5 h-3.5 fill-yellow-400" />
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {product.rating > 0
+                                ? product.rating.toFixed(1)
+                                : "New"}
+                        </span>
                     </div>
-                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                        ${product.price}
+                    <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">
+                        ₦{Number(product.price).toLocaleString()}
                     </span>
                 </div>
 
-                <div className="flex items-center justify-between">
-                    <p className="text-xs text-zinc-500">
-                        {product.vendorType === "seller"
-                            ? `${product.stock} in stock`
-                            : `${product.stock} slots left`}
-                    </p>
-                    <button className="flex items-center gap-1 px-3 py-1.5 bg-zinc-900 text-white rounded-full text-xs hover:bg-zinc-700 active:scale-95 transition">
-                        {product.vendorType === "seller" ? (
-                            <>
-                                <ShoppingCart className="w-4 h-4" /> Add to Cart
-                            </>
-                        ) : (
-                            <>
-                                <Bookmark className="w-4 h-4" /> Book Now
-                            </>
-                        )}
-                    </button>
+                {/* Stock label + Action button */}
+                <div className="flex items-center justify-between pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                    <StockLabel
+                        vendorType={product.vendorType}
+                        stock={product.stock}
+                    />
+                    <ListingActionButton
+                        vendorType={product.vendorType}
+                        outOfStock={outOfStock}
+                        added={added}
+                        onClick={handleAction}
+                        size="sm"
+                    />
                 </div>
             </div>
         </div>
