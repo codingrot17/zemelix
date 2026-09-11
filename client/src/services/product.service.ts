@@ -1,9 +1,8 @@
-import { ID, Query, databases, storage, DB_ID, STORAGE_BUCKET_ID } from "@/lib/appwrite";
+import { ID, Query, databases, DB_ID } from "@/lib/appwrite/client";
+import { storage, STORAGE_BUCKET_ID, APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID } from "@/lib/appwrite/client";
 import type { Product } from "@/types/product";
 
 const COLLECTION_ID = import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID;
-const ENDPOINT = import.meta.env.VITE_APPWRITE_ENDPOINT || "https://cloud.appwrite.io/v1";
-const PROJECT_ID = import.meta.env.VITE_APPWRITE_PROJECT_ID;
 
 export interface ListProductsOptions {
     featuredOnly?: boolean;
@@ -52,6 +51,8 @@ function assertStorageConfig() {
         );
     }
 }
+
+const PROJECT_ID = APPWRITE_PROJECT_ID;
 
 function docToProduct(doc: Record<string, any>): Product {
     return {
@@ -145,7 +146,7 @@ export async function deleteSellerProduct(productId: string): Promise<void> {
 export async function uploadProductImage(file: File): Promise<{ fileId: string; url: string }> {
     assertStorageConfig();
     const response = await storage.createFile(STORAGE_BUCKET_ID, ID.unique(), file);
-    const url = `${ENDPOINT}/storage/buckets/${STORAGE_BUCKET_ID}/files/${response.$id}/view?project=${PROJECT_ID}`;
+    const url = `${APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET_ID}/files/${response.$id}/view?project=${PROJECT_ID}`;
     return { fileId: response.$id, url };
 }
 
