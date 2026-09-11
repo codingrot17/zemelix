@@ -204,67 +204,67 @@ export default function VendorWizard() {
         setError(null);
     };
 
-    const handleSubmit = async () => {
-        if (!user) {
-            setError("User not authenticated");
-            return;
+    
+const handleSubmit = async () => {
+    if (!user) {
+        setError("User not authenticated");
+        return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+        let logoFileId: string | null = null;
+        let bannerFileId: string | null = null;
+
+        if (logoFile) {
+            logoFileId = await uploadVendorFile(logoFile);
         }
 
-        setLoading(true);
-        setError(null);
-
-        try {
-            let logoFileId: string | null = null;
-            let bannerFileId: string | null = null;
-
-            if (logoFile) {
-                const res = await uploadVendorFile(logoFile);
-                logoFileId = res.$id;
-            }
-
-            if (bannerFile) {
-                const res = await uploadVendorFile(bannerFile);
-                bannerFileId = res.$id;
-            }
-
-            const onboardingData: VendorOnboardingData = {
-                role: "seller",
-                vendorType: formData.vendorType,
-                businessCategory: formData.businessCategory,
-                businessName: formData.businessName,
-                businessDescription: formData.businessDescription,
-                slogan: formData.slogan || null,
-                logo: logoFileId,
-                coverImage: bannerFileId,
-                primaryColor: formData.primaryColor,
-                socialLinks: JSON.stringify(formData.socialLinks),
-                vendorStatus: "pending",
-                storeStatus: "closed",
-                onboardingStep: 99,
-                currency: "NGN",
-                subscriptionPlan: "free",
-                accountStatus: "active"
-            };
-
-            await completeVendorOnboarding(user.$id, onboardingData);
-
-            await refreshUser();
-
-            localStorage.removeItem(LOCAL_STORAGE_KEY);
-
-            setSuccess(true);
-
-            setTimeout(() => navigate("/dashboard"), 2000);
-        } catch (err: any) {
-            console.error("Vendor setup failed:", err);
-
-            setError(
-                err.message || "Failed to complete setup. Please try again."
-            );
-
-            setLoading(false);
+        if (bannerFile) {
+            bannerFileId = await uploadVendorFile(bannerFile);
         }
-    };
+
+        const onboardingData: VendorOnboardingData = {
+            role: "seller",
+            vendorType: formData.vendorType,
+            businessCategory: formData.businessCategory,
+            businessName: formData.businessName,
+            businessDescription: formData.businessDescription,
+            slogan: formData.slogan || null,
+            logo: logoFileId,
+            coverImage: bannerFileId,
+            primaryColor: formData.primaryColor,
+            socialLinks: JSON.stringify(formData.socialLinks),
+            vendorStatus: "pending",
+            storeStatus: "closed",
+            onboardingStep: 99,
+            currency: "NGN",
+            subscriptionPlan: "free",
+            accountStatus: "active"
+        };
+
+        await completeVendorOnboarding(user.$id, onboardingData);
+
+        await refreshUser();
+
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+
+        setSuccess(true);
+
+        setTimeout(() => navigate("/dashboard"), 2000);
+    } catch (err: any) {
+        console.error("Vendor setup failed:", err);
+
+        setError(
+            err.message || "Failed to complete setup. Please try again."
+        );
+
+        setLoading(false);
+    }
+};
+
 
     if (success) {
         return (
