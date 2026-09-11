@@ -94,7 +94,7 @@ export async function getUserProfile(
 
 export async function updateUserProfile(
     userId: string,
-    data: Record<string, any>
+    data: Partial<UserProfile>
 ) {
     if (!DB_ID || !USERS_COLLECTION_ID) {
         throw new Error("Database not configured");
