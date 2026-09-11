@@ -1,3 +1,4 @@
+import type { UserProfile } from "@/types/user";
 import {
     getCurrentAccount,
     createSession as createAppwriteSession,
@@ -18,7 +19,9 @@ export async function getAuthenticatedAccount() {
     return getCurrentAccount();
 }
 
-export async function getAuthenticatedUserProfile(userId: string) {
+export async function getAuthenticatedUserProfile(
+    userId: string
+): Promise<UserProfile | null> {
     return getUserProfile(userId);
 }
 
