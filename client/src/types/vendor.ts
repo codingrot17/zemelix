@@ -3,7 +3,7 @@ export interface VendorProfile {
     businessCategory?: string | null;
     businessName?: string | null;
     businessDescription?: string | null;
-    socialLinks?: Record<string, string> | null;
+    socialLinks?: string | Record<string, string> | null;
     primaryColor?: string | null;
     logo?: string | null;
     coverImage?: string | null;
