@@ -54,14 +54,8 @@ export function useVendorWizard() {
                         user.primaryColor ??
                         user.profile?.primaryColor ??
                         "#1a73e8",
-                    logoFileId:
-                        user.logo ??
-                        user.profile?.vendorProfile?.logoFileId ??
-                        null,
-                    bannerFileId:
-                        user.coverImage ??
-                        user.profile?.vendorProfile?.bannerFileId ??
-                        null,
+                    logoFileId: user.logo ?? null,
+                    bannerFileId: user.coverImage ?? null,
                     slogan: user.slogan ?? user.profile?.slogan ?? null
                 };
                 setLocalDraft(seed);
