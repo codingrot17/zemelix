@@ -55,7 +55,7 @@ export async function createUserProfile(
                 Permission.delete(Role.user(userId)),
             ]
         )) as unknown as UserProfile;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Profile creation failed:", error);
         throw error;
     }
@@ -75,8 +75,16 @@ export async function getUserProfile(
             USERS_COLLECTION_ID,
             userId
         )) as unknown as UserProfile;
-    } catch (error: any) {
-        if (error?.code === 404) {
+    } catch (error: unknown) {
+        const code =
+            typeof error === "object" &&
+            error !== null &&
+            "code" in error &&
+            typeof error.code === "number"
+                ? error.code
+                : undefined;
+
+        if (code === 404) {
             try {
                 const currentAccount = await account.get();
                 return await createUserProfile(
