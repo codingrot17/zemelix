@@ -25,10 +25,13 @@ import {
 } from "@/lib/appwrite";
 import {
     vendorTypeOptions,
-    getCategoriesForType,
-    searchCategories,
     type BusinessCategory
 } from "@/data/businessCategories";
+
+import {
+    listCategories,
+    findCategories
+} from "@/services/category.service";
 
 const steps = [
     { id: 0, title: "Business Type", icon: Store },
@@ -470,7 +473,7 @@ function StepBusinessInfo({
 
     useEffect(() => {
         const base = formData.vendorType
-            ? getCategoriesForType(formData.vendorType)
+            ? listCategories(formData.vendorType)
             : [];
         setFilteredCategories(base);
     }, [formData.vendorType]);
@@ -478,12 +481,12 @@ function StepBusinessInfo({
     useEffect(() => {
         if (categorySearch.trim()) {
             setFilteredCategories(
-                searchCategories(categorySearch, formData.vendorType)
+                findCategories(categorySearch, formData.vendorType)
             );
         } else {
             setFilteredCategories(
                 formData.vendorType
-                    ? getCategoriesForType(formData.vendorType)
+                    ? listCategories(formData.vendorType)
                     : []
             );
         }
