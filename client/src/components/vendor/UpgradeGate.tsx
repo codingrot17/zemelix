@@ -36,11 +36,7 @@ const UpgradeGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
 
     // Already a vendor ⇒ send to vendor dashboard
-    if (
-        user.role === "vendor" ||
-        user.role === "seller" ||
-        user.profile?.vendorId
-    ) {
+    if (user.role === "vendor" || user.role === "seller") {
         return <Navigate to="/dashboard/seller" replace />;
     }
 
