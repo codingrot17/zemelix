@@ -10,15 +10,15 @@ import React, {
     useCallback
 } from "react";
 import {
-    getCurrentAccount,
-    getUserProfile,
-    createSession,
-    deleteSession,
-    registerUser,
-    sendVerificationEmail,
-    validateSession,
-    startSessionMonitor
-} from "@/lib/appwrite";
+    getAuthenticatedAccount,
+    getAuthenticatedUserProfile,
+    loginUser,
+    logoutUser,
+    registerAuthUser,
+    sendVerification,
+    isSessionValid,
+    startAuthSessionMonitor
+} from "@/services/auth.service";
 import { normalizeRole } from "@/lib/authHelpers";
 import type { UserRole } from "@/types/auth";
 
@@ -114,23 +114,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         async function initAuth() {
             try {
-                const isValid = await validateSession();
+                const isValid = await isSessionValid();
                 if (!isValid) {
                     setUser(null);
                     setLoading(false);
                     return;
                 }
 
-                const account = await getCurrentAccount();
+                const account = await getAuthenticatedAccount();
                 if (!account) {
                     setUser(null);
                     setLoading(false);
                     return;
                 }
 
-                const profile = await getUserProfile(account.$id);
+                const profile = await getAuthenticatedUserProfile(account.$id);
                 setUser(buildAuthUser(account, profile));
-                stopMonitor = startSessionMonitor(handleSessionExpired);
+                stopMonitor = startAuthSessionMonitor(handleSessionExpired);
             } catch (error) {
                 console.error("Auth init error:", error);
                 setUser(null);
@@ -150,25 +150,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }, []);
 
     const login = useCallback(async (email: string, password: string) => {
-        await createSession(email, password);
-        const account = await getCurrentAccount();
+        await loginUser(email, password);
+        const account = await getAuthenticatedAccount();
         if (!account) throw new Error("Failed to get account after login");
-        const profile = await getUserProfile(account.$id);
+        const profile = await getAuthenticatedUserProfile(account.$id);
         setUser(buildAuthUser(account, profile));
     }, []);
 
     const register = useCallback(
         async (email: string, password: string, name: string) => {
-            await registerUser(email, password, name);
+            await registerAuthUser(email, password, name);
             const redirectUrl =
                 import.meta.env.VITE_APPWRITE_VERIFICATION_REDIRECT_URL ||
                 `${window.location.origin}/verify`;
-            await sendVerificationEmail(redirectUrl);
+            await sendVerification(redirectUrl);
             setVerificationSent(true);
-            const account = await getCurrentAccount();
+            const account = await getAuthenticatedAccount();
             if (!account)
                 throw new Error("Failed to get account after registration");
-            const profile = await getUserProfile(account.$id);
+            const profile = await getAuthenticatedUserProfile(account.$id);
             setUser(buildAuthUser(account, profile));
         },
         []
@@ -176,7 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const logout = useCallback(async () => {
         try {
-            await deleteSession();
+            await logoutUser();
         } catch (error) {
             console.warn("Logout warning:", error);
         } finally {
@@ -189,18 +189,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const redirectUrl =
             import.meta.env.VITE_APPWRITE_VERIFICATION_REDIRECT_URL ||
             `${window.location.origin}/verify`;
-        await sendVerificationEmail(redirectUrl);
+        await sendVerification(redirectUrl);
         setVerificationSent(true);
     }, []);
 
     const refreshUser = useCallback(async () => {
         try {
-            const account = await getCurrentAccount();
+            const account = await getAuthenticatedAccount();
             if (!account) {
                 setUser(null);
                 return;
             }
-            const profile = await getUserProfile(account.$id);
+            const profile = await getAuthenticatedUserProfile(account.$id);
             setUser(buildAuthUser(account, profile));
         } catch (error) {
             console.warn("Refresh user error:", error);
