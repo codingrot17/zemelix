@@ -66,6 +66,7 @@ function assertStorageConfig() {
 
 type ProductDocument = {
     $id: string;
+    $createdAt?: string;
     title?: string;
     shortDescription?: string;
     longDescription?: string;
@@ -82,6 +83,7 @@ type ProductDocument = {
     sellerName?: string;
     sellerAvatar?: string;
     sellerWhatsapp?: string;
+    sellerId?: string;
 };
 
 const PRODUCT_BADGES: ProductBadge[] = [
@@ -108,6 +110,32 @@ function toVendorType(value: unknown): VendorType {
 function toNumber(value: unknown): number {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toSellerProduct(doc: ProductDocument): SellerProduct {
+    return {
+        $id: doc.$id,
+        $createdAt: doc.$createdAt ?? "",
+        title: doc.title ?? "",
+        shortDescription: doc.shortDescription ?? "",
+        longDescription: doc.longDescription ?? null,
+        price: toNumber(doc.price),
+        stock: toNumber(doc.stock),
+        category: doc.category ?? "General",
+        tags: Array.isArray(doc.tags)
+            ? doc.tags.filter((tag): tag is string => typeof tag === "string")
+            : [],
+        badge: typeof doc.badge === "string" ? doc.badge : null,
+        vendorType: typeof doc.vendorType === "string" ? doc.vendorType : "seller",
+        sellerName: doc.sellerName ?? "",
+        sellerWhatsapp: doc.sellerWhatsapp ?? null,
+        sellerAvatar: doc.sellerAvatar ?? null,
+        featured: doc.featured === true,
+        status: typeof doc.status === "string" ? doc.status : "active",
+        rating: toNumber(doc.rating),
+        sellerId: doc.sellerId ?? "",
+        imageUrl: doc.imageUrl ?? null
+    };
 }
 
 function docToProduct(doc: ProductDocument): Product {
@@ -186,7 +214,9 @@ export async function listSellerProducts(
         Query.limit(limit)
     ]);
 
-    return response.documents as unknown as SellerProduct[];
+    return response.documents.map(document =>
+        toSellerProduct(document as ProductDocument)
+    );
 }
 
 export async function createSellerProduct(
@@ -199,7 +229,7 @@ export async function createSellerProduct(
         ID.unique(),
         input
     );
-    return document as unknown as SellerProduct;
+    return toSellerProduct(document as ProductDocument);
 }
 
 export async function updateSellerProduct(
@@ -213,7 +243,7 @@ export async function updateSellerProduct(
         productId,
         input
     );
-    return document as unknown as SellerProduct;
+    return toSellerProduct(document as ProductDocument);
 }
 
 export async function deleteSellerProduct(productId: string): Promise<void> {
