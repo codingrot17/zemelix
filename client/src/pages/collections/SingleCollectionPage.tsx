@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCollectionBySlugOrId, getCollectionErrorMessage } from "@/services/collection.service";
-import type { Collection } from "@/types";
+import type { Collection } from "@/types/collection";
 import { Star, ShoppingBag, Calendar, Users } from "lucide-react";
 
 export function SingleCollectionPage() {
