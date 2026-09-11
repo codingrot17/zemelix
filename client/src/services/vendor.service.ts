@@ -1,4 +1,5 @@
-import { updateUserProfile, uploadFile } from "@/lib/appwrite";
+import { updateUserProfile } from "@/lib/appwrite/database";
+import { uploadFile } from "@/lib/appwrite/storage";
 
 export type VendorOnboardingData = {
     role: "seller";
