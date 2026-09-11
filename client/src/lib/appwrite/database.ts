@@ -1,10 +1,10 @@
 import { Permission, Role } from "appwrite";
 import {
+    account,
     databases,
     DB_ID,
     USERS_COLLECTION_ID,
 } from "./client";
-import { getCurrentAccount } from "./account";
 
 export async function createUserProfile(
     userId: string,
@@ -70,13 +70,15 @@ export async function getUserProfile(userId: string) {
         return await databases.getDocument(DB_ID, USERS_COLLECTION_ID, userId);
     } catch (error: any) {
         if (error?.code === 404) {
-            const account = await getCurrentAccount();
-            if (account) {
+            try {
+                const currentAccount = await account.get();
                 return await createUserProfile(
-                    account.$id,
-                    account.email,
-                    account.name
+                    currentAccount.$id,
+                    currentAccount.email,
+                    currentAccount.name
                 );
+            } catch {
+                // Preserve the original profile lookup error if recovery fails.
             }
         }
         throw error;
