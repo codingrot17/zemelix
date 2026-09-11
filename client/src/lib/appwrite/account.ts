@@ -1,3 +1,4 @@
+import { Account, ID } from "appwrite";
 import { account } from "./client";
 
 function clearAppwriteCookies() {
@@ -73,7 +74,7 @@ export async function registerUser(
 ) {
     try {
         const newUser = await account.create(
-            "unique()",
+            ID.unique(),
             email,
             password,
             name
