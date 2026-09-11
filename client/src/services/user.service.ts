@@ -9,7 +9,7 @@ export type VendorProfileUpdate = {
     logo: string | null;
     coverImage: string | null;
     primaryColor: string | null;
-    socialLinks: Record<string, unknown> | null;
+    socialLinks: string | Record<string, string> | null;
     slogan: string | null;
     vendorStatus: "pending";
     storeStatus: "closed";
@@ -17,9 +17,6 @@ export type VendorProfileUpdate = {
     onboardingStep: 99;
 };
 
-export async function updateVendorProfile(
-    userId: string,
-    data: VendorProfileUpdate
-) {
+export async function updateVendorProfile(userId: string, data: VendorProfileUpdate) {
     return updateUserProfile(userId, data);
 }
