@@ -11,7 +11,7 @@ export type VendorOnboardingData = {
     logo: string | null;
     coverImage: string | null;
     primaryColor: string;
-    socialLinks: Record<string, string> | null;
+    socialLinks: string | Record<string, string> | null;
     vendorStatus: "pending";
     storeStatus: "closed";
     onboardingStep: 99;
