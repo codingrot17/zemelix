@@ -4,7 +4,7 @@ import { CollectionCard } from "@/components/features/collection/CollectionCard"
 import ProductCard from "@/components/shared/ProductCard";
 import { useProducts } from "@/hooks/useProducts";
 import { getCollectionErrorMessage, listCollections } from "@/services/collection.service";
-import type { Collection } from "@/types";
+import type { Collection } from "@/types/collection";
 import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
