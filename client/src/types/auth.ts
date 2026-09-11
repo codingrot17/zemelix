@@ -1,4 +1,5 @@
 import type { VendorProfile } from "@/types/vendor";
+import type { UserProfile } from "@/types/user";
 
 export type UserRole = "admin" | "seller" | "customer" | "vendor";
 
@@ -10,7 +11,7 @@ export interface User extends VendorProfile {
     emailVerification?: boolean;
     role: UserRole;
     country?: string;
-    profile?: Record<string, any> | null;
+    profile?: UserProfile | null;
 }
 
 export interface AuthUser extends User {
@@ -19,5 +20,5 @@ export interface AuthUser extends User {
     name: string;
     email: string;
     emailVerification: boolean;
-    profile: Record<string, any> | null;
+    profile: UserProfile | null;
 }
