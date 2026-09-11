@@ -1,4 +1,4 @@
-import { updateUserProfile } from "@/lib/appwrite";
+import { updateUserProfile } from "@/lib/appwrite/database";
 
 export type VendorProfileUpdate = {
     role: "vendor";
