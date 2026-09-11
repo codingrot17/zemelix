@@ -1,6 +1,16 @@
 import { ID, Query, databases, DB_ID } from "@/lib/appwrite/client";
-import { storage, STORAGE_BUCKET_ID, APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID } from "@/lib/appwrite/client";
-import type { Product } from "@/types/product";
+import {
+    storage,
+    STORAGE_BUCKET_ID,
+    APPWRITE_ENDPOINT,
+    APPWRITE_PROJECT_ID
+} from "@/lib/appwrite/client";
+import type {
+    Product,
+    ProductBadge,
+    ProductStatus,
+    VendorType
+} from "@/types/product";
 
 const COLLECTION_ID = import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID;
 
@@ -44,6 +54,8 @@ function assertProductConfig() {
     }
 }
 
+const PROJECT_ID = APPWRITE_PROJECT_ID;
+
 function assertStorageConfig() {
     if (!STORAGE_BUCKET_ID || !PROJECT_ID) {
         throw new Error(
@@ -52,73 +64,134 @@ function assertStorageConfig() {
     }
 }
 
-const PROJECT_ID = APPWRITE_PROJECT_ID;
+type ProductDocument = {
+    $id: string;
+    title?: string;
+    shortDescription?: string;
+    longDescription?: string;
+    imageUrl?: string;
+    price?: unknown;
+    stock?: unknown;
+    rating?: unknown;
+    category?: string;
+    tags?: unknown;
+    badge?: unknown;
+    featured?: unknown;
+    status?: unknown;
+    vendorType?: unknown;
+    sellerName?: string;
+    sellerAvatar?: string;
+    sellerWhatsapp?: string;
+};
 
-function docToProduct(doc: Record<string, any>): Product {
+const PRODUCT_BADGES: ProductBadge[] = [
+    "Hot",
+    "Trending",
+    "Featured",
+    "New"
+];
+
+function toProductBadge(value: unknown): ProductBadge | undefined {
+    return typeof value === "string" && PRODUCT_BADGES.includes(value as ProductBadge)
+        ? (value as ProductBadge)
+        : undefined;
+}
+
+function toProductStatus(value: unknown): ProductStatus {
+    return value === "archived" || value === "draft" ? value : "active";
+}
+
+function toVendorType(value: unknown): VendorType {
+    return value === "service" ? "service" : "seller";
+}
+
+function toNumber(value: unknown): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function docToProduct(doc: ProductDocument): Product {
     return {
         id: doc.$id,
         title: doc.title ?? "",
         shortDescription: doc.shortDescription ?? "",
         longDescription: doc.longDescription ?? "",
         imageUrl: doc.imageUrl ?? "/images/placeholder.svg",
-        price: Number(doc.price) || 0,
-        stock: Number(doc.stock) || 0,
-        rating: Number(doc.rating) || 0,
+        price: toNumber(doc.price),
+        stock: toNumber(doc.stock),
+        rating: toNumber(doc.rating),
         category: doc.category ?? "General",
-        tags: Array.isArray(doc.tags) ? doc.tags : [],
-        badge: doc.badge ?? undefined,
-        featured: doc.featured ?? false,
-        status: doc.status ?? "active",
-        vendorType: doc.vendorType ?? "seller",
+        tags: Array.isArray(doc.tags)
+            ? doc.tags.filter((tag): tag is string => typeof tag === "string")
+            : [],
+        badge: toProductBadge(doc.badge),
+        featured: doc.featured === true,
+        status: toProductStatus(doc.status),
+        vendorType: toVendorType(doc.vendorType),
         sellerName: doc.sellerName ?? "Unknown Seller",
         sellerAvatar: doc.sellerAvatar ?? "/images/placeholder.svg",
-        sellerWhatsapp: doc.sellerWhatsapp ?? undefined,
+        sellerWhatsapp: doc.sellerWhatsapp ?? undefined
     };
 }
 
-export async function listProducts(options: ListProductsOptions = {}): Promise<Product[]> {
+export async function listProducts(
+    options: ListProductsOptions = {}
+): Promise<Product[]> {
     assertProductConfig();
 
     const {
         featuredOnly = false,
         category,
         limit = 25,
-        activeOnly = true,
+        activeOnly = true
     } = options;
 
     const queries: string[] = [
         Query.limit(limit),
-        Query.orderDesc("$createdAt"),
+        Query.orderDesc("$createdAt")
     ];
 
     if (featuredOnly) queries.push(Query.equal("featured", true));
     if (activeOnly) queries.push(Query.equal("status", "active"));
     if (category) queries.push(Query.equal("category", category));
 
-    const response = await databases.listDocuments(DB_ID, COLLECTION_ID, queries);
-    return response.documents.map(document => docToProduct(document as Record<string, any>));
+    const response = await databases.listDocuments(
+        DB_ID,
+        COLLECTION_ID,
+        queries
+    );
+    return response.documents.map(document => docToProduct(document));
 }
 
 export async function getProduct(productId: string): Promise<Product> {
     assertProductConfig();
-    const document = await databases.getDocument(DB_ID, COLLECTION_ID, productId);
-    return docToProduct(document as Record<string, any>);
+    const document = await databases.getDocument(
+        DB_ID,
+        COLLECTION_ID,
+        productId
+    );
+    return docToProduct(document);
 }
 
-export async function listSellerProducts(sellerId: string, limit = 100): Promise<SellerProduct[]> {
+export async function listSellerProducts(
+    sellerId: string,
+    limit = 100
+): Promise<SellerProduct[]> {
     assertProductConfig();
     if (!sellerId) throw new Error("Seller ID is required.");
 
     const response = await databases.listDocuments(DB_ID, COLLECTION_ID, [
         Query.equal("sellerId", sellerId),
         Query.orderDesc("$createdAt"),
-        Query.limit(limit),
+        Query.limit(limit)
     ]);
 
     return response.documents as unknown as SellerProduct[];
 }
 
-export async function createSellerProduct(input: SellerProductInput): Promise<SellerProduct> {
+export async function createSellerProduct(
+    input: SellerProductInput
+): Promise<SellerProduct> {
     assertProductConfig();
     const document = await databases.createDocument(
         DB_ID,
@@ -134,7 +207,12 @@ export async function updateSellerProduct(
     input: Partial<SellerProductInput>
 ): Promise<SellerProduct> {
     assertProductConfig();
-    const document = await databases.updateDocument(DB_ID, COLLECTION_ID, productId, input);
+    const document = await databases.updateDocument(
+        DB_ID,
+        COLLECTION_ID,
+        productId,
+        input
+    );
     return document as unknown as SellerProduct;
 }
 
@@ -143,9 +221,15 @@ export async function deleteSellerProduct(productId: string): Promise<void> {
     await databases.deleteDocument(DB_ID, COLLECTION_ID, productId);
 }
 
-export async function uploadProductImage(file: File): Promise<{ fileId: string; url: string }> {
+export async function uploadProductImage(
+    file: File
+): Promise<{ fileId: string; url: string }> {
     assertStorageConfig();
-    const response = await storage.createFile(STORAGE_BUCKET_ID, ID.unique(), file);
+    const response = await storage.createFile(
+        STORAGE_BUCKET_ID,
+        ID.unique(),
+        file
+    );
     const url = `${APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET_ID}/files/${response.$id}/view?project=${PROJECT_ID}`;
     return { fileId: response.$id, url };
 }
