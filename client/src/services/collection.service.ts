@@ -9,6 +9,26 @@ export interface ListCollectionsOptions {
     orderDesc?: string;
 }
 
+type CollectionDocument = {
+    $id: string;
+    title?: string;
+    slug?: string;
+    description?: string;
+    longDescription?: string;
+    imageUrl?: string;
+    badge?: string;
+    tags?: unknown;
+    type?: string;
+    itemCount?: number;
+    priceFrom?: string | number;
+    curatorName?: string;
+    curatorAvatar?: string;
+    curatorRating?: number;
+    exampleServiceTitle?: string;
+    exampleServiceDescription?: string;
+    exampleServicePrice?: string;
+};
+
 function assertCollectionsConfig() {
     if (!DB_ID || !COLLECTIONS_COLLECTION_ID) {
         throw new Error(
@@ -17,7 +37,7 @@ function assertCollectionsConfig() {
     }
 }
 
-export function docToCollection(doc: Record<string, any>): Collection {
+export function docToCollection(doc: CollectionDocument): Collection {
     return {
         id: doc.$id,
         title: doc.title ?? "",
@@ -26,7 +46,7 @@ export function docToCollection(doc: Record<string, any>): Collection {
         longDescription: doc.longDescription ?? undefined,
         imageUrl: doc.imageUrl ?? "",
         badge: doc.badge ?? undefined,
-        tags: Array.isArray(doc.tags) ? doc.tags : [],
+        tags: Array.isArray(doc.tags) ? doc.tags.filter((tag): tag is string => typeof tag === "string") : [],
         type: doc.type ?? "goods",
         itemCount: doc.itemCount ?? undefined,
         priceFrom: doc.priceFrom ?? undefined,
@@ -59,9 +79,7 @@ export async function listCollections({
         [Query.orderDesc(orderDesc), Query.limit(limit)]
     );
 
-    return response.documents.map(doc =>
-        docToCollection(doc as Record<string, any>)
-    );
+    return response.documents.map(doc => docToCollection(doc));
 }
 
 export async function getCollectionBySlugOrId(
@@ -76,7 +94,7 @@ export async function getCollectionBySlugOrId(
     );
 
     if (response.documents.length > 0) {
-        return docToCollection(response.documents[0] as Record<string, any>);
+        return docToCollection(response.documents[0]);
     }
 
     try {
@@ -85,9 +103,17 @@ export async function getCollectionBySlugOrId(
             COLLECTIONS_COLLECTION_ID,
             slugOrId
         );
-        return docToCollection(document as Record<string, any>);
-    } catch (error: any) {
-        if (error?.code === 404) return null;
+        return docToCollection(document);
+    } catch (error: unknown) {
+        const code =
+            typeof error === "object" &&
+            error !== null &&
+            "code" in error &&
+            typeof error.code === "number"
+                ? error.code
+                : undefined;
+
+        if (code === 404) return null;
         throw error;
     }
 }
