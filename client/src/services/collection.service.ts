@@ -1,6 +1,5 @@
-import { databases, DB_ID } from "@/lib/appwrite";
+import { databases, DB_ID, Query } from "@/lib/appwrite/client";
 import type { Collection } from "@/types";
-import { Query } from "appwrite";
 
 const COLLECTIONS_COLLECTION_ID =
     import.meta.env.VITE_APPWRITE_COLLECTIONS_COLLECTION_ID ?? "";
