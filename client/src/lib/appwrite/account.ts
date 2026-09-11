@@ -1,5 +1,6 @@
 import { ID } from "appwrite";
 import { account } from "./client";
+import { createUserProfile } from "./database";
 
 function clearAppwriteCookies() {
     if (typeof document === "undefined") return;
@@ -79,7 +80,10 @@ export async function registerUser(
             password,
             name
         );
+
         await createSession(email, password);
+        await createUserProfile(newUser.$id, email, name);
+
         return newUser;
     } catch (error) {
         console.error("Registration failed:", error);
