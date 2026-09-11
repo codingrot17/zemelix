@@ -1,5 +1,9 @@
 import { databases, DB_ID, Query } from "@/lib/appwrite/client";
-import type { Collection } from "@/types/collection";
+import type {
+    Collection,
+    CollectionBadge,
+    CollectionType
+} from "@/types/collection";
 
 const COLLECTIONS_COLLECTION_ID =
     import.meta.env.VITE_APPWRITE_COLLECTIONS_COLLECTION_ID ?? "";
@@ -16,11 +20,11 @@ type CollectionDocument = {
     description?: string;
     longDescription?: string;
     imageUrl?: string;
-    badge?: string;
+    badge?: unknown;
     tags?: unknown;
-    type?: string;
+    type?: unknown;
     itemCount?: number;
-    priceFrom?: string | number;
+    priceFrom?: unknown;
     curatorName?: string;
     curatorAvatar?: string;
     curatorRating?: number;
@@ -28,6 +32,30 @@ type CollectionDocument = {
     exampleServiceDescription?: string;
     exampleServicePrice?: string;
 };
+
+const COLLECTION_BADGES: CollectionBadge[] = [
+    "Hot",
+    "Trending",
+    "Featured",
+    "Popular",
+    "New"
+];
+
+function toCollectionBadge(value: unknown): CollectionBadge | undefined {
+    return typeof value === "string" && COLLECTION_BADGES.includes(value as CollectionBadge)
+        ? (value as CollectionBadge)
+        : undefined;
+}
+
+function toCollectionType(value: unknown): CollectionType {
+    return value === "services" ? "services" : "goods";
+}
+
+function toPriceString(value: unknown): string | undefined {
+    if (typeof value === "string") return value;
+    if (typeof value === "number") return String(value);
+    return undefined;
+}
 
 function assertCollectionsConfig() {
     if (!DB_ID || !COLLECTIONS_COLLECTION_ID) {
@@ -45,11 +73,13 @@ export function docToCollection(doc: CollectionDocument): Collection {
         description: doc.description ?? "",
         longDescription: doc.longDescription ?? undefined,
         imageUrl: doc.imageUrl ?? "",
-        badge: doc.badge ?? undefined,
-        tags: Array.isArray(doc.tags) ? doc.tags.filter((tag): tag is string => typeof tag === "string") : [],
-        type: doc.type ?? "goods",
+        badge: toCollectionBadge(doc.badge),
+        tags: Array.isArray(doc.tags)
+            ? doc.tags.filter((tag): tag is string => typeof tag === "string")
+            : [],
+        type: toCollectionType(doc.type),
         itemCount: doc.itemCount ?? undefined,
-        priceFrom: doc.priceFrom ?? undefined,
+        priceFrom: toPriceString(doc.priceFrom),
         curator: doc.curatorName
             ? {
                   name: doc.curatorName,
