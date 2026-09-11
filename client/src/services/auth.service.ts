@@ -8,7 +8,7 @@ import {
     validateSession as validateAppwriteSession,
     startSessionMonitor as startAppwriteSessionMonitor,
     verifyEmail as verifyAppwriteEmail
-} from "@/lib/appwrite";
+} from "@/lib/appwrite/account";
 
 export async function verifyEmail(userId: string, secret: string) {
     return verifyAppwriteEmail(userId, secret);
