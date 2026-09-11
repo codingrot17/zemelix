@@ -1,6 +1,5 @@
 import {
     getCurrentAccount,
-    getUserProfile,
     createSession as createAppwriteSession,
     deleteSession as deleteAppwriteSession,
     registerUser as registerAppwriteUser,
@@ -9,6 +8,7 @@ import {
     startSessionMonitor as startAppwriteSessionMonitor,
     verifyEmail as verifyAppwriteEmail
 } from "@/lib/appwrite/account";
+import { getUserProfile } from "@/lib/appwrite/database";
 
 export async function verifyEmail(userId: string, secret: string) {
     return verifyAppwriteEmail(userId, secret);
