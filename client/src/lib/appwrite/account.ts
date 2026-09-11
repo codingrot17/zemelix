@@ -1,4 +1,4 @@
-import { Account, ID } from "appwrite";
+import { ID } from "appwrite";
 import { account } from "./client";
 
 function clearAppwriteCookies() {
