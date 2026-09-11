@@ -792,7 +792,7 @@ function StepReview({
     const selectedType = vendorTypeOptions.find(
         t => t.id === formData.vendorType
     );
-    const selectedCategory = getCategoriesForType(formData.vendorType).find(
+    const selectedCategory = listCategories(formData.vendorType).find(
         c => c.id === formData.businessCategory
     );
 
