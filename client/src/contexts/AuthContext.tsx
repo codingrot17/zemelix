@@ -20,31 +20,7 @@ import {
     startAuthSessionMonitor
 } from "@/services/auth.service";
 import { normalizeRole } from "@/lib/authHelpers";
-import type { UserRole } from "@/types/auth";
-
-// --------------------------------------------------
-// TYPES
-// --------------------------------------------------
-export interface AuthUser {
-    id: string;
-    $id: string;
-    name: string;
-    email: string;
-    emailVerification: boolean;
-    role: UserRole;
-    profile: Record<string, any> | null;
-    // Vendor profile fields (sourced from profile document)
-    vendorType?: string | null;
-    businessCategory?: string | null;
-    businessName?: string | null;
-    businessDescription?: string | null;
-    socialLinks?: Record<string, string> | null;
-    primaryColor?: string | null;
-    logo?: string | null;
-    coverImage?: string | null;
-    slogan?: string | null;
-    onboardingStep?: number | null;
-}
+import type { AuthUser } from "@/types/auth";
 
 interface AuthContextType {
     user: AuthUser | null;
@@ -60,14 +36,8 @@ interface AuthContextType {
     reloadUserProfile: () => Promise<void>;
 }
 
-// --------------------------------------------------
-// CONTEXT
-// --------------------------------------------------
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// --------------------------------------------------
-// HELPER
-// --------------------------------------------------
 function buildAuthUser(
     account: {
         $id: string;
@@ -85,7 +55,6 @@ function buildAuthUser(
         emailVerification: account.emailVerification,
         role: normalizeRole({ profile, role: profile?.role }),
         profile,
-        // Flatten vendor fields from profile for easy access
         vendorType: profile?.vendorType ?? null,
         businessCategory: profile?.businessCategory ?? null,
         businessName: profile?.businessName ?? null,
@@ -99,9 +68,6 @@ function buildAuthUser(
     };
 }
 
-// --------------------------------------------------
-// PROVIDER
-// --------------------------------------------------
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     children
 }) => {
@@ -225,9 +191,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     );
 };
 
-// --------------------------------------------------
-// HOOK
-// --------------------------------------------------
 export function useAuth() {
     const context = useContext(AuthContext);
     if (!context) {
@@ -236,4 +199,5 @@ export function useAuth() {
     return context;
 }
 
+export type { AuthUser } from "@/types/auth";
 export { canUpgradeToVendor, hasRole } from "@/lib/authHelpers";
