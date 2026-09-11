@@ -16,13 +16,10 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-    databases,
-    storage,
-    DB_ID,
-    USERS_COLLECTION_ID,
-    STORAGE_BUCKET_ID,
-    ID
-} from "@/lib/appwrite";
+    uploadVendorFile,
+    completeVendorOnboarding,
+    type VendorOnboardingData
+} from "@/services/vendor.service";
 import {
     vendorTypeOptions,
     type BusinessCategory
@@ -118,10 +115,12 @@ export default function VendorWizard() {
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
         if (file.size > 2 * 1024 * 1024) {
             setError("Logo must be less than 2MB");
             return;
         }
+
         setLogoFile(file);
         setLogoPreview(URL.createObjectURL(file));
         setError(null);
@@ -135,10 +134,12 @@ export default function VendorWizard() {
     const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
         if (file.size > 5 * 1024 * 1024) {
             setError("Banner must be less than 5MB");
             return;
         }
+
         setBannerFile(file);
         setBannerPreview(URL.createObjectURL(file));
         setError(null);
@@ -157,28 +158,35 @@ export default function VendorWizard() {
                     return false;
                 }
                 return true;
+
             case 1:
                 if (!formData.businessName.trim()) {
                     setError("Business name is required");
                     return false;
                 }
+
                 if (formData.businessName.trim().length < 2) {
                     setError("Business name must be at least 2 characters");
                     return false;
                 }
+
                 if (!formData.businessCategory) {
                     setError("Please select a business category");
                     return false;
                 }
+
                 if (!formData.businessDescription.trim()) {
                     setError("Business description is required");
                     return false;
                 }
+
                 if (formData.businessDescription.trim().length < 20) {
                     setError("Description must be at least 20 characters");
                     return false;
                 }
+
                 return true;
+
             default:
                 return true;
         }
@@ -186,6 +194,7 @@ export default function VendorWizard() {
 
     const nextStep = () => {
         if (!validateStep(currentStep)) return;
+
         setCurrentStep(prev => Math.min(prev + 1, 3));
         setError(null);
     };
@@ -200,6 +209,7 @@ export default function VendorWizard() {
             setError("User not authenticated");
             return;
         }
+
         setLoading(true);
         setError(null);
 
@@ -208,55 +218,50 @@ export default function VendorWizard() {
             let bannerFileId: string | null = null;
 
             if (logoFile) {
-                const res = await storage.createFile(
-                    STORAGE_BUCKET_ID,
-                    ID.unique(),
-                    logoFile
-                );
+                const res = await uploadVendorFile(logoFile);
                 logoFileId = res.$id;
             }
+
             if (bannerFile) {
-                const res = await storage.createFile(
-                    STORAGE_BUCKET_ID,
-                    ID.unique(),
-                    bannerFile
-                );
+                const res = await uploadVendorFile(bannerFile);
                 bannerFileId = res.$id;
             }
 
-            await databases.updateDocument(
-                DB_ID,
-                USERS_COLLECTION_ID,
-                user.$id,
-                {
-                    role: "seller",
-                    vendorType: formData.vendorType,
-                    businessCategory: formData.businessCategory,
-                    businessName: formData.businessName,
-                    businessDescription: formData.businessDescription,
-                    slogan: formData.slogan || null,
-                    logo: logoFileId,
-                    coverImage: bannerFileId,
-                    primaryColor: formData.primaryColor,
-                    socialLinks: JSON.stringify(formData.socialLinks),
-                    vendorStatus: "pending",
-                    storeStatus: "closed",
-                    onboardingStep: 99,
-                    currency: "NGN",
-                    subscriptionPlan: "free",
-                    accountStatus: "active"
-                }
-            );
+            const onboardingData: VendorOnboardingData = {
+                role: "seller",
+                vendorType: formData.vendorType,
+                businessCategory: formData.businessCategory,
+                businessName: formData.businessName,
+                businessDescription: formData.businessDescription,
+                slogan: formData.slogan || null,
+                logo: logoFileId,
+                coverImage: bannerFileId,
+                primaryColor: formData.primaryColor,
+                socialLinks: JSON.stringify(formData.socialLinks),
+                vendorStatus: "pending",
+                storeStatus: "closed",
+                onboardingStep: 99,
+                currency: "NGN",
+                subscriptionPlan: "free",
+                accountStatus: "active"
+            };
+
+            await completeVendorOnboarding(user.$id, onboardingData);
 
             await refreshUser();
+
             localStorage.removeItem(LOCAL_STORAGE_KEY);
+
             setSuccess(true);
+
             setTimeout(() => navigate("/dashboard"), 2000);
         } catch (err: any) {
             console.error("Vendor setup failed:", err);
+
             setError(
                 err.message || "Failed to complete setup. Please try again."
             );
+
             setLoading(false);
         }
     };
@@ -266,12 +271,15 @@ export default function VendorWizard() {
             <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-gray-900 dark:to-indigo-950">
                 <div className="text-center">
                     <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-4 animate-bounce" />
+
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                         Welcome Aboard! 🎉
                     </h1>
+
                     <p className="text-gray-600 dark:text-gray-400 mb-4">
                         Your vendor account has been created successfully.
                     </p>
+
                     <p className="text-sm text-gray-500">
                         Redirecting to dashboard...
                     </p>
@@ -290,6 +298,7 @@ export default function VendorWizard() {
                             const Icon = step.icon;
                             const isActive = idx === currentStep;
                             const isCompleted = idx < currentStep;
+
                             return (
                                 <div
                                     key={step.id}
@@ -299,8 +308,7 @@ export default function VendorWizard() {
                                         className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all z-10
                                         ${isCompleted ? "bg-green-500 border-green-500 text-white" : ""}
                                         ${isActive ? "bg-indigo-600 border-indigo-600 text-white scale-110 shadow-lg" : ""}
-                                        ${!isActive && !isCompleted ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-400" : ""}
-                                    `}
+                                        ${!isActive && !isCompleted ? "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-400" : ""}`}
                                     >
                                         {isCompleted ? (
                                             <Check className="w-6 h-6" />
@@ -308,14 +316,24 @@ export default function VendorWizard() {
                                             <Icon className="w-6 h-6" />
                                         )}
                                     </div>
+
                                     <span
-                                        className={`mt-2 text-xs font-medium text-center ${isActive ? "text-indigo-700 dark:text-indigo-300" : "text-gray-500"}`}
+                                        className={`mt-2 text-xs font-medium text-center ${
+                                            isActive
+                                                ? "text-indigo-700 dark:text-indigo-300"
+                                                : "text-gray-500"
+                                        }`}
                                     >
                                         {step.title}
                                     </span>
+
                                     {idx < steps.length - 1 && (
                                         <div
-                                            className={`hidden sm:block absolute top-6 left-1/2 w-full h-0.5 -z-0 ${isCompleted ? "bg-green-500" : "bg-gray-300 dark:bg-gray-700"}`}
+                                            className={`hidden sm:block absolute top-6 left-1/2 w-full h-0.5 -z-0 ${
+                                                isCompleted
+                                                    ? "bg-green-500"
+                                                    : "bg-gray-300 dark:bg-gray-700"
+                                            }`}
                                         />
                                     )}
                                 </div>
@@ -327,9 +345,11 @@ export default function VendorWizard() {
                 {error && (
                     <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+
                         <p className="text-sm font-medium text-red-800 dark:text-red-200 flex-1">
                             {error}
                         </p>
+
                         <button
                             onClick={() => setError(null)}
                             className="text-red-600 hover:text-red-800"
@@ -347,12 +367,14 @@ export default function VendorWizard() {
                                 updateField={updateField}
                             />
                         )}
+
                         {currentStep === 1 && (
                             <StepBusinessInfo
                                 formData={formData}
                                 updateField={updateField}
                             />
                         )}
+
                         {currentStep === 2 && (
                             <StepBranding
                                 formData={formData}
@@ -366,6 +388,7 @@ export default function VendorWizard() {
                                 onBannerRemove={handleBannerRemove}
                             />
                         )}
+
                         {currentStep === 3 && (
                             <StepReview
                                 formData={formData}
@@ -383,6 +406,7 @@ export default function VendorWizard() {
                         >
                             <ArrowLeft className="w-4 h-4" /> Back
                         </button>
+
                         {currentStep < 3 ? (
                             <button
                                 onClick={nextStep}
@@ -426,27 +450,36 @@ function StepBusinessType({
             <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
                 What type of vendor are you?
             </h2>
+
             <p className="text-gray-600 dark:text-gray-400 mb-6">
                 Choose the option that best describes your business
             </p>
+
             <div className="grid gap-4">
                 {vendorTypeOptions.map(type => (
                     <button
                         key={type.id}
                         onClick={() => updateField("vendorType", type.id)}
                         className={`p-6 rounded-xl border-2 text-left transition-all hover:shadow-lg
-                            ${formData.vendorType === type.id ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 shadow-md" : "border-gray-200 dark:border-gray-700 hover:border-indigo-300"}`}
+                            ${
+                                formData.vendorType === type.id
+                                    ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 shadow-md"
+                                    : "border-gray-200 dark:border-gray-700 hover:border-indigo-300"
+                            }`}
                     >
                         <div className="flex items-start gap-4">
                             <span className="text-4xl">{type.icon}</span>
+
                             <div className="flex-1">
                                 <h3 className="font-semibold text-lg mb-1 text-gray-900 dark:text-white">
                                     {type.label}
                                 </h3>
+
                                 <p className="text-sm text-gray-600 dark:text-gray-400">
                                     {type.description}
                                 </p>
                             </div>
+
                             {formData.vendorType === type.id && (
                                 <CheckCircle className="w-6 h-6 text-indigo-600 flex-shrink-0" />
                             )}
@@ -475,6 +508,7 @@ function StepBusinessInfo({
         const base = formData.vendorType
             ? listCategories(formData.vendorType)
             : [];
+
         setFilteredCategories(base);
     }, [formData.vendorType]);
 
@@ -501,14 +535,17 @@ function StepBusinessInfo({
             <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
                 Tell us about your business
             </h2>
+
             <p className="text-gray-600 dark:text-gray-400 mb-6">
                 This information will appear on your store profile
             </p>
+
             <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">
                         Business Name *
                     </label>
+
                     <input
                         type="text"
                         value={formData.businessName}
@@ -519,16 +556,20 @@ function StepBusinessInfo({
                         maxLength={100}
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
                     />
+
                     <p className="text-xs text-gray-500 mt-1">
                         {formData.businessName.length}/100
                     </p>
                 </div>
+
                 <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">
                         Business Category *
                     </label>
+
                     <div className="relative mb-2">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+
                         <input
                             type="text"
                             value={categorySearch}
@@ -537,6 +578,7 @@ function StepBusinessInfo({
                             className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                         />
                     </div>
+
                     <div className="max-h-60 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg">
                         {filteredCategories.length === 0 ? (
                             <div className="p-4 text-center text-gray-500 text-sm">
@@ -547,14 +589,22 @@ function StepBusinessInfo({
                                 <button
                                     key={cat.id}
                                     onClick={() => {
-                                        updateField("businessCategory", cat.id);
+                                        updateField(
+                                            "businessCategory",
+                                            cat.id
+                                        );
                                         setCategorySearch("");
                                     }}
-                                    className={`w-full text-left px-4 py-3 border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition ${formData.businessCategory === cat.id ? "bg-indigo-50 dark:bg-indigo-900/30" : ""}`}
+                                    className={`w-full text-left px-4 py-3 border-b last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition ${
+                                        formData.businessCategory === cat.id
+                                            ? "bg-indigo-50 dark:bg-indigo-900/30"
+                                            : ""
+                                    }`}
                                 >
                                     <div className="font-medium text-sm text-gray-900 dark:text-white">
                                         {cat.name}
                                     </div>
+
                                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                         {cat.description}
                                     </div>
@@ -562,39 +612,50 @@ function StepBusinessInfo({
                             ))
                         )}
                     </div>
+
                     {formData.businessCategory && selectedCatName && (
                         <p className="text-xs text-green-600 dark:text-green-400 mt-2 flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> Selected:{" "}
-                            {selectedCatName}
+                            <CheckCircle className="w-3 h-3" />
+                            Selected: {selectedCatName}
                         </p>
                     )}
                 </div>
+
                 <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">
                         Business Description *
                     </label>
+
                     <textarea
                         value={formData.businessDescription}
                         onChange={e =>
-                            updateField("businessDescription", e.target.value)
+                            updateField(
+                                "businessDescription",
+                                e.target.value
+                            )
                         }
                         placeholder="Describe what makes your business unique..."
                         rows={4}
                         maxLength={500}
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
                     />
+
                     <p className="text-xs text-gray-500 mt-1">
                         {formData.businessDescription.length}/500 (min 20)
                     </p>
                 </div>
+
                 <div>
                     <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300">
                         Business Slogan (Optional)
                     </label>
+
                     <input
                         type="text"
                         value={formData.slogan}
-                        onChange={e => updateField("slogan", e.target.value)}
+                        onChange={e =>
+                            updateField("slogan", e.target.value)
+                        }
                         placeholder="e.g. Quality you can trust"
                         maxLength={100}
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -634,15 +695,18 @@ function StepBranding({
             <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
                 Brand Your Store
             </h2>
+
             <p className="text-gray-600 dark:text-gray-400 mb-6">
                 Upload your logo and customise your brand colours
             </p>
+
             <div className="space-y-6">
                 {/* Logo */}
                 <div>
                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         Logo (Optional)
                     </label>
+
                     <div className="flex items-start gap-4">
                         {logoPreview ? (
                             <div className="relative">
@@ -651,6 +715,7 @@ function StepBranding({
                                     alt="Logo preview"
                                     className="w-24 h-24 object-cover rounded-lg border-2 border-gray-300"
                                 />
+
                                 <button
                                     type="button"
                                     onClick={onLogoRemove}
@@ -667,26 +732,31 @@ function StepBranding({
                                     onChange={onLogoChange}
                                     className="hidden"
                                 />
+
                                 <div className="w-24 h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center hover:border-indigo-500 transition">
                                     <Upload className="w-8 h-8 text-gray-400" />
                                 </div>
                             </label>
                         )}
+
                         <div className="flex-1">
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                                 Upload your business logo
                             </p>
+
                             <p className="text-xs text-gray-500">
                                 PNG, JPG up to 2MB. Square format recommended.
                             </p>
                         </div>
                     </div>
                 </div>
+
                 {/* Banner */}
                 <div>
                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         Cover Banner (Optional)
                     </label>
+
                     {bannerPreview ? (
                         <div className="relative">
                             <img
@@ -694,6 +764,7 @@ function StepBranding({
                                 alt="Banner preview"
                                 className="w-full h-32 object-cover rounded-lg border-2 border-gray-300"
                             />
+
                             <button
                                 type="button"
                                 onClick={onBannerRemove}
@@ -710,11 +781,14 @@ function StepBranding({
                                 onChange={onBannerChange}
                                 className="hidden"
                             />
+
                             <div className="w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center hover:border-indigo-500 transition">
                                 <Upload className="w-8 h-8 text-gray-400 mb-2" />
+
                                 <p className="text-sm text-gray-600 dark:text-gray-400">
                                     Click to upload banner
                                 </p>
+
                                 <p className="text-xs text-gray-500 mt-1">
                                     PNG, JPG up to 5MB. 16:9 ratio recommended.
                                 </p>
@@ -722,36 +796,47 @@ function StepBranding({
                         </label>
                     )}
                 </div>
+
                 {/* Brand Colour */}
                 <div>
                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         Primary Brand Colour
                     </label>
+
                     <div className="flex gap-3 items-center">
                         <input
                             type="color"
                             value={formData.primaryColor}
                             onChange={e =>
-                                updateField("primaryColor", e.target.value)
+                                updateField(
+                                    "primaryColor",
+                                    e.target.value
+                                )
                             }
                             className="w-16 h-12 rounded-lg border-2 border-gray-300 cursor-pointer"
                         />
+
                         <input
                             type="text"
                             value={formData.primaryColor}
                             onChange={e =>
-                                updateField("primaryColor", e.target.value)
+                                updateField(
+                                    "primaryColor",
+                                    e.target.value
+                                )
                             }
                             placeholder="#6366f1"
                             className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white outline-none"
                         />
                     </div>
                 </div>
+
                 {/* Social Links */}
                 <div>
                     <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                         Social Media Links (Optional)
                     </label>
+
                     <div className="space-y-3">
                         {(
                             [
@@ -766,7 +851,10 @@ function StepBranding({
                                 type="url"
                                 value={formData.socialLinks[platform]}
                                 onChange={e =>
-                                    updateSocialLink(platform, e.target.value)
+                                    updateSocialLink(
+                                        platform,
+                                        e.target.value
+                                    )
                                 }
                                 placeholder={`https://${platform === "website" ? "yoursite.com" : platform + ".com/yourpage"}`}
                                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -792,6 +880,7 @@ function StepReview({
     const selectedType = vendorTypeOptions.find(
         t => t.id === formData.vendorType
     );
+
     const selectedCategory = listCategories(formData.vendorType).find(
         c => c.id === formData.businessCategory
     );
@@ -801,9 +890,11 @@ function StepReview({
             <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
                 Review Your Information
             </h2>
+
             <p className="text-gray-600 dark:text-gray-400 mb-6">
                 Please confirm everything looks correct before submitting
             </p>
+
             <div className="space-y-6">
                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-lg p-6 border-2 border-gray-200 dark:border-gray-700">
                     {bannerPreview && (
@@ -813,13 +904,16 @@ function StepReview({
                             className="w-full h-32 object-cover rounded-lg mb-4"
                         />
                     )}
+
                     <div className="flex items-start gap-4 mb-4">
                         {logoPreview ? (
                             <img
                                 src={logoPreview}
                                 alt="Logo"
                                 className="w-20 h-20 rounded-lg object-cover border-2"
-                                style={{ borderColor: formData.primaryColor }}
+                                style={{
+                                    borderColor: formData.primaryColor
+                                }}
                             />
                         ) : (
                             <div
@@ -833,21 +927,26 @@ function StepReview({
                                     .toUpperCase() || "?"}
                             </div>
                         )}
+
                         <div className="flex-1">
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                                {formData.businessName || "Your Business Name"}
+                                {formData.businessName ||
+                                    "Your Business Name"}
                             </h3>
+
                             {formData.slogan && (
                                 <p className="text-sm text-gray-600 dark:text-gray-400 italic mt-1">
                                     "{formData.slogan}"
                                 </p>
                             )}
+
                             <div className="flex items-center gap-2 mt-2">
                                 {selectedType && (
                                     <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
                                         {selectedType.label}
                                     </span>
                                 )}
+
                                 {selectedCategory && (
                                     <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                                         {selectedCategory.name}
@@ -856,31 +955,43 @@ function StepReview({
                             </div>
                         </div>
                     </div>
+
                     <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                         {formData.businessDescription}
                     </p>
                 </div>
+
                 <div className="bg-white dark:bg-gray-800 rounded-lg border p-6 space-y-4">
                     <DetailRow
                         label="Vendor Type"
                         value={selectedType?.label || "Not set"}
                     />
+
                     <DetailRow
                         label="Business Name"
                         value={formData.businessName || "Not set"}
                     />
+
                     <DetailRow
                         label="Category"
                         value={selectedCategory?.name || "Not set"}
                     />
+
                     <DetailRow
                         label="Description"
-                        value={formData.businessDescription || "Not set"}
+                        value={
+                            formData.businessDescription || "Not set"
+                        }
                         fullWidth
                     />
+
                     {formData.slogan && (
-                        <DetailRow label="Slogan" value={formData.slogan} />
+                        <DetailRow
+                            label="Slogan"
+                            value={formData.slogan}
+                        />
                     )}
+
                     <DetailRow
                         label="Brand Colour"
                         value={
@@ -888,31 +999,44 @@ function StepReview({
                                 <div
                                     className="w-6 h-6 rounded border"
                                     style={{
-                                        backgroundColor: formData.primaryColor
+                                        backgroundColor:
+                                            formData.primaryColor
                                     }}
                                 />
+
                                 <span className="font-mono text-sm">
                                     {formData.primaryColor}
                                 </span>
                             </div>
                         }
                     />
+
                     <DetailRow
                         label="Logo"
-                        value={logoPreview ? "✅ Uploaded" : "Not uploaded"}
+                        value={
+                            logoPreview ? "✅ Uploaded" : "Not uploaded"
+                        }
                     />
+
                     <DetailRow
                         label="Banner"
-                        value={bannerPreview ? "✅ Uploaded" : "Not uploaded"}
+                        value={
+                            bannerPreview
+                                ? "✅ Uploaded"
+                                : "Not uploaded"
+                        }
                     />
                 </div>
+
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                     <div className="flex gap-3">
                         <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+
                         <div>
                             <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">
                                 Important Information
                             </p>
+
                             <p className="text-sm text-yellow-700 dark:text-yellow-300">
                                 After submission, your vendor account will be
                                 pending review. You'll receive an email
@@ -941,7 +1065,10 @@ function DetailRow({
             <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                 {label}
             </div>
-            <div className="text-sm text-gray-900 dark:text-white">{value}</div>
+
+            <div className="text-sm text-gray-900 dark:text-white">
+                {value}
+            </div>
         </div>
     );
 }
