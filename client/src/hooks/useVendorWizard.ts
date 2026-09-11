@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { databases, DB_ID, USERS_COLLECTION_ID } from "@/lib/appwrite";
+import { updateVendorProfile } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
 
 const LOCAL_KEY = "vendorWizardDraft_v1";
@@ -117,7 +117,7 @@ export function useVendorWizard() {
                 }
 
                 const payload = {
-                    role: "vendor",
+                    role: "vendor" as const,
                     vendorType: draft.vendorType ?? null,
                     businessCategory:
                         draft.businessCategory ?? draft.vendorType ?? null,
@@ -128,18 +128,13 @@ export function useVendorWizard() {
                     primaryColor: draft.primaryColor ?? null,
                     socialLinks: draft.socialLinks ?? null,
                     slogan: draft.slogan ?? null,
-                    vendorStatus: "pending",
-                    storeStatus: "closed",
-                    verificationStatus: "unverified",
-                    onboardingStep: 99
+                    vendorStatus: "pending" as const,
+                    storeStatus: "closed" as const,
+                    verificationStatus: "unverified" as const,
+                    onboardingStep: 99 as const
                 };
 
-                await databases.updateDocument(
-                    DB_ID,
-                    USERS_COLLECTION_ID,
-                    user.$id,
-                    payload
-                );
+                await updateVendorProfile(user.$id, payload);
 
                 clearLocal();
                 await reloadUserProfile();
