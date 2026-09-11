@@ -4,10 +4,25 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const LOCAL_KEY = "vendorWizardDraft_v1";
 
+type VendorWizardDraft = {
+    step?: number;
+    vendorType?: string | null;
+    businessCategory?: string | null;
+    businessName?: string | null;
+    businessDescription?: string | null;
+    socialLinks?: string | Record<string, string> | null;
+    primaryColor?: string | null;
+    logoFileId?: string | null;
+    bannerFileId?: string | null;
+    slogan?: string | null;
+    logoFile?: File;
+    bannerFile?: File;
+};
+
 export function useVendorWizard() {
     const { user, reloadUserProfile } = useAuth();
 
-    const [localDraft, setLocalDraft] = useState<Record<string, any> | null>(
+    const [localDraft, setLocalDraft] = useState<VendorWizardDraft | null>(
         null
     );
     const [loading, setLoading] = useState(false);
@@ -24,7 +39,7 @@ export function useVendorWizard() {
         try {
             const raw = localStorage.getItem(LOCAL_KEY);
             if (raw) {
-                const parsed = JSON.parse(raw);
+                const parsed = JSON.parse(raw) as VendorWizardDraft;
                 setLocalDraft(parsed);
                 setHasSavedProgress(true);
                 setSavedStep(
@@ -34,7 +49,7 @@ export function useVendorWizard() {
             }
 
             if (user) {
-                const seed = {
+                const seed: VendorWizardDraft = {
                     step: 0,
                     vendorType:
                         user.vendorType ?? user.profile?.vendorType ?? null,
@@ -69,8 +84,8 @@ export function useVendorWizard() {
     }, [user]);
 
     const saveLocal = useCallback(
-        (partial: Record<string, any>) => {
-            const next = { ...(localDraft ?? {}), ...partial };
+        (partial: Partial<VendorWizardDraft>) => {
+            const next: VendorWizardDraft = { ...(localDraft ?? {}), ...partial };
             setLocalDraft(next);
             try {
                 localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
