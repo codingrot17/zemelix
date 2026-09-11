@@ -21,6 +21,7 @@ import {
 } from "@/services/auth.service";
 import { normalizeRole } from "@/lib/authHelpers";
 import type { AuthUser } from "@/types/auth";
+import type { UserProfile } from "@/types/user";
 
 interface AuthContextType {
     user: AuthUser | null;
@@ -45,7 +46,7 @@ function buildAuthUser(
         email: string;
         emailVerification: boolean;
     },
-    profile: Record<string, any> | null
+    profile: UserProfile | null
 ): AuthUser {
     return {
         id: account.$id,
