@@ -14,7 +14,7 @@ export type CartItem = {
     price: number;
     qty: number;
     imageUrl?: string;
-    [key: string]: any;
+    [key: string]: unknown;
 };
 
 const STORAGE_KEY = "cart_zemelix_v1"; // namespaced key to avoid collisions
@@ -55,16 +55,17 @@ function emitChange() {
             _cart = [];
             return;
         }
-        const parsed = JSON.parse(raw);
+        const parsed: unknown = JSON.parse(raw);
         if (Array.isArray(parsed)) {
             _cart = parsed
                 .filter(
-                    (it: any) =>
-                        it &&
-                        typeof it.id === "string" &&
-                        typeof it.price === "number"
+                    (it: unknown): it is CartItem =>
+                        typeof it === "object" &&
+                        it !== null &&
+                        typeof (it as Record<string, unknown>).id === "string" &&
+                        typeof (it as Record<string, unknown>).price === "number"
                 )
-                .map((it: any) => ({
+                .map((it: CartItem) => ({
                     ...it,
                     qty: Math.max(1, Number(it.qty) || 1)
                 }));
@@ -97,7 +98,7 @@ function _addItem(incoming: Partial<CartItem> & { id: string; price: number }) {
             title: incoming.title || "",
             price: incoming.price,
             qty: incoming.qty && incoming.qty > 0 ? incoming.qty : 1,
-            ...(incoming as any)
+            ...incoming
         };
         _cart = [..._cart, newItem];
     }
