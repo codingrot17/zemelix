@@ -20,3 +20,12 @@ export interface User {
     slogan?: string | null;
     onboardingStep?: number | null;
 }
+
+export interface AuthUser extends User {
+    id: string;
+    $id: string;
+    name: string;
+    email: string;
+    emailVerification: boolean;
+    profile: Record<string, any> | null;
+}
