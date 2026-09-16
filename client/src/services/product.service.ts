@@ -1,11 +1,6 @@
-import { ID, Query, databases, DB_ID } from "@/lib/appwrite/client";
-import {
-    storage,
-    STORAGE_BUCKET_ID,
-    APPWRITE_ENDPOINT,
-    APPWRITE_PROJECT_ID
-} from "@/lib/appwrite/client";
+import { ID, Permission, Query, Role, databases, DB_ID } from "@/lib/appwrite/client";
 import { getCurrentAccount } from "@/lib/appwrite/account";
+import { deleteFile, uploadFile } from "@/lib/appwrite/storage";
 import { ownsResource } from "@/services/authorization.service";
 import type {
     Product,
@@ -52,16 +47,6 @@ function assertProductConfig() {
     if (!DB_ID || !COLLECTION_ID) {
         throw new Error(
             "Appwrite product configuration is missing. Set VITE_APPWRITE_DB_ID and VITE_APPWRITE_PRODUCTS_COLLECTION_ID."
-        );
-    }
-}
-
-const PROJECT_ID = APPWRITE_PROJECT_ID;
-
-function assertStorageConfig() {
-    if (!STORAGE_BUCKET_ID || !PROJECT_ID) {
-        throw new Error(
-            "Appwrite storage configuration is missing. Set VITE_APPWRITE_STORAGE_BUCKET_ID and VITE_APPWRITE_PROJECT_ID."
         );
     }
 }
@@ -232,6 +217,20 @@ export async function listSellerProducts(
     );
 }
 
+function productPermissions(sellerId: string, status: string) {
+    const permissions = [
+        Permission.read(Role.user(sellerId)),
+        Permission.update(Role.user(sellerId)),
+        Permission.delete(Role.user(sellerId))
+    ];
+
+    if (status === "active") {
+        permissions.push(Permission.read(Role.any()));
+    }
+
+    return permissions;
+}
+
 export async function createSellerProduct(
     input: SellerProductInput
 ): Promise<SellerProduct> {
@@ -241,7 +240,8 @@ export async function createSellerProduct(
         DB_ID,
         COLLECTION_ID,
         ID.unique(),
-        { ...input, sellerId: currentUserId }
+        { ...input, sellerId: currentUserId },
+        productPermissions(currentUserId, input.status)
     );
     return toSellerProduct(document as ProductDocument);
 }
@@ -290,20 +290,13 @@ export async function deleteSellerProduct(productId: string): Promise<void> {
 export async function uploadProductImage(
     file: File
 ): Promise<{ fileId: string; url: string }> {
-    assertStorageConfig();
-    const response = await storage.createFile(
-        STORAGE_BUCKET_ID,
-        ID.unique(),
-        file
-    );
-    const url = `${APPWRITE_ENDPOINT}/storage/buckets/${STORAGE_BUCKET_ID}/files/${response.$id}/view?project=${PROJECT_ID}`;
-    return { fileId: response.$id, url };
+    const fileId = await uploadFile(file);
+    return { fileId, url: `/storage/${fileId}` };
 }
 
 export async function deleteProductImage(fileId: string): Promise<void> {
-    assertStorageConfig();
     try {
-        await storage.deleteFile(STORAGE_BUCKET_ID, fileId);
+        await deleteFile(fileId);
     } catch {
         // Ignore missing/already-deleted files.
     }
