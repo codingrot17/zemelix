@@ -1,6 +1,10 @@
 import { ID, Permission, Query, Role, databases, DB_ID } from "@/lib/appwrite/client";
 import { getCurrentAccount } from "@/lib/appwrite/account";
-import { deleteFile, uploadFile } from "@/lib/appwrite/storage";
+import {
+    deleteFile,
+    getFilePreviewUrl,
+    uploadFile
+} from "@/lib/appwrite/storage";
 import { ownsResource } from "@/services/authorization.service";
 import type {
     Product,
@@ -291,7 +295,7 @@ export async function uploadProductImage(
     file: File
 ): Promise<{ fileId: string; url: string }> {
     const fileId = await uploadFile(file);
-    return { fileId, url: `/storage/${fileId}` };
+    return { fileId, url: getFilePreviewUrl(fileId) };
 }
 
 export async function deleteProductImage(fileId: string): Promise<void> {
