@@ -52,13 +52,15 @@ export function useProducts(
                 if (!cancelled) {
                     setProducts(data);
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("useProducts: failed to load products", err);
 
                 if (!cancelled) {
                     setProducts([]);
                     setError(
-                        err?.message || "Failed to fetch products from Appwrite."
+                        err instanceof Error
+                            ? err.message
+                            : "Failed to fetch products from Appwrite."
                     );
                 }
             } finally {
