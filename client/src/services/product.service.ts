@@ -5,6 +5,7 @@ import {
     APPWRITE_ENDPOINT,
     APPWRITE_PROJECT_ID
 } from "@/lib/appwrite/client";
+import { getCurrentAccount } from "@/lib/appwrite/account";
 import type {
     Product,
     ProductBadge,
@@ -37,13 +38,13 @@ export interface SellerProductInput {
     featured: boolean;
     status: string;
     rating: number;
-    sellerId: string;
     imageUrl?: string | null;
 }
 
 export interface SellerProduct extends SellerProductInput {
     $id: string;
     $createdAt: string;
+    sellerId: string;
 }
 
 function assertProductConfig() {
@@ -62,6 +63,14 @@ function assertStorageConfig() {
             "Appwrite storage configuration is missing. Set VITE_APPWRITE_STORAGE_BUCKET_ID and VITE_APPWRITE_PROJECT_ID."
         );
     }
+}
+
+async function requireCurrentUserId(): Promise<string> {
+    const account = await getCurrentAccount();
+    if (!account?.$id) {
+        throw new Error("You must be signed in to manage products.");
+    }
+    return account.$id;
 }
 
 type ProductDocument = {
@@ -206,10 +215,13 @@ export async function listSellerProducts(
     limit = 100
 ): Promise<SellerProduct[]> {
     assertProductConfig();
-    if (!sellerId) throw new Error("Seller ID is required.");
+    const currentUserId = await requireCurrentUserId();
+    if (!sellerId || sellerId !== currentUserId) {
+        throw new Error("You can only access your own products.");
+    }
 
     const response = await databases.listDocuments(DB_ID, COLLECTION_ID, [
-        Query.equal("sellerId", sellerId),
+        Query.equal("sellerId", currentUserId),
         Query.orderDesc("$createdAt"),
         Query.limit(limit)
     ]);
@@ -223,11 +235,12 @@ export async function createSellerProduct(
     input: SellerProductInput
 ): Promise<SellerProduct> {
     assertProductConfig();
+    const currentUserId = await requireCurrentUserId();
     const document = await databases.createDocument(
         DB_ID,
         COLLECTION_ID,
         ID.unique(),
-        input
+        { ...input, sellerId: currentUserId }
     );
     return toSellerProduct(document as ProductDocument);
 }
@@ -237,6 +250,17 @@ export async function updateSellerProduct(
     input: Partial<SellerProductInput>
 ): Promise<SellerProduct> {
     assertProductConfig();
+    const currentUserId = await requireCurrentUserId();
+    const existing = await databases.getDocument(
+        DB_ID,
+        COLLECTION_ID,
+        productId
+    ) as ProductDocument;
+
+    if (existing.sellerId !== currentUserId) {
+        throw new Error("You can only update your own products.");
+    }
+
     const document = await databases.updateDocument(
         DB_ID,
         COLLECTION_ID,
@@ -248,6 +272,17 @@ export async function updateSellerProduct(
 
 export async function deleteSellerProduct(productId: string): Promise<void> {
     assertProductConfig();
+    const currentUserId = await requireCurrentUserId();
+    const existing = await databases.getDocument(
+        DB_ID,
+        COLLECTION_ID,
+        productId
+    ) as ProductDocument;
+
+    if (existing.sellerId !== currentUserId) {
+        throw new Error("You can only delete your own products.");
+    }
+
     await databases.deleteDocument(DB_ID, COLLECTION_ID, productId);
 }
 
