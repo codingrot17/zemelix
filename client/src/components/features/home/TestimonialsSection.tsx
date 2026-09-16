@@ -13,8 +13,16 @@ import { Input } from "@/components/ui/input";
 import { Star, Video, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+type Testimonial = {
+  type: "text" | "video";
+  name: string;
+  quote: string;
+  videoUrl?: string;
+  rating: number;
+};
+
 // Demo testimonials
-const initialTestimonials = [
+const initialTestimonials: Testimonial[] = [
   {
     type: "video",
     name: "Jane Doe",
@@ -73,7 +81,7 @@ function AddTestimonyModal({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onAdd: (t: any) => void;
+  onAdd: (t: Testimonial) => void;
 }) {
   const [type, setType] = useState<"text" | "video">("text");
   const [name, setName] = useState("");
@@ -85,7 +93,7 @@ function AddTestimonyModal({
     e.preventDefault();
     if (type === "video" && !videoUrl) return;
     if (!name || !quote) return;
-    onAdd({ type, name, quote, videoUrl, rating });
+    onAdd({ type, name, quote, videoUrl: videoUrl || undefined, rating });
     setName("");
     setQuote("");
     setVideoUrl("");
@@ -171,7 +179,7 @@ function AddTestimonyModal({
 }
 
 // Testimonial card (text or video)
-function TestimonialCard({ t }: { t: any }) {
+function TestimonialCard({ t }: { t: Testimonial }) {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 min-w-[300px] max-w-xs flex flex-col  justify-center items-center h-72">
       {t.type === "video" && t.videoUrl ? (
@@ -208,7 +216,7 @@ export function TestimonialsSection() {
   const [testimonials, setTestimonials] = useState(initialTestimonials);
   const [modalOpen, setModalOpen] = useState(false);
 
-  function handleAddTestimony(newTestimony: any) {
+  function handleAddTestimony(newTestimony: Testimonial) {
     setTestimonials([newTestimony, ...testimonials]);
   }
 
