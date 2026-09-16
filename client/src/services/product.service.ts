@@ -6,6 +6,7 @@ import {
     APPWRITE_PROJECT_ID
 } from "@/lib/appwrite/client";
 import { getCurrentAccount } from "@/lib/appwrite/account";
+import { ownsResource } from "@/services/authorization.service";
 import type {
     Product,
     ProductBadge,
@@ -216,7 +217,7 @@ export async function listSellerProducts(
 ): Promise<SellerProduct[]> {
     assertProductConfig();
     const currentUserId = await requireCurrentUserId();
-    if (!sellerId || sellerId !== currentUserId) {
+    if (!ownsResource(currentUserId, sellerId)) {
         throw new Error("You can only access your own products.");
     }
 
@@ -257,7 +258,7 @@ export async function updateSellerProduct(
         productId
     ) as ProductDocument;
 
-    if (existing.sellerId !== currentUserId) {
+    if (!ownsResource(currentUserId, existing.sellerId)) {
         throw new Error("You can only update your own products.");
     }
 
@@ -279,7 +280,7 @@ export async function deleteSellerProduct(productId: string): Promise<void> {
         productId
     ) as ProductDocument;
 
-    if (existing.sellerId !== currentUserId) {
+    if (!ownsResource(currentUserId, existing.sellerId)) {
         throw new Error("You can only delete your own products.");
     }
 
