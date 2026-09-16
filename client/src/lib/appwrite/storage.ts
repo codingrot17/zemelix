@@ -1,5 +1,6 @@
-import { ID } from "appwrite";
+import { ID, Permission, Role } from "appwrite";
 import {
+    account,
     storage,
     STORAGE_BUCKET_ID,
     APPWRITE_ENDPOINT,
@@ -9,10 +10,16 @@ import {
 export async function uploadFile(file: File): Promise<string> {
     if (!file) throw new Error("No file provided");
 
+    const currentUser = await account.get();
+
     const response = await storage.createFile(
         STORAGE_BUCKET_ID,
         ID.unique(),
-        file
+        file,
+        [
+            Permission.update(Role.user(currentUser.$id)),
+            Permission.delete(Role.user(currentUser.$id)),
+        ]
     );
     return response.$id;
 }
