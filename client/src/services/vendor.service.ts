@@ -16,12 +16,27 @@ export type VendorOnboardingInput = {
     socialLinks: string | Record<string, string> | null;
 };
 
+/**
+ * Compatibility shape for the current VendorWizard.
+ * Trusted fields are intentionally not forwarded to the browser-invoked
+ * function; the function sets those values server-side.
+ */
+export type VendorOnboardingData = VendorOnboardingInput & {
+    role: "seller";
+    vendorStatus: "pending";
+    storeStatus: "closed";
+    onboardingStep: 99;
+    currency: "NGN";
+    subscriptionPlan: "free";
+    accountStatus: "active";
+};
+
 export function uploadVendorFile(file: File) {
     return uploadFile(file);
 }
 
 export async function completeVendorOnboarding(
-    data: VendorOnboardingInput
+    data: VendorOnboardingData
 ) {
     if (!VENDOR_PROMOTION_FUNCTION_ID) {
         throw new Error(
@@ -29,9 +44,31 @@ export async function completeVendorOnboarding(
         );
     }
 
+    const {
+        vendorType,
+        businessCategory,
+        businessName,
+        businessDescription,
+        slogan,
+        logo,
+        coverImage,
+        primaryColor,
+        socialLinks,
+    } = data;
+
     return functions.createExecution(
         VENDOR_PROMOTION_FUNCTION_ID,
-        JSON.stringify(data),
+        JSON.stringify({
+            vendorType,
+            businessCategory,
+            businessName,
+            businessDescription,
+            slogan,
+            logo,
+            coverImage,
+            primaryColor,
+            socialLinks,
+        }),
         false
     );
 }
