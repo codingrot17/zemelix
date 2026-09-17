@@ -201,6 +201,11 @@ export async function updateUserProfile(
         throw new Error("Database not configured");
     }
 
+    const currentAccount = await account.get();
+    if (currentAccount.$id !== userId) {
+        throw new Error("You can only update your own profile.");
+    }
+
     return await databases.updateDocument(
         DB_ID,
         USERS_COLLECTION_ID,
