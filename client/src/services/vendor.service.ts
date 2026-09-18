@@ -36,6 +36,7 @@ export function uploadVendorFile(file: File) {
 }
 
 export async function completeVendorOnboarding(
+    _userId: string,
     data: VendorOnboardingData
 ) {
     if (!VENDOR_PROMOTION_FUNCTION_ID) {
