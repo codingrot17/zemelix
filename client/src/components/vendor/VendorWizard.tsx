@@ -245,7 +245,7 @@ const handleSubmit = async () => {
             accountStatus: "active"
         };
 
-        await completeVendorOnboarding(user.$id, onboardingData);
+        await completeVendorOnboarding(onboardingData);
 
         await refreshUser();
 
