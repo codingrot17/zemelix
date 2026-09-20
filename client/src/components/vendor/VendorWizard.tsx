@@ -101,7 +101,11 @@ export default function VendorWizard() {
     }, [formData, currentStep]);
 
     const updateField = (field: keyof VendorFormData, value: any) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
+        setFormData(prev => ({
+            ...prev,
+            [field]: value,
+            ...(field === "vendorType" ? { businessCategory: "" } : {})
+        }));
         setError(null);
     };
 
