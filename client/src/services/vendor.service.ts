@@ -57,7 +57,7 @@ export async function completeVendorOnboarding(
         socialLinks,
     } = data;
 
-    return functions.createExecution(
+    const execution = await functions.createExecution(
         VENDOR_PROMOTION_FUNCTION_ID,
         JSON.stringify({
             vendorType,
@@ -72,4 +72,19 @@ export async function completeVendorOnboarding(
         }),
         false
     );
+
+    if (execution.responseStatusCode < 200 || execution.responseStatusCode >= 300) {
+        let message = "Vendor onboarding failed.";
+        try {
+            const response = JSON.parse(execution.responseBody || "{}");
+            if (typeof response.error === "string" && response.error) {
+                message = response.error;
+            }
+        } catch {
+            // Keep the generic message when the function response is not JSON.
+        }
+        throw new Error(message);
+    }
+
+    return execution;
 }
