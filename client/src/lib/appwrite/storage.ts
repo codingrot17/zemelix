@@ -31,7 +31,7 @@ export function getFilePreviewUrl(
 ): string {
     if (!fileId) return "";
 
-    const endpoint = APPWRITE_ENDPOINT.replace(/\/v1\/?$/, "");
+    const endpoint = APPWRITE_ENDPOINT.replace(/\/$/, "");
     return `${endpoint}/storage/buckets/${STORAGE_BUCKET_ID}/files/${fileId}/preview?project=${APPWRITE_PROJECT_ID}&width=${width}&height=${height}`;
 }
 
