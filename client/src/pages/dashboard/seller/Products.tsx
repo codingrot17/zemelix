@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { createSellerProduct, deleteSellerProduct, listSellerProducts, type SellerProduct, updateSellerProduct, uploadProductImage } from "@/services/product.service";
+import { getFilePreviewUrl } from "@/lib/appwrite/storage";
 
 const CATEGORIES = ["Fashion", "Beauty", "Electronics", "Gadgets", "Home & Living", "Food & Drinks", "Graphic Design", "Digital Services", "Furniture", "Automobile", "Photography", "Tech Services", "Other"];
 const BADGES = ["", "Hot", "New", "Trending", "Featured"] as const;
@@ -78,7 +79,7 @@ export default function SellerProducts() {
         try {
             let imageUrl = existingImageUrl ?? "";
             if (imageFile) imageUrl = (await uploadProductImage(imageFile)).url;
-            const payload = { title: form.title.trim(), shortDescription: form.shortDescription.trim(), longDescription: form.longDescription.trim() || null, price: Number(form.price), stock: Number(form.stock), category: form.category, tags: parseTags(form.tags), badge: form.badge || null, vendorType: form.vendorType, sellerName: user.profile?.businessName ?? user.name ?? "Seller", sellerWhatsapp: form.sellerWhatsapp.trim() || null, sellerAvatar: user.profile?.logo ?? null, featured: form.featured, status: form.status, rating: editingProduct?.rating ?? 0, sellerId: user.$id, imageUrl: imageUrl || null };
+            const payload = { title: form.title.trim(), shortDescription: form.shortDescription.trim(), longDescription: form.longDescription.trim() || null, price: Number(form.price), stock: Number(form.stock), category: form.category, tags: parseTags(form.tags), badge: form.badge || null, vendorType: form.vendorType, sellerName: user.profile?.businessName ?? user.name ?? "Seller", sellerWhatsapp: form.sellerWhatsapp.trim() || null, sellerAvatar: user.profile?.logo ? getFilePreviewUrl(user.profile.logo) : null, featured: form.featured, status: form.status, rating: editingProduct?.rating ?? 0, sellerId: user.$id, imageUrl: imageUrl || null };
             if (editingProduct) await updateSellerProduct(editingProduct.$id, payload); else await createSellerProduct(payload);
             resetDialog(); await fetchProducts();
         } catch (error: any) { setFormError(error?.message ?? "Failed to save product."); }
