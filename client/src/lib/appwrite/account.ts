@@ -2,18 +2,6 @@ import { ID } from "appwrite";
 import { account } from "./client";
 import { createUserProfile } from "./database";
 
-function clearAppwriteCookies() {
-    if (typeof document === "undefined") return;
-
-    const cookies = document.cookie.split(";");
-    for (const cookie of cookies) {
-        const name = cookie.split("=")[0].trim();
-        if (name.startsWith("a_session_")) {
-            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-        }
-    }
-}
-
 export async function getCurrentSession() {
     try {
         return await account.getSession("current");
@@ -30,8 +18,7 @@ export async function validateSession(): Promise<boolean> {
 
 export async function createSession(email: string, password: string) {
     try {
-        clearAppwriteCookies();
-        await account.deleteSessions().catch(() => {});
+        // Login creates a new session without destroying sessions on other devices.
         return await account.createEmailPasswordSession(email, password);
     } catch (error) {
         console.error("Session creation failed:", error);
@@ -41,11 +28,20 @@ export async function createSession(email: string, password: string) {
 
 export async function deleteSession() {
     try {
-        await account.deleteSessions();
+        // Normal logout only ends the current device/session.
+        await account.deleteSession("current");
     } catch (error) {
         console.warn("Session deletion warning:", error);
-    } finally {
-        clearAppwriteCookies();
+    }
+}
+
+export async function deleteAllSessions() {
+    try {
+        // Explicitly reserved for a future "log out all devices" action.
+        await account.deleteSessions();
+    } catch (error) {
+        console.warn("All-session deletion warning:", error);
+        throw error;
     }
 }
 
