@@ -3,6 +3,7 @@ import {
     getCurrentAccount,
     createSession as createAppwriteSession,
     deleteSession as deleteAppwriteSession,
+    deleteAllSessions as deleteAllAppwriteSessions,
     registerUser as registerAppwriteUser,
     sendVerificationEmail as sendAppwriteVerificationEmail,
     validateSession as validateAppwriteSession,
@@ -31,6 +32,10 @@ export async function loginUser(email: string, password: string) {
 
 export async function logoutUser() {
     return deleteAppwriteSession();
+}
+
+export async function logoutAllDevices() {
+    return deleteAllAppwriteSessions();
 }
 
 export async function registerAuthUser(
