@@ -78,7 +78,15 @@ export async function registerUser(
         );
 
         await createSession(email, password);
-        await createUserProfile(newUser.$id, email, name);
+
+        try {
+            await createUserProfile(newUser.$id, email, name);
+        } catch (error) {
+            // Do not leave a newly registered user with an authenticated
+            // session when required profile initialization has failed.
+            await deleteSession();
+            throw error;
+        }
 
         return newUser;
     } catch (error) {
