@@ -21,23 +21,12 @@ export type VendorOnboardingInput = {
  * Trusted fields are intentionally not forwarded to the browser-invoked
  * function; the function sets those values server-side.
  */
-export type VendorOnboardingData = VendorOnboardingInput & {
-    role: "seller";
-    vendorStatus: "pending";
-    storeStatus: "closed";
-    onboardingStep: 99;
-    currency: "NGN";
-    subscriptionPlan: "free";
-    accountStatus: "active";
-};
-
 export function uploadVendorFile(file: File) {
     return uploadFile(file);
 }
 
 export async function completeVendorOnboarding(
-    _userId: string,
-    data: VendorOnboardingData
+    data: VendorOnboardingInput
 ) {
     if (!VENDOR_PROMOTION_FUNCTION_ID) {
         throw new Error(
