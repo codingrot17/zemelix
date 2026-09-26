@@ -33,18 +33,18 @@ export interface SellerProductInput {
     tags: string[];
     badge?: string | null;
     vendorType: string;
-    sellerName: string;
     sellerWhatsapp?: string | null;
-    sellerAvatar?: string | null;
-    featured: boolean;
-    status: string;
-    rating: number;
     imageUrl?: string | null;
 }
 
 export interface SellerProduct extends SellerProductInput {
     $id: string;
     $createdAt: string;
+    sellerName: string;
+    sellerAvatar: string | null;
+    featured: boolean;
+    status: string;
+    rating: number;
     sellerId: string;
 }
 
@@ -245,7 +245,15 @@ export async function createSellerProduct(
         DB_ID,
         COLLECTION_ID,
         ID.unique(),
-        { ...input, sellerId: currentUserId },
+        {
+            ...input,
+            sellerId: currentUserId,
+            // Marketplace-controlled fields are deliberately not accepted
+            // from SellerProductInput.
+            featured: false,
+            status: "draft",
+            rating: 0,
+        },
         productPermissions(currentUserId, input.status)
     );
     return toSellerProduct(document as ProductDocument);
@@ -267,11 +275,25 @@ export async function updateSellerProduct(
         throw new Error("You can only update your own products.");
     }
 
+    const editableFields: Partial<SellerProductInput> = {
+        title: input.title,
+        shortDescription: input.shortDescription,
+        longDescription: input.longDescription,
+        price: input.price,
+        stock: input.stock,
+        category: input.category,
+        tags: input.tags,
+        badge: input.badge,
+        vendorType: input.vendorType,
+        sellerWhatsapp: input.sellerWhatsapp,
+        imageUrl: input.imageUrl,
+    };
+
     const document = await databases.updateDocument(
         DB_ID,
         COLLECTION_ID,
         productId,
-        input
+        editableFields
     );
     return toSellerProduct(document as ProductDocument);
 }
