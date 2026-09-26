@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
     uploadVendorFile,
     completeVendorOnboarding,
-    type VendorOnboardingData
+    type VendorOnboardingInput
 } from "@/services/vendor.service";
 import {
     vendorTypeOptions,
@@ -230,8 +230,7 @@ const handleSubmit = async () => {
             bannerFileId = await uploadVendorFile(bannerFile);
         }
 
-        const onboardingData: VendorOnboardingData = {
-            role: "seller",
+        const onboardingData: VendorOnboardingInput = {
             vendorType: formData.vendorType,
             businessCategory: formData.businessCategory,
             businessName: formData.businessName,
@@ -241,15 +240,9 @@ const handleSubmit = async () => {
             coverImage: bannerFileId,
             primaryColor: formData.primaryColor,
             socialLinks: JSON.stringify(formData.socialLinks),
-            vendorStatus: "pending",
-            storeStatus: "closed",
-            onboardingStep: 99,
-            currency: "NGN",
-            subscriptionPlan: "free",
-            accountStatus: "active"
         };
 
-        await completeVendorOnboarding(user.$id, onboardingData);
+        await completeVendorOnboarding(onboardingData);
 
         await refreshUser();
 
