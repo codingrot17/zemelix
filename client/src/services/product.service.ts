@@ -254,7 +254,7 @@ export async function createSellerProduct(
             status: "draft",
             rating: 0,
         },
-        productPermissions(currentUserId, input.status)
+        productPermissions(currentUserId, "draft")
     );
     return toSellerProduct(document as ProductDocument);
 }
