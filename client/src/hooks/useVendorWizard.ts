@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { updateVendorProfile } from "@/services/user.service";
+import { completeVendorOnboarding } from "@/services/vendor.service";
 import { useAuth } from "@/contexts/AuthContext";
 
 const LOCAL_KEY_PREFIX = "vendorWizardDraft_v1";
@@ -140,7 +140,6 @@ export function useVendorWizard() {
                 }
 
                 const payload = {
-                    role: "vendor" as const,
                     vendorType: draft.vendorType ?? null,
                     businessCategory:
                         draft.businessCategory ?? draft.vendorType ?? null,
@@ -151,13 +150,9 @@ export function useVendorWizard() {
                     primaryColor: draft.primaryColor ?? null,
                     socialLinks: draft.socialLinks ?? null,
                     slogan: draft.slogan ?? null,
-                    vendorStatus: "pending" as const,
-                    storeStatus: "closed" as const,
-                    verificationStatus: "unverified" as const,
-                    onboardingStep: 99 as const
                 };
 
-                await updateVendorProfile(user.$id, payload);
+                await completeVendorOnboarding(payload);
 
                 clearLocal();
                 await reloadUserProfile();
