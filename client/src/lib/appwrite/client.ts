@@ -11,8 +11,19 @@ if (!PROJECT_ID) {
 export const DB_ID = import.meta.env.VITE_APPWRITE_DB_ID;
 export const USERS_COLLECTION_ID = import.meta.env
     .VITE_APPWRITE_USER_COLLECTION_ID;
-export const STORAGE_BUCKET_ID =
-    import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID || "default";
+export const STORAGE_BUCKET_ID = import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID;
+
+if (!DB_ID) {
+    throw new Error("VITE_APPWRITE_DB_ID is required");
+}
+
+if (!USERS_COLLECTION_ID) {
+    throw new Error("VITE_APPWRITE_USER_COLLECTION_ID is required");
+}
+
+if (!STORAGE_BUCKET_ID) {
+    throw new Error("VITE_APPWRITE_STORAGE_BUCKET_ID is required");
+}
 export const APPWRITE_ENDPOINT = ENDPOINT;
 export const APPWRITE_PROJECT_ID = PROJECT_ID;
 
