@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { createSellerProduct, deleteSellerProduct, listSellerProducts, type SellerProduct, updateSellerProduct, uploadProductImage } from "@/services/product.service";
-import { getFilePreviewUrl } from "@/lib/appwrite/storage";
 
 const CATEGORIES = ["Fashion", "Beauty", "Electronics", "Gadgets", "Home & Living", "Food & Drinks", "Graphic Design", "Digital Services", "Furniture", "Automobile", "Photography", "Tech Services", "Other"];
 const BADGES = ["", "Hot", "New", "Trending"] as const;
