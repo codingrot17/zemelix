@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { updateVendorProfile } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
 
-const LOCAL_KEY = "vendorWizardDraft_v1";
+const LOCAL_KEY_PREFIX = "vendorWizardDraft_v1";
+
+function getLocalKey(userId: string): string {
+    return `${LOCAL_KEY_PREFIX}:${userId}`;
+}
 
 type VendorWizardDraft = {
     step?: number;
@@ -36,8 +40,15 @@ export function useVendorWizard() {
 
     // Init local draft
     useEffect(() => {
+        if (!user) {
+            setLocalDraft({ step: 0 });
+            setHasSavedProgress(false);
+            setSavedStep(null);
+            return;
+        }
+
         try {
-            const raw = localStorage.getItem(LOCAL_KEY);
+            const raw = localStorage.getItem(getLocalKey(user.$id));
             if (raw) {
                 const parsed = JSON.parse(raw) as VendorWizardDraft;
                 setLocalDraft(parsed);
@@ -48,8 +59,7 @@ export function useVendorWizard() {
                 return;
             }
 
-            if (user) {
-                const seed: VendorWizardDraft = {
+            const seed: VendorWizardDraft = {
                     step: 0,
                     vendorType:
                         user.vendorType ?? user.profile?.vendorType ?? null,
@@ -74,9 +84,6 @@ export function useVendorWizard() {
                     slogan: user.slogan ?? user.profile?.slogan ?? null
                 };
                 setLocalDraft(seed);
-            } else {
-                setLocalDraft({ step: 0 });
-            }
         } catch (err) {
             console.warn("useVendorWizard init error", err);
             setLocalDraft({ step: 0 });
@@ -88,7 +95,12 @@ export function useVendorWizard() {
             const next: VendorWizardDraft = { ...(localDraft ?? {}), ...partial };
             setLocalDraft(next);
             try {
-                localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
+                if (user) {
+                    localStorage.setItem(
+                        getLocalKey(user.$id),
+                        JSON.stringify(next)
+                    );
+                }
                 setHasSavedProgress(true);
                 setSavedStep(typeof next.step === "number" ? next.step : null);
             } catch (err) {
@@ -96,15 +108,17 @@ export function useVendorWizard() {
             }
             return next;
         },
-        [localDraft]
+        [localDraft, user]
     );
 
     const clearLocal = useCallback(() => {
-        localStorage.removeItem(LOCAL_KEY);
+        if (user) {
+            localStorage.removeItem(getLocalKey(user.$id));
+        }
         setLocalDraft(null);
         setHasSavedProgress(false);
         setSavedStep(null);
-    }, []);
+    }, [user]);
 
     const finalSubmit = useCallback(
         async (opts: { uploadFn?: (file: File) => Promise<string> } = {}) => {
