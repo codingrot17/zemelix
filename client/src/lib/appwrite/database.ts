@@ -136,8 +136,7 @@ export async function createUserProfile(
                 onboardingStep: null,
                 socialLinks: null,
                 primaryColor: null,
-                $createdAt: new Date().toISOString(),
-            },
+                            },
             [
                 Permission.read(Role.user(userId)),
                 Permission.update(Role.user(userId)),
