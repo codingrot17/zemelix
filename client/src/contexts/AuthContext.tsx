@@ -76,9 +76,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const [loading, setLoading] = useState(true);
     const [verificationSent, setVerificationSent] = useState(false);
 
-    useEffect(() => {
-        let stopMonitor: (() => void) | null = null;
+    const handleSessionExpired = useCallback(() => {
+        setUser(null);
+    }, []);
 
+    useEffect(() => {
         async function initAuth() {
             try {
                 const isValid = await isSessionValid();
@@ -97,7 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
                 const profile = await getAuthenticatedUserProfile(account.$id);
                 setUser(buildAuthUser(account, profile));
-                stopMonitor = startAuthSessionMonitor(handleSessionExpired);
             } catch (error) {
                 console.error("Auth init error:", error);
                 setUser(null);
@@ -107,14 +108,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
 
         initAuth();
-        return () => {
-            if (stopMonitor) stopMonitor();
-        };
     }, []);
 
-    const handleSessionExpired = useCallback(() => {
-        setUser(null);
-    }, []);
+    useEffect(() => {
+        if (!user) return;
+
+        const stopMonitor = startAuthSessionMonitor(handleSessionExpired);
+        return stopMonitor;
+    }, [user, handleSessionExpired]);
 
     const login = useCallback(async (email: string, password: string) => {
         await loginUser(email, password);
