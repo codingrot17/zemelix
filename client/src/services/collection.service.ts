@@ -20,11 +20,11 @@ type CollectionDocument = {
     description?: string;
     longDescription?: string;
     imageUrl?: string;
-    badge?: unknown;
+    badge?: string;
     tags?: unknown;
-    type?: unknown;
+    type?: string;
     itemCount?: number;
-    priceFrom?: unknown;
+    priceFrom?: string | number;
     curatorName?: string;
     curatorAvatar?: string;
     curatorRating?: number;
@@ -41,20 +41,12 @@ const COLLECTION_BADGES: CollectionBadge[] = [
     "New"
 ];
 
-function toCollectionBadge(value: unknown): CollectionBadge | undefined {
-    return typeof value === "string" && COLLECTION_BADGES.includes(value as CollectionBadge)
-        ? (value as CollectionBadge)
-        : undefined;
+function isCollectionBadge(value: string): value is CollectionBadge {
+    return COLLECTION_BADGES.includes(value as CollectionBadge);
 }
 
-function toCollectionType(value: unknown): CollectionType {
-    return value === "services" ? "services" : "goods";
-}
-
-function toPriceString(value: unknown): string | undefined {
-    if (typeof value === "string") return value;
-    if (typeof value === "number") return String(value);
-    return undefined;
+function isCollectionType(value: string): value is CollectionType {
+    return value === "goods" || value === "services";
 }
 
 function assertCollectionsConfig() {
@@ -73,13 +65,21 @@ export function docToCollection(doc: CollectionDocument): Collection {
         description: doc.description ?? "",
         longDescription: doc.longDescription ?? undefined,
         imageUrl: doc.imageUrl ?? "",
-        badge: toCollectionBadge(doc.badge),
+        badge:
+            doc.badge && isCollectionBadge(doc.badge)
+                ? doc.badge
+                : undefined,
         tags: Array.isArray(doc.tags)
-            ? doc.tags.filter((tag): tag is string => typeof tag === "string")
+            ? doc.tags.filter(
+                  (tag): tag is string => typeof tag === "string"
+              )
             : [],
-        type: toCollectionType(doc.type),
+        type: doc.type && isCollectionType(doc.type) ? doc.type : "goods",
         itemCount: doc.itemCount ?? undefined,
-        priceFrom: toPriceString(doc.priceFrom),
+        priceFrom:
+            typeof doc.priceFrom === "number"
+                ? String(doc.priceFrom)
+                : doc.priceFrom ?? undefined,
         curator: doc.curatorName
             ? {
                   name: doc.curatorName,
