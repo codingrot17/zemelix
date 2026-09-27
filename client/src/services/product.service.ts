@@ -317,7 +317,7 @@ export async function deleteSellerProduct(productId: string): Promise<void> {
 export async function uploadProductImage(
     file: File
 ): Promise<{ fileId: string; url: string }> {
-    const fileId = await uploadFile(file);
+    const fileId = await uploadFile(file, { publicRead: true });
     return { fileId, url: getFilePreviewUrl(fileId) };
 }
 
