@@ -121,6 +121,7 @@ export default function AppRoutes() {
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
                 <Route path="/verify" element={<Verify />} />
+                <Route path="/auth/verify" element={<Verify />} />
 
                 {/* ========================================
                 VENDOR UPGRADE (SPECIAL GUARD)

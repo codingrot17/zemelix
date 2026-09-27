@@ -10,41 +10,18 @@ import React, {
     useCallback
 } from "react";
 import {
-    getCurrentAccount,
-    getUserProfile,
-    createSession,
-    deleteSession,
-    registerUser,
-    sendVerificationEmail,
-    validateSession,
-    startSessionMonitor
-} from "@/lib/appwrite";
+    getAuthenticatedAccount,
+    getAuthenticatedUserProfile,
+    loginUser,
+    logoutUser,
+    registerAuthUser,
+    sendVerification,
+    isSessionValid,
+    startAuthSessionMonitor
+} from "@/services/auth.service";
 import { normalizeRole } from "@/lib/authHelpers";
-import type { UserRole } from "@/types/auth";
-
-// --------------------------------------------------
-// TYPES
-// --------------------------------------------------
-export interface AuthUser {
-    id: string;
-    $id: string;
-    name: string;
-    email: string;
-    emailVerification: boolean;
-    role: UserRole;
-    profile: Record<string, any> | null;
-    // Vendor profile fields (sourced from profile document)
-    vendorType?: string | null;
-    businessCategory?: string | null;
-    businessName?: string | null;
-    businessDescription?: string | null;
-    socialLinks?: Record<string, string> | null;
-    primaryColor?: string | null;
-    logo?: string | null;
-    coverImage?: string | null;
-    slogan?: string | null;
-    onboardingStep?: number | null;
-}
+import type { AuthUser } from "@/types/auth";
+import type { UserProfile } from "@/types/user";
 
 interface AuthContextType {
     user: AuthUser | null;
@@ -60,14 +37,8 @@ interface AuthContextType {
     reloadUserProfile: () => Promise<void>;
 }
 
-// --------------------------------------------------
-// CONTEXT
-// --------------------------------------------------
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// --------------------------------------------------
-// HELPER
-// --------------------------------------------------
 function buildAuthUser(
     account: {
         $id: string;
@@ -75,7 +46,7 @@ function buildAuthUser(
         email: string;
         emailVerification: boolean;
     },
-    profile: Record<string, any> | null
+    profile: UserProfile | null
 ): AuthUser {
     return {
         id: account.$id,
@@ -85,7 +56,6 @@ function buildAuthUser(
         emailVerification: account.emailVerification,
         role: normalizeRole({ profile, role: profile?.role }),
         profile,
-        // Flatten vendor fields from profile for easy access
         vendorType: profile?.vendorType ?? null,
         businessCategory: profile?.businessCategory ?? null,
         businessName: profile?.businessName ?? null,
@@ -99,9 +69,6 @@ function buildAuthUser(
     };
 }
 
-// --------------------------------------------------
-// PROVIDER
-// --------------------------------------------------
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     children
 }) => {
@@ -109,28 +76,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const [loading, setLoading] = useState(true);
     const [verificationSent, setVerificationSent] = useState(false);
 
-    useEffect(() => {
-        let stopMonitor: (() => void) | null = null;
+    const handleSessionExpired = useCallback(() => {
+        setUser(null);
+    }, []);
 
+    useEffect(() => {
         async function initAuth() {
             try {
-                const isValid = await validateSession();
+                const isValid = await isSessionValid();
                 if (!isValid) {
                     setUser(null);
                     setLoading(false);
                     return;
                 }
 
-                const account = await getCurrentAccount();
+                const account = await getAuthenticatedAccount();
                 if (!account) {
                     setUser(null);
                     setLoading(false);
                     return;
                 }
 
-                const profile = await getUserProfile(account.$id);
+                const profile = await getAuthenticatedUserProfile(account.$id);
                 setUser(buildAuthUser(account, profile));
-                stopMonitor = startSessionMonitor(handleSessionExpired);
             } catch (error) {
                 console.error("Auth init error:", error);
                 setUser(null);
@@ -140,35 +108,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
 
         initAuth();
-        return () => {
-            if (stopMonitor) stopMonitor();
-        };
     }, []);
 
-    const handleSessionExpired = useCallback(() => {
-        setUser(null);
-    }, []);
+    useEffect(() => {
+        if (!user) return;
+
+        const stopMonitor = startAuthSessionMonitor(handleSessionExpired);
+        return stopMonitor;
+    }, [user, handleSessionExpired]);
 
     const login = useCallback(async (email: string, password: string) => {
-        await createSession(email, password);
-        const account = await getCurrentAccount();
+        await loginUser(email, password);
+        const account = await getAuthenticatedAccount();
         if (!account) throw new Error("Failed to get account after login");
-        const profile = await getUserProfile(account.$id);
+        const profile = await getAuthenticatedUserProfile(account.$id);
         setUser(buildAuthUser(account, profile));
     }, []);
 
     const register = useCallback(
         async (email: string, password: string, name: string) => {
-            await registerUser(email, password, name);
+            await registerAuthUser(email, password, name);
             const redirectUrl =
                 import.meta.env.VITE_APPWRITE_VERIFICATION_REDIRECT_URL ||
                 `${window.location.origin}/verify`;
-            await sendVerificationEmail(redirectUrl);
+            await sendVerification(redirectUrl);
             setVerificationSent(true);
-            const account = await getCurrentAccount();
+            const account = await getAuthenticatedAccount();
             if (!account)
                 throw new Error("Failed to get account after registration");
-            const profile = await getUserProfile(account.$id);
+            const profile = await getAuthenticatedUserProfile(account.$id);
             setUser(buildAuthUser(account, profile));
         },
         []
@@ -176,7 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const logout = useCallback(async () => {
         try {
-            await deleteSession();
+            await logoutUser();
         } catch (error) {
             console.warn("Logout warning:", error);
         } finally {
@@ -189,18 +157,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         const redirectUrl =
             import.meta.env.VITE_APPWRITE_VERIFICATION_REDIRECT_URL ||
             `${window.location.origin}/verify`;
-        await sendVerificationEmail(redirectUrl);
+        await sendVerification(redirectUrl);
         setVerificationSent(true);
     }, []);
 
     const refreshUser = useCallback(async () => {
         try {
-            const account = await getCurrentAccount();
+            const account = await getAuthenticatedAccount();
             if (!account) {
                 setUser(null);
                 return;
             }
-            const profile = await getUserProfile(account.$id);
+            const profile = await getAuthenticatedUserProfile(account.$id);
             setUser(buildAuthUser(account, profile));
         } catch (error) {
             console.warn("Refresh user error:", error);
@@ -225,9 +193,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     );
 };
 
-// --------------------------------------------------
-// HOOK
-// --------------------------------------------------
 export function useAuth() {
     const context = useContext(AuthContext);
     if (!context) {
@@ -236,4 +201,5 @@ export function useAuth() {
     return context;
 }
 
+export type { AuthUser } from "@/types/auth";
 export { canUpgradeToVendor, hasRole } from "@/lib/authHelpers";

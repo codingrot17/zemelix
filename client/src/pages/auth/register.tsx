@@ -92,9 +92,11 @@ export default function RegisterPage() {
             setTimeout(() => {
                 navigate("/dashboard");
             }, 2000);
-        } catch (err: any) {
+        } catch (err: unknown) {
             const message =
-                err?.message || "Registration failed. Please try again.";
+                err instanceof Error
+                    ? err.message
+                    : "Registration failed. Please try again.";
             setError(message);
         } finally {
             setLoading(false);

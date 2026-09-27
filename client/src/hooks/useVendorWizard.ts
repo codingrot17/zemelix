@@ -1,13 +1,32 @@
 import { useCallback, useEffect, useState } from "react";
-import { databases, DB_ID, USERS_COLLECTION_ID } from "@/lib/appwrite";
+import { completeVendorOnboarding } from "@/services/vendor.service";
 import { useAuth } from "@/contexts/AuthContext";
 
-const LOCAL_KEY = "vendorWizardDraft_v1";
+const LOCAL_KEY_PREFIX = "vendorWizardDraft_v1";
+
+function getLocalKey(userId: string): string {
+    return `${LOCAL_KEY_PREFIX}:${userId}`;
+}
+
+type VendorWizardDraft = {
+    step?: number;
+    vendorType?: string | null;
+    businessCategory?: string | null;
+    businessName?: string | null;
+    businessDescription?: string | null;
+    socialLinks?: string | Record<string, string> | null;
+    primaryColor?: string | null;
+    logoFileId?: string | null;
+    bannerFileId?: string | null;
+    slogan?: string | null;
+    logoFile?: File;
+    bannerFile?: File;
+};
 
 export function useVendorWizard() {
     const { user, reloadUserProfile } = useAuth();
 
-    const [localDraft, setLocalDraft] = useState<Record<string, any> | null>(
+    const [localDraft, setLocalDraft] = useState<VendorWizardDraft | null>(
         null
     );
     const [loading, setLoading] = useState(false);
@@ -21,10 +40,17 @@ export function useVendorWizard() {
 
     // Init local draft
     useEffect(() => {
+        if (!user) {
+            setLocalDraft({ step: 0 });
+            setHasSavedProgress(false);
+            setSavedStep(null);
+            return;
+        }
+
         try {
-            const raw = localStorage.getItem(LOCAL_KEY);
+            const raw = localStorage.getItem(getLocalKey(user.$id));
             if (raw) {
-                const parsed = JSON.parse(raw);
+                const parsed = JSON.parse(raw) as VendorWizardDraft;
                 setLocalDraft(parsed);
                 setHasSavedProgress(true);
                 setSavedStep(
@@ -33,8 +59,7 @@ export function useVendorWizard() {
                 return;
             }
 
-            if (user) {
-                const seed = {
+            const seed: VendorWizardDraft = {
                     step: 0,
                     vendorType:
                         user.vendorType ?? user.profile?.vendorType ?? null,
@@ -54,20 +79,11 @@ export function useVendorWizard() {
                         user.primaryColor ??
                         user.profile?.primaryColor ??
                         "#1a73e8",
-                    logoFileId:
-                        user.logo ??
-                        user.profile?.vendorProfile?.logoFileId ??
-                        null,
-                    bannerFileId:
-                        user.coverImage ??
-                        user.profile?.vendorProfile?.bannerFileId ??
-                        null,
+                    logoFileId: user.logo ?? null,
+                    bannerFileId: user.coverImage ?? null,
                     slogan: user.slogan ?? user.profile?.slogan ?? null
                 };
                 setLocalDraft(seed);
-            } else {
-                setLocalDraft({ step: 0 });
-            }
         } catch (err) {
             console.warn("useVendorWizard init error", err);
             setLocalDraft({ step: 0 });
@@ -75,11 +91,16 @@ export function useVendorWizard() {
     }, [user]);
 
     const saveLocal = useCallback(
-        (partial: Record<string, any>) => {
-            const next = { ...(localDraft ?? {}), ...partial };
+        (partial: Partial<VendorWizardDraft>) => {
+            const next: VendorWizardDraft = { ...(localDraft ?? {}), ...partial };
             setLocalDraft(next);
             try {
-                localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
+                if (user) {
+                    localStorage.setItem(
+                        getLocalKey(user.$id),
+                        JSON.stringify(next)
+                    );
+                }
                 setHasSavedProgress(true);
                 setSavedStep(typeof next.step === "number" ? next.step : null);
             } catch (err) {
@@ -87,15 +108,17 @@ export function useVendorWizard() {
             }
             return next;
         },
-        [localDraft]
+        [localDraft, user]
     );
 
     const clearLocal = useCallback(() => {
-        localStorage.removeItem(LOCAL_KEY);
+        if (user) {
+            localStorage.removeItem(getLocalKey(user.$id));
+        }
         setLocalDraft(null);
         setHasSavedProgress(false);
         setSavedStep(null);
-    }, []);
+    }, [user]);
 
     const finalSubmit = useCallback(
         async (opts: { uploadFn?: (file: File) => Promise<string> } = {}) => {
@@ -117,7 +140,6 @@ export function useVendorWizard() {
                 }
 
                 const payload = {
-                    role: "vendor",
                     vendorType: draft.vendorType ?? null,
                     businessCategory:
                         draft.businessCategory ?? draft.vendorType ?? null,
@@ -128,18 +150,9 @@ export function useVendorWizard() {
                     primaryColor: draft.primaryColor ?? null,
                     socialLinks: draft.socialLinks ?? null,
                     slogan: draft.slogan ?? null,
-                    vendorStatus: "pending",
-                    storeStatus: "closed",
-                    verificationStatus: "unverified",
-                    onboardingStep: 99
                 };
 
-                await databases.updateDocument(
-                    DB_ID,
-                    USERS_COLLECTION_ID,
-                    user.$id,
-                    payload
-                );
+                await completeVendorOnboarding(payload);
 
                 clearLocal();
                 await reloadUserProfile();

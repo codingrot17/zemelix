@@ -4,6 +4,7 @@
  */
 
 import type { User, UserRole } from "@/types/auth";
+import type { UserProfile } from "@/types/user";
 
 const VALID_ROLES: UserRole[] = ["admin", "seller", "customer"];
 const ROLE_ALIASES: Record<string, UserRole> = {
@@ -16,7 +17,7 @@ const ROLE_ALIASES: Record<string, UserRole> = {
 
 export function normalizeRole(
     user: {
-        profile?: Record<string, any> | null;
+        profile?: UserProfile | null;
         role?: string | null;
     } | null
 ): UserRole {
@@ -32,6 +33,7 @@ export function normalizeRole(
 
     return "customer";
 }
+
 /**
  * Check if user has any of the required roles
  */
@@ -55,7 +57,7 @@ export function hasRole(user: User | null, roles: UserRole[]): boolean {
  * 3. Must have verified email
  * 4. Must have active account status
  */
-export function canUpgradeToVendor(user: any): boolean {
+export function canUpgradeToVendor(user: User | null): boolean {
     if (!user) return false;
 
     // Must be customer

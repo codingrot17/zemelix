@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { verifyEmail } from "@/lib/appwrite";
+import { verifyEmail } from "@/services/auth.service";
 
 export default function Verify() {
   const [params] = useSearchParams();

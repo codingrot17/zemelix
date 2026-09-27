@@ -20,9 +20,12 @@ export default function VerificationBanner() {
     try {
       await resendVerification();
       setMessage("✅ Verification email sent! Check your inbox.");
-    } catch (error: any) {
+    } catch (error: unknown) {
       setMessage("❌ Failed to resend. Please log in again or try later.");
-      console.error("Resend verification error:", error?.message || error);
+      console.error(
+        "Resend verification error:",
+        error instanceof Error ? error.message : error
+      );
     } finally {
       // 30-second cooldown
       setTimeout(() => setCooldown(false), 30000);

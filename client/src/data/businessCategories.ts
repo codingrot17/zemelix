@@ -636,6 +636,34 @@ const digitalCategories: BusinessCategory[] = [
     }
 ];
 
+const wholesalerCategories: BusinessCategory[] = [
+    { id: "wholesale-general", name: "General Merchandise", description: "Mixed wholesale goods and supplies", keywords: ["wholesale", "general", "merchandise"] },
+    { id: "wholesale-electronics", name: "Electronics & Accessories", description: "Wholesale electronics, devices and accessories", keywords: ["electronics", "devices", "accessories"] },
+    { id: "wholesale-fashion", name: "Fashion & Apparel", description: "Wholesale clothing, footwear and fashion items", keywords: ["fashion", "clothing", "apparel"] },
+    { id: "wholesale-food", name: "Food & Beverages", description: "Wholesale food, drinks and packaged goods", keywords: ["food", "beverages", "drinks"] },
+    { id: "wholesale-beauty", name: "Beauty & Personal Care", description: "Wholesale beauty and personal care products", keywords: ["beauty", "cosmetics", "personal care"] },
+    { id: "wholesale-home", name: "Home & Kitchen", description: "Wholesale household and kitchen products", keywords: ["home", "kitchen", "household"] },
+    { id: "wholesale-building", name: "Building Materials", description: "Wholesale construction and building supplies", keywords: ["building", "construction", "materials"] },
+    { id: "wholesale-auto", name: "Auto Parts & Accessories", description: "Wholesale vehicle parts and accessories", keywords: ["auto", "car", "parts"] },
+    { id: "wholesale-agriculture", name: "Agricultural Products", description: "Wholesale agricultural products and supplies", keywords: ["agriculture", "farm", "agricultural"] },
+    { id: "wholesale-office", name: "Office & Stationery", description: "Wholesale office supplies and stationery", keywords: ["office", "stationery", "supplies"] },
+    { id: "wholesale-industrial", name: "Industrial Equipment", description: "Wholesale machinery, tools and industrial supplies", keywords: ["industrial", "equipment", "machinery"] },
+    { id: "wholesale-other", name: "Other Wholesale Products", description: "Other wholesale products", keywords: ["wholesale", "other", "miscellaneous"] }
+];
+
+const otherBusinessCategories: BusinessCategory[] = [
+    { id: "other-retail", name: "Retail & General Trading", description: "General retail and trading businesses", keywords: ["retail", "trading", "shop"] },
+    { id: "other-professional", name: "Professional Services", description: "Professional and business services", keywords: ["professional", "business", "services"] },
+    { id: "other-construction", name: "Construction & Engineering", description: "Construction, engineering and technical businesses", keywords: ["construction", "engineering", "technical"] },
+    { id: "other-logistics", name: "Transportation & Logistics", description: "Transport, delivery and logistics businesses", keywords: ["transport", "logistics", "delivery"] },
+    { id: "other-food", name: "Food & Hospitality", description: "Food, catering and hospitality businesses", keywords: ["food", "hospitality", "catering"] },
+    { id: "other-agriculture", name: "Agriculture & Farming", description: "Agricultural and farming businesses", keywords: ["agriculture", "farming", "farm"] },
+    { id: "other-creative", name: "Creative & Media", description: "Creative, media and entertainment businesses", keywords: ["creative", "media", "entertainment"] },
+    { id: "other-education", name: "Education & Training", description: "Education, tutoring and training businesses", keywords: ["education", "training", "tutoring"] },
+    { id: "other-beauty", name: "Beauty & Personal Care", description: "Beauty, wellness and personal care businesses", keywords: ["beauty", "wellness", "personal care"] },
+    { id: "other", name: "Other Business", description: "Other businesses not covered above", keywords: ["other", "miscellaneous"] }
+];
+
 export const categoryDatabase: CategoryGroup[] = [
     {
         type: "product-seller",
@@ -656,6 +684,16 @@ export const categoryDatabase: CategoryGroup[] = [
         type: "hybrid",
         label: "Hybrid (Products + Services)",
         categories: [...productCategories, ...serviceCategories]
+    },
+    {
+        type: "wholesaler",
+        label: "Wholesaler",
+        categories: wholesalerCategories
+    },
+    {
+        type: "other",
+        label: "Other",
+        categories: otherBusinessCategories
     }
 ];
 

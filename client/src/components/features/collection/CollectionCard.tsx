@@ -11,7 +11,7 @@ import {
   ShoppingBag,
   Calendar,
 } from "lucide-react";
-import type { Collection } from "@/types";
+import type { Collection } from "@/types/collection";
 
 const badgeColors: Record<string, string> = {
   Hot: "bg-red-500 text-white",
@@ -198,12 +198,11 @@ export const CollectionCard: React.FC<{ collection: Collection }> = ({
           </div>
           <div className="px-4 pb-4 mt-auto">
             <button
-  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-xl mt-2 transition"
-  onClick={() => navigate(`/collections/${collection.slug}`)}
->
-  View Collection
-</button>
-
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-xl mt-2 transition"
+              onClick={() => navigate(`/collections/${collection.slug}`)}
+            >
+              View Collection
+            </button>
           </div>
         </div>
         {/* Backside (more info) */}

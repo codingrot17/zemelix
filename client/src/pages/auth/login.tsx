@@ -66,9 +66,12 @@ export default function LoginPage() {
 
             // Navigate to intended destination
             navigate(redirectTo, { replace: true });
-        } catch (err: any) {
+        } catch (err: unknown) {
             // Display user-friendly error
-            const message = err?.message || "Invalid email or password";
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : "Invalid email or password";
             setError(message);
         } finally {
             setLoading(false);

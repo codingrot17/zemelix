@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { databases } from "@/lib/appwrite";
-import { products as dummyProducts } from "@/data/products";
+import { getProduct } from "@/services/product.service";
 import { useCart } from "@/hooks/useCart";
 import type { Product } from "@/types/product";
 import {
@@ -20,31 +19,6 @@ import {
     ListingActionButton
 } from "@/components/shared/ListingPrimitives";
 
-const DB_ID = import.meta.env.VITE_APPWRITE_DB_ID;
-const COLLECTION_ID = import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID;
-
-function docToProduct(doc: Record<string, any>): Product {
-    return {
-        id: doc.$id,
-        title: doc.title ?? "",
-        shortDescription: doc.shortDescription ?? "",
-        longDescription: doc.longDescription ?? "",
-        imageUrl: doc.imageUrl ?? "/images/placeholder.svg",
-        price: Number(doc.price) || 0,
-        stock: Number(doc.stock) || 0,
-        rating: Number(doc.rating) || 0,
-        category: doc.category ?? "General",
-        tags: Array.isArray(doc.tags) ? doc.tags : [],
-        badge: doc.badge ?? undefined,
-        featured: doc.featured ?? false,
-        status: doc.status ?? "active",
-        vendorType: doc.vendorType ?? "seller",
-        sellerName: doc.sellerName ?? "Unknown Seller",
-        sellerAvatar: doc.sellerAvatar ?? undefined,
-        sellerWhatsapp: doc.sellerWhatsapp ?? undefined
-    };
-}
-
 function buildWhatsAppUrl(phone: string, title: string): string {
     const cleaned = phone.replace(/\D/g, "");
     const number = cleaned.startsWith("0") ? "234" + cleaned.slice(1) : cleaned;
@@ -54,7 +28,6 @@ function buildWhatsAppUrl(phone: string, title: string): string {
     return `https://wa.me/${number}?text=${msg}`;
 }
 
-// ── Star display ───────────────────────────────────────────────────────────────
 function StarRating({ rating }: { rating: number }) {
     return (
         <div className="flex items-center gap-1">
@@ -75,7 +48,6 @@ function StarRating({ rating }: { rating: number }) {
     );
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────────
 export default function ProductDetailPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -88,32 +60,42 @@ export default function ProductDetailPage() {
     const [added, setAdded] = useState(false);
 
     useEffect(() => {
-        if (!id) return;
-        if (DB_ID && COLLECTION_ID) {
-            databases
-                .getDocument(DB_ID, COLLECTION_ID, id)
-                .then(doc =>
-                    setProduct(docToProduct(doc as Record<string, any>))
-                )
-                .catch(() => {
-                    const found = dummyProducts.find(p => p.id === id);
-                    found
-                        ? setProduct(found as unknown as Product)
-                        : setError("Product not found.");
-                })
-                .finally(() => setLoading(false));
-        } else {
-            const found = dummyProducts.find(p => p.id === id);
-            found
-                ? setProduct(found as unknown as Product)
-                : setError("Product not found.");
+        if (!id) {
+            setError("Product not found.");
             setLoading(false);
+            return;
         }
+
+        let cancelled = false;
+
+        async function loadProduct() {
+            setLoading(true);
+            setError(null);
+
+            try {
+                const result = await getProduct(id);
+                if (!cancelled) setProduct(result);
+            } catch (err) {
+                console.error("Failed to load product.", err);
+                if (!cancelled) {
+                    setProduct(null);
+                    setError("Product not found.");
+                }
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        }
+
+        loadProduct();
+
+        return () => {
+            cancelled = true;
+        };
     }, [id]);
 
     const handleAction = () => {
         if (!product) return;
-        if (product.vendorType === "service") return; // Book Now — future flow
+        if (product.vendorType === "service") return;
         add({
             id: product.id,
             title: product.title,
@@ -136,7 +118,6 @@ export default function ProductDetailPage() {
         }
     };
 
-    // ── Loading ────────────────────────────────────────────────────────────────
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[50vh] text-gray-400">
@@ -146,7 +127,6 @@ export default function ProductDetailPage() {
         );
     }
 
-    // ── Error ──────────────────────────────────────────────────────────────────
     if (error || !product) {
         return (
             <div className="max-w-5xl mx-auto px-4 py-16 text-center">
@@ -163,8 +143,6 @@ export default function ProductDetailPage() {
 
     const isService = product.vendorType === "service";
     const outOfStock = product.stock === 0;
-
-    // ── Seller initials fallback ───────────────────────────────────────────────
     const sellerInitials = product.sellerName
         .split(" ")
         .map(n => n[0])
@@ -174,7 +152,6 @@ export default function ProductDetailPage() {
 
     return (
         <div className="max-w-5xl mx-auto px-4 py-8">
-            {/* Back */}
             <button
                 onClick={() => navigate(-1)}
                 className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 mb-6 transition"
@@ -184,7 +161,6 @@ export default function ProductDetailPage() {
             </button>
 
             <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-                {/* ── Image Column ─────────────────────────────────────────────── */}
                 <div className="relative">
                     <div
                         className={`rounded-2xl overflow-hidden shadow-md border-2 ${
@@ -203,14 +179,12 @@ export default function ProductDetailPage() {
                         )}
                     </div>
 
-                    {/* Badge overlay */}
                     {product.badge && (
                         <div className="absolute top-4 left-4">
                             <BadgeChip badge={product.badge} />
                         </div>
                     )}
 
-                    {/* Wishlist */}
                     <button
                         onClick={() => setWishlisted(w => !w)}
                         className="absolute top-4 right-4 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-full p-2 shadow hover:scale-110 transition"
@@ -225,7 +199,6 @@ export default function ProductDetailPage() {
                         />
                     </button>
 
-                    {/* Out of stock */}
                     {outOfStock && (
                         <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
                             <span className="bg-white text-gray-800 font-bold px-4 py-2 rounded-full text-sm">
@@ -235,9 +208,7 @@ export default function ProductDetailPage() {
                     )}
                 </div>
 
-                {/* ── Details Column ───────────────────────────────────────────── */}
                 <div className="flex flex-col gap-4">
-                    {/* Category + Type */}
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="px-2.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full text-xs font-medium">
                             {product.category}
@@ -253,17 +224,12 @@ export default function ProductDetailPage() {
                         ))}
                     </div>
 
-                    {/* Title */}
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-snug">
                         {product.title}
                     </h1>
 
-                    {/* Rating */}
-                    {product.rating >= 0 && (
-                        <StarRating rating={product.rating} />
-                    )}
+                    {product.rating >= 0 && <StarRating rating={product.rating} />}
 
-                    {/* Price */}
                     <p
                         className={`text-3xl font-bold ${
                             isService
@@ -274,7 +240,6 @@ export default function ProductDetailPage() {
                         ₦{Number(product.price).toLocaleString()}
                     </p>
 
-                    {/* Descriptions */}
                     <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
                         {product.shortDescription}
                     </p>
@@ -284,13 +249,11 @@ export default function ProductDetailPage() {
                         </p>
                     )}
 
-                    {/* Stock / Slots */}
                     <StockLabel
                         vendorType={product.vendorType}
                         stock={product.stock}
                     />
 
-                    {/* ── Seller Card ──────────────────────────────────────────── */}
                     <div
                         className={`p-4 rounded-xl border ${
                             isService
@@ -311,9 +274,7 @@ export default function ProductDetailPage() {
                             ) : (
                                 <div
                                     className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow ${
-                                        isService
-                                            ? "bg-teal-500"
-                                            : "bg-indigo-500"
+                                        isService ? "bg-teal-500" : "bg-indigo-500"
                                     }`}
                                 >
                                     {sellerInitials}
@@ -330,13 +291,9 @@ export default function ProductDetailPage() {
                             </div>
                         </div>
 
-                        {/* WhatsApp contact */}
                         {product.sellerWhatsapp && (
                             <a
-                                href={buildWhatsAppUrl(
-                                    product.sellerWhatsapp,
-                                    product.title
-                                )}
+                                href={buildWhatsAppUrl(product.sellerWhatsapp, product.title)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition"
@@ -348,7 +305,6 @@ export default function ProductDetailPage() {
                         )}
                     </div>
 
-                    {/* ── Actions ─────────────────────────────────────────────── */}
                     <div className="flex gap-3 mt-2">
                         <ListingActionButton
                             vendorType={product.vendorType}
