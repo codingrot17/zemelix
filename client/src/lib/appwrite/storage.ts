@@ -7,20 +7,34 @@ import {
     APPWRITE_PROJECT_ID,
 } from "./client";
 
-export async function uploadFile(file: File): Promise<string> {
+export interface UploadFileOptions {
+    publicRead?: boolean;
+}
+
+export async function uploadFile(
+    file: File,
+    options: UploadFileOptions = {}
+): Promise<string> {
     if (!file) throw new Error("No file provided");
 
     const currentUser = await account.get();
+
+    const permissions = [
+        Permission.update(Role.user(currentUser.$id)),
+        Permission.delete(Role.user(currentUser.$id)),
+    ];
+
+    if (options.publicRead) {
+        permissions.push(Permission.read(Role.any()));
+    }
 
     const response = await storage.createFile(
         STORAGE_BUCKET_ID,
         ID.unique(),
         file,
-        [
-            Permission.update(Role.user(currentUser.$id)),
-            Permission.delete(Role.user(currentUser.$id)),
-        ]
+        permissions
     );
+
     return response.$id;
 }
 
