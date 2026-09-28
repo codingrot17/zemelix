@@ -1,6 +1,7 @@
 import { Permission, Role } from "appwrite";
 import { ID, Query, databases, DB_ID } from "@/lib/appwrite/client";
 import { getCurrentAccount } from "@/lib/appwrite/account";
+import { getUserProfile } from "@/lib/appwrite/database";
 import {
     deleteFile,
     getFilePreviewUrl,
@@ -241,6 +242,22 @@ export async function createSellerProduct(
 ): Promise<SellerProduct> {
     assertProductConfig();
     const currentUserId = await requireCurrentUserId();
+    const [profile, currentAccount] = await Promise.all([
+        getUserProfile(currentUserId),
+        getCurrentAccount(),
+    ]);
+
+    const sellerName =
+        profile?.businessName?.trim() ||
+        profile?.fullName?.trim() ||
+        currentAccount?.name?.trim();
+
+    if (!sellerName) {
+        throw new Error(
+            "Complete your seller profile with a business name or full name before creating a product."
+        );
+    }
+
     const document = await databases.createDocument(
         DB_ID,
         COLLECTION_ID,
@@ -248,6 +265,9 @@ export async function createSellerProduct(
         {
             ...input,
             sellerId: currentUserId,
+            // Seller identity is derived from the authenticated user's
+            // own profile rather than accepted from the product form.
+            sellerName,
             // Marketplace-controlled fields are deliberately not accepted
             // from SellerProductInput.
             featured: false,
