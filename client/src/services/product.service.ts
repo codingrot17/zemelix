@@ -271,10 +271,10 @@ export async function createSellerProduct(
             // Marketplace-controlled fields are deliberately not accepted
             // from SellerProductInput.
             featured: false,
-            status: "draft",
+            status: "active",
             rating: 0,
         },
-        productPermissions(currentUserId, "draft")
+        productPermissions(currentUserId, "active")
     );
     return toSellerProduct(document as ProductDocument);
 }
