@@ -80,25 +80,33 @@ export default function VendorWizard() {
     const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
+    const draftStorageKey = user?.id
+        ? LOCAL_STORAGE_KEY + ":" + user.id
+        : null;
+
     useEffect(() => {
+        if (!draftStorageKey) return;
+
         try {
-            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            const saved = localStorage.getItem(draftStorageKey);
             if (saved) {
                 const parsed = JSON.parse(saved);
                 setFormData(prev => ({ ...prev, ...parsed }));
                 setCurrentStep(parsed.step ?? 0);
             }
         } catch {}
-    }, []);
+    }, [draftStorageKey]);
 
     useEffect(() => {
+        if (!draftStorageKey) return;
+
         try {
             localStorage.setItem(
-                LOCAL_STORAGE_KEY,
+                draftStorageKey,
                 JSON.stringify({ ...formData, step: currentStep })
             );
         } catch {}
-    }, [formData, currentStep]);
+    }, [formData, currentStep, draftStorageKey]);
 
     const updateField = (field: keyof VendorFormData, value: any) => {
         setFormData(prev => ({
@@ -246,7 +254,7 @@ const handleSubmit = async () => {
 
         await refreshUser();
 
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
+        if (draftStorageKey) localStorage.removeItem(draftStorageKey);
 
         setSuccess(true);
 
