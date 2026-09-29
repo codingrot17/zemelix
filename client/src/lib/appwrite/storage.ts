@@ -38,6 +38,13 @@ export async function uploadFile(
     return response.$id;
 }
 
+export function getFileViewUrl(fileId: string): string {
+    if (!fileId) return "";
+
+    const endpoint = APPWRITE_ENDPOINT.replace(/\/$/, "");
+    return `${endpoint}/storage/buckets/${STORAGE_BUCKET_ID}/files/${fileId}/view?project=${APPWRITE_PROJECT_ID}`;
+}
+
 export function getFilePreviewUrl(
     fileId: string,
     width = 400,
