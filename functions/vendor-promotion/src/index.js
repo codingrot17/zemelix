@@ -97,7 +97,7 @@ export default async ({ req, res, error }) => {
             {
                 ...application,
                 role: "seller",
-                vendorStatus: "pending",
+                vendorStatus: "active",
                 storeStatus: "closed",
                 onboardingStep: 99,
                 currency: "NGN",
