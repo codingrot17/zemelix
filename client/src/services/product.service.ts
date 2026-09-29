@@ -4,7 +4,7 @@ import { getCurrentAccount } from "@/lib/appwrite/account";
 import { getUserProfile } from "@/lib/appwrite/database";
 import {
     deleteFile,
-    getFilePreviewUrl,
+    getFileViewUrl,
     uploadFile
 } from "@/lib/appwrite/storage";
 import { ownsResource } from "@/services/authorization.service";
@@ -338,7 +338,7 @@ export async function uploadProductImage(
     file: File
 ): Promise<{ fileId: string; url: string }> {
     const fileId = await uploadFile(file, { publicRead: true });
-    return { fileId, url: getFilePreviewUrl(fileId) };
+    return { fileId, url: getFileViewUrl(fileId) };
 }
 
 export async function deleteProductImage(fileId: string): Promise<void> {
