@@ -1035,10 +1035,9 @@ function StepReview({
                             </p>
 
                             <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                After submission, your vendor account will be
-                                pending review. You'll receive an email
-                                notification once approved. This typically takes
-                                1–2 business days.
+                                Your seller account is ready. Once you complete
+                                setup, you'll be able to create and publish
+                                products on Zemelix right away.
                             </p>
                         </div>
                     </div>
