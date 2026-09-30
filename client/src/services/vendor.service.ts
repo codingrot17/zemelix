@@ -22,7 +22,7 @@ export type VendorOnboardingInput = {
  * function; the function sets those values server-side.
  */
 export function uploadVendorFile(file: File) {
-    return uploadFile(file);
+    return uploadFile(file, { publicRead: true });
 }
 
 export async function completeVendorOnboarding(
