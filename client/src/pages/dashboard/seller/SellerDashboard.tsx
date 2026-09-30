@@ -90,7 +90,7 @@ export default function SellerDashboard() {
     // Pull vendor info from profile if available
     const businessName =
         user?.profile?.businessName ?? user?.name ?? "Your Store";
-    const vendorStatus = user?.profile?.vendorStatus ?? "pending";
+    const vendorStatus = user?.profile?.vendorStatus ?? "active";
     const storeStatus = user?.profile?.storeStatus ?? "closed";
 
     return (
@@ -127,18 +127,32 @@ export default function SellerDashboard() {
                 </Button>
             </div>
 
-            {/* ── Pending approval banner ── */}
+            {/* ── Vendor account status banner ── */}
+            {vendorStatus === "active" && (
+                <div className="flex items-start gap-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-semibold text-green-800 dark:text-green-200">
+                            Seller account active
+                        </p>
+                        <p className="text-sm text-green-700 dark:text-green-300 mt-0.5">
+                            Your seller account is active. You can create and
+                            publish products on Zemelix right away.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {vendorStatus === "pending" && (
                 <div className="flex items-start gap-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                     <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                     <div>
                         <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
-                            Account under review
+                            Account pending approval
                         </p>
                         <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-0.5">
-                            Your vendor account is pending approval. You can
-                            prepare your products in the meantime — they'll go
-                            live once approved (typically 1–2 business days).
+                            Your seller account is awaiting approval. You can
+                            prepare your products while the account is pending.
                         </p>
                     </div>
                 </div>
