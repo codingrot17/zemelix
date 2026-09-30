@@ -252,6 +252,9 @@ export async function createSellerProduct(
         profile?.fullName?.trim() ||
         currentAccount?.name?.trim();
 
+    const sellerAvatar =
+        profile?.logo ? getFileViewUrl(profile.logo) : null;
+
     if (!sellerName) {
         throw new Error(
             "Complete your seller profile with a business name or full name before creating a product."
@@ -268,6 +271,9 @@ export async function createSellerProduct(
             // Seller identity is derived from the authenticated user's
             // own profile rather than accepted from the product form.
             sellerName,
+            // Seller branding is derived from the authenticated user's
+            // profile rather than accepted from the product form.
+            sellerAvatar,
             // Marketplace-controlled fields are deliberately not accepted
             // from SellerProductInput.
             featured: false,
@@ -295,7 +301,13 @@ export async function updateSellerProduct(
         throw new Error("You can only update your own products.");
     }
 
-    const editableFields: Partial<SellerProductInput> = {
+    const profile = await getUserProfile(currentUserId);
+    const sellerAvatar =
+        profile?.logo ? getFileViewUrl(profile.logo) : null;
+
+    const editableFields: Partial<SellerProductInput> & {
+        sellerAvatar: string | null;
+    } = {
         title: input.title,
         shortDescription: input.shortDescription,
         longDescription: input.longDescription,
@@ -307,6 +319,7 @@ export async function updateSellerProduct(
         vendorType: input.vendorType,
         sellerWhatsapp: input.sellerWhatsapp,
         imageUrl: input.imageUrl,
+        sellerAvatar,
     };
 
     const document = await databases.updateDocument(
