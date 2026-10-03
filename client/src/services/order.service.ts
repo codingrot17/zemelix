@@ -1,9 +1,10 @@
-import { Permission, Query, Role } from "appwrite";
-import { ID, databases, DB_ID } from "@/lib/appwrite/client";
+import { Query, databases, DB_ID, functions } from "@/lib/appwrite/client";
 import { getCurrentAccount } from "@/lib/appwrite/account";
 
 const ORDERS_COLLECTION_ID = "orders";
 const ORDER_ITEMS_COLLECTION_ID = "order_items";
+const CREATE_SELLER_ORDER_FUNCTION_ID =
+    import.meta.env.VITE_APPWRITE_CREATE_SELLER_ORDER_FUNCTION_ID;
 
 export type OrderStatus = "contacted" | "purchased" | "cancelled";
 
@@ -87,6 +88,11 @@ function assertOrderConfig() {
     if (!DB_ID) {
         throw new Error("Appwrite database configuration is missing. Set VITE_APPWRITE_DB_ID.");
     }
+    if (!CREATE_SELLER_ORDER_FUNCTION_ID) {
+        throw new Error(
+            "VITE_APPWRITE_CREATE_SELLER_ORDER_FUNCTION_ID is required."
+        );
+    }
 }
 
 async function requireCurrentUserId(): Promise<string> {
@@ -158,26 +164,11 @@ function validateItems(items: CreateOrderItemInput[]) {
     }
 }
 
-function orderPermissions(customerId: string, sellerId: string) {
-    return [
-        Permission.read(Role.user(customerId)),
-        Permission.read(Role.user(sellerId)),
-        Permission.update(Role.user(sellerId))
-    ];
-}
-
-function orderItemPermissions(customerId: string, sellerId: string) {
-    return [
-        Permission.read(Role.user(customerId)),
-        Permission.read(Role.user(sellerId))
-    ];
-}
-
 export async function createSellerOrder(
     input: CreateSellerOrderInput
 ): Promise<{ order: Order; items: OrderItem[] }> {
     assertOrderConfig();
-    const customerId = await requireCurrentUserId();
+    await requireCurrentUserId();
 
     if (!input.sellerId.trim()) throw new Error("sellerId is required.");
     if (!input.checkoutSessionId.trim()) throw new Error("checkoutSessionId is required.");
@@ -187,67 +178,55 @@ export async function createSellerOrder(
 
     validateItems(input.items);
 
-    const subtotal = input.items.reduce(
-        (sum, item) => sum + item.unitPrice * item.quantity,
-        0
-    );
-    const contactedAt = new Date().toISOString();
-
-    const orderDocument = await databases.createDocument(
-        DB_ID,
-        ORDERS_COLLECTION_ID,
-        ID.unique(),
-        {
-            checkoutSessionId: input.checkoutSessionId,
-            sellerId: input.sellerId,
-            customerId,
-            status: "contacted",
-            source: "whatsapp",
-            subtotal,
-            total: subtotal,
-            customerName: input.customerName.trim(),
-            customerEmail: input.customerEmail?.trim() || null,
-            customerPhone: input.customerPhone.trim(),
-            contactedAt,
-            purchasedAt: null,
-            cancelledAt: null
-        },
-        orderPermissions(customerId, input.sellerId)
-    );
-
-    const order = toOrder(orderDocument as OrderDocument);
-    const createdItems: OrderItem[] = [];
-
-    try {
-        for (const item of input.items) {
-            const itemDocument = await databases.createDocument(
-                DB_ID,
-                ORDER_ITEMS_COLLECTION_ID,
-                ID.unique(),
-                {
-                    orderId: order.$id,
-                    productId: item.productId,
-                    productTitle: item.productTitle.trim(),
-                    quantity: item.quantity,
-                    unitPrice: item.unitPrice,
-                    total: item.unitPrice * item.quantity,
-                    imageUrl: item.imageUrl?.trim() || null
-                },
-                orderItemPermissions(customerId, input.sellerId)
-            );
-
-            createdItems.push(toOrderItem(itemDocument as OrderItemDocument));
-        }
-    } catch (error) {
-        try {
-            await databases.deleteDocument(DB_ID, ORDERS_COLLECTION_ID, order.$id);
-        } catch {
-            // Preserve the original error if cleanup is not possible.
-        }
-        throw error;
+    if (input.items.length !== 1) {
+        throw new Error("Seller order creation currently supports one product at a time.");
     }
 
-    return { order, items: createdItems };
+    const execution = await functions.createExecution(
+        CREATE_SELLER_ORDER_FUNCTION_ID,
+        JSON.stringify({
+            checkoutSessionId: input.checkoutSessionId,
+            sellerId: input.sellerId,
+            customerName: input.customerName,
+            customerEmail: input.customerEmail ?? null,
+            customerPhone: input.customerPhone,
+            productId: input.items[0].productId
+        }),
+        false
+    );
+
+    if (
+        execution.responseStatusCode < 200 ||
+        execution.responseStatusCode >= 300
+    ) {
+        let message = "Could not create the seller lead.";
+        try {
+            const response = JSON.parse(execution.responseBody || "{}");
+            if (typeof response.error === "string" && response.error) {
+                message = response.error;
+            }
+        } catch {
+            // Keep the generic message when the function response is not JSON.
+        }
+        throw new Error(message);
+    }
+
+    try {
+        const response = JSON.parse(execution.responseBody || "{}");
+        if (!response.ok || !response.order || !response.item) {
+            throw new Error("Could not create the seller lead.");
+        }
+
+        return {
+            order: toOrder(response.order as OrderDocument),
+            items: [toOrderItem(response.item as OrderItemDocument)]
+        };
+    } catch (error) {
+        if (error instanceof Error && error.message !== "Could not create the seller lead.") {
+            throw error;
+        }
+        throw new Error("Could not create the seller lead.");
+    }
 }
 
 export async function listSellerOrders(sellerId: string, limit = 100): Promise<Order[]> {
