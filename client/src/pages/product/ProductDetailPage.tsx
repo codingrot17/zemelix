@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { getProduct } from "@/services/product.service";
 import { getPublicSellerProfile } from "@/services/seller.service";
 import { getFileViewUrl } from "@/lib/appwrite/storage";
@@ -293,32 +293,65 @@ export default function ProductDetailPage() {
                             </div>
                         )}
 
-                        <div className="flex items-center gap-3">
-                            {product.sellerAvatar ? (
-                                <img
-                                    src={product.sellerAvatar}
-                                    alt={product.sellerName}
-                                    className="w-12 h-12 rounded-full border-2 border-white dark:border-gray-700 object-cover shadow"
-                                />
-                            ) : (
-                                <div
-                                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow ${
-                                        isService ? "bg-teal-500" : "bg-indigo-500"
-                                    }`}
-                                >
-                                    {sellerInitials}
+                        {product.sellerId ? (
+                            <Link
+                                to={`/seller/${product.sellerId}`}
+                                className="flex items-center gap-3 w-fit max-w-full cursor-pointer"
+                                aria-label={`View ${product.sellerName} store`}
+                            >
+                                {product.sellerAvatar ? (
+                                    <img
+                                        src={product.sellerAvatar}
+                                        alt={product.sellerName}
+                                        className="w-12 h-12 rounded-full border-2 border-white dark:border-gray-700 object-cover shadow"
+                                    />
+                                ) : (
+                                    <div
+                                        className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow ${
+                                            isService ? "bg-teal-500" : "bg-indigo-500"
+                                        }`}
+                                    >
+                                        {sellerInitials}
+                                    </div>
+                                )}
+                                <div>
+                                    <p className="font-semibold text-gray-900 dark:text-white">
+                                        {product.sellerName}
+                                    </p>
+                                    <ListingTypeChip
+                                        vendorType={product.vendorType}
+                                        size="xs"
+                                    />
                                 </div>
-                            )}
-                            <div>
-                                <p className="font-semibold text-gray-900 dark:text-white">
-                                    {product.sellerName}
-                                </p>
-                                <ListingTypeChip
-                                    vendorType={product.vendorType}
-                                    size="xs"
-                                />
+                            </Link>
+                        ) : (
+                            <div className="flex items-center gap-3">
+                                {product.sellerAvatar ? (
+                                    <img
+                                        src={product.sellerAvatar}
+                                        alt={product.sellerName}
+                                        className="w-12 h-12 rounded-full border-2 border-white dark:border-gray-700 object-cover shadow"
+                                    />
+                                ) : (
+                                    <div
+                                        className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow ${
+                                            isService ? "bg-teal-500" : "bg-indigo-500"
+                                        }`}
+                                    >
+                                        {sellerInitials}
+                                    </div>
+                                )}
+                                <div>
+                                    <p className="font-semibold text-gray-900 dark:text-white">
+                                        {product.sellerName}
+                                    </p>
+                                    <ListingTypeChip
+                                        vendorType={product.vendorType}
+                                        size="xs"
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {product.sellerWhatsapp && (
                             <a
