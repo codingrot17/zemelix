@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Loader2, MessageCircle, Package, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle, Loader2, MessageCircle, Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
     listOrderItems,
     listSellerOrders,
+    markOrderPurchased,
     type Order,
     type OrderItem
 } from "@/services/order.service";
@@ -32,6 +33,7 @@ export default function SellerOrders() {
     const { user } = useAuth();
     const [orders, setOrders] = useState<OrderWithItems[]>([]);
     const [loading, setLoading] = useState(true);
+    const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     async function loadOrders() {
@@ -66,6 +68,27 @@ export default function SellerOrders() {
         void loadOrders();
     }, [user?.$id]);
 
+    async function handleMarkPurchased(orderId: string) {
+        setUpdatingOrderId(orderId);
+        setError(null);
+
+        try {
+            const updatedOrder = await markOrderPurchased(orderId);
+            setOrders(current =>
+                current.map(order =>
+                    order.$id === orderId
+                        ? { ...order, ...updatedOrder }
+                        : order
+                )
+            );
+        } catch (err) {
+            console.error("Failed to mark order as purchased.", err);
+            setError("Unable to mark this lead as purchased. Please try again.");
+        } finally {
+            setUpdatingOrderId(null);
+        }
+    }
+
     const contactedCount = orders.filter(order => order.status === "contacted").length;
     const purchasedCount = orders.filter(order => order.status === "purchased").length;
 
@@ -83,7 +106,7 @@ export default function SellerOrders() {
                 <Button
                     variant="outline"
                     onClick={() => void loadOrders()}
-                    disabled={loading}
+                    disabled={loading || updatingOrderId !== null}
                     className="w-full sm:w-auto"
                 >
                     <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
@@ -153,6 +176,11 @@ export default function SellerOrders() {
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                             Lead created {formatDate(order.contactedAt)}
                                         </p>
+                                        {order.purchasedAt && (
+                                            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                                                Purchased {formatDate(order.purchasedAt)}
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="text-left lg:text-right">
                                         <p className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -200,6 +228,24 @@ export default function SellerOrders() {
                                         )}
                                     </div>
                                 </div>
+
+                                {order.status === "contacted" && (
+                                    <div className="flex justify-end">
+                                        <Button
+                                            onClick={() => void handleMarkPurchased(order.$id)}
+                                            disabled={updatingOrderId !== null}
+                                        >
+                                            {updatingOrderId === order.$id ? (
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            ) : (
+                                                <CheckCircle className="w-4 h-4 mr-2" />
+                                            )}
+                                            {updatingOrderId === order.$id
+                                                ? "Marking Purchased…"
+                                                : "Mark as Purchased"}
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
