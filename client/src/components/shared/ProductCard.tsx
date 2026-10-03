@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Heart, Star } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
 import { useCart } from "@/hooks/useCart";
 import {
@@ -106,21 +106,26 @@ export default function ProductCard({ product }: { product: Product }) {
             {/* ── Content ── */}
             <div className="flex flex-col flex-1 p-4 gap-3">
                 {/* Seller strip */}
-                <button
-                    type="button"
-                    className="text-left w-fit max-w-full"
-                    onClick={e => {
-                        e.stopPropagation();
-                        if (product.sellerId) navigate(`/seller/${product.sellerId}`);
-                    }}
-                    disabled={!product.sellerId}
-                >
+                {product.sellerId ? (
+                    <Link
+                        to={`/seller/${product.sellerId}`}
+                        className="block w-fit max-w-full cursor-pointer"
+                        onClick={e => e.stopPropagation()}
+                        aria-label={`View ${product.sellerName} store`}
+                    >
+                        <SellerStrip
+                            name={product.sellerName}
+                            avatar={product.sellerAvatar}
+                            vendorType={product.vendorType}
+                        />
+                    </Link>
+                ) : (
                     <SellerStrip
                         name={product.sellerName}
                         avatar={product.sellerAvatar}
                         vendorType={product.vendorType}
                     />
-                </button>
+                )}
 
                 {/* Title */}
                 <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 line-clamp-2 leading-snug">
