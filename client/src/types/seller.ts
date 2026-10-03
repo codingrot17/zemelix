@@ -4,6 +4,7 @@ export interface PublicSellerProfile {
     fullName: string | null;
     logo: string | null;
     coverImage: string | null;
+    primaryColor: string | null;
     slogan: string | null;
     businessDescription: string | null;
     vendorType: string | null;
