@@ -192,7 +192,7 @@ export default function SellerStorePage() {
 
                         <div className="flex-1 min-w-0">
                             <p
-                                className="text-xs font-semibold uppercase tracking-wide"
+                                className="text-xs font-semibold uppercase tracking-wide drop-shadow-sm"
                                 style={{ color: brandColor ?? undefined }}
                             >
                                 {seller.vendorType || "Seller"}
