@@ -13,6 +13,29 @@ function validBrandColor(value: string | null): string | null {
     return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : null;
 }
 
+function getBrandTextColor(background: string | null): string {
+    if (!background) return "#ffffff";
+
+    const red = parseInt(background.slice(1, 3), 16) / 255;
+    const green = parseInt(background.slice(3, 5), 16) / 255;
+    const blue = parseInt(background.slice(5, 7), 16) / 255;
+
+    const linearize = (channel: number) =>
+        channel <= 0.03928
+            ? channel / 12.92
+            : Math.pow((channel + 0.055) / 1.055, 2.4);
+
+    const luminance =
+        0.2126 * linearize(red) +
+        0.7152 * linearize(green) +
+        0.0722 * linearize(blue);
+
+    const whiteContrast = 1.05 / (luminance + 0.05);
+    const darkContrast = (luminance + 0.05) / 0.05;
+
+    return whiteContrast >= darkContrast ? "#ffffff" : "#111827";
+}
+
 function socialEntries(
     value: PublicSellerProfile["socialLinks"]
 ): Array<[string, string]> {
@@ -192,8 +215,11 @@ export default function SellerStorePage() {
 
                         <div className="flex-1 min-w-0">
                             <p
-                                className="inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-sm"
-                                style={{ backgroundColor: brandColor ?? "#374151" }}
+                                className="inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide shadow-sm"
+                                style={{
+                                    backgroundColor: brandColor ?? "#374151",
+                                    color: getBrandTextColor(brandColor ?? "#374151")
+                                }}
                             >
                                 {seller.vendorType || "Seller"}
                             </p>
