@@ -334,6 +334,130 @@ async function markSellerOrderPurchased({ req, res, error, databases, databaseId
     }
 }
 
+
+async function undoSellerOrderPurchase({ req, res, error, databases, databaseId }) {
+    const sellerId = req.headers["x-appwrite-user-id"];
+    const orderId = req.bodyJson?.orderId;
+
+    if (!sellerId) {
+        return jsonError(res, "You must be signed in to undo a purchase.", 401);
+    }
+
+    if (!isNonEmptyString(orderId, 128)) {
+        return jsonError(res, "A valid orderId is required.", 400);
+    }
+
+    try {
+        const order = await databases.getDocument(
+            databaseId,
+            ORDERS_COLLECTION_ID,
+            orderId
+        );
+
+        if (order.sellerId !== sellerId) {
+            return jsonError(res, "You can only update your own orders.", 403);
+        }
+
+        if (order.status !== "purchased") {
+            return jsonError(res, "Only purchased orders can be reverted.", 409);
+        }
+
+        const itemResponse = await databases.listDocuments(
+            databaseId,
+            ORDER_ITEMS_COLLECTION_ID,
+            [
+                Query.equal("orderId", orderId),
+                Query.limit(100),
+            ]
+        );
+
+        if (itemResponse.documents.length === 0) {
+            return jsonError(res, "Order has no items to restore.", 400);
+        }
+
+        const updates = [];
+
+        for (const item of itemResponse.documents) {
+            const quantity = toNumber(item.quantity);
+
+            if (!Number.isInteger(quantity) || quantity < 1) {
+                return jsonError(res, "Order contains an invalid item quantity.", 400);
+            }
+
+            const product = await databases.getDocument(
+                databaseId,
+                PRODUCTS_COLLECTION_ID,
+                item.productId
+            );
+
+            if (product.sellerId !== sellerId) {
+                return jsonError(res, "Order contains a product owned by another seller.", 403);
+            }
+
+            const currentStock = toNumber(product.stock);
+
+            updates.push({
+                productId: product.$id,
+                previousStock: currentStock,
+                nextStock: currentStock + quantity,
+            });
+        }
+
+        const appliedUpdates = [];
+
+        try {
+            for (const update of updates) {
+                await databases.updateDocument(
+                    databaseId,
+                    PRODUCTS_COLLECTION_ID,
+                    update.productId,
+                    { stock: update.nextStock }
+                );
+                appliedUpdates.push(update);
+            }
+
+            const updatedOrder = await databases.updateDocument(
+                databaseId,
+                ORDERS_COLLECTION_ID,
+                orderId,
+                {
+                    status: "contacted",
+                    purchasedAt: null,
+                }
+            );
+
+            return res.json({
+                ok: true,
+                order: updatedOrder,
+            });
+        } catch (undoError) {
+            for (const update of appliedUpdates.reverse()) {
+                try {
+                    await databases.updateDocument(
+                        databaseId,
+                        PRODUCTS_COLLECTION_ID,
+                        update.productId,
+                        { stock: update.previousStock }
+                    );
+                } catch (rollbackError) {
+                    error(
+                        rollbackError?.message ??
+                        `Failed to restore stock rollback for product ${update.productId}.`
+                    );
+                }
+            }
+            throw undoError;
+        }
+    } catch (err) {
+        if (err?.code === 404) {
+            return jsonError(res, "Order or product not found.", 404);
+        }
+
+        error(err?.message ?? "Seller purchase undo failed.");
+        return jsonError(res, "Seller purchase undo failed.", 500);
+    }
+}
+
 export default async ({ req, res, error }) => {
     if (req.method !== "POST") {
         return jsonError(res, "Method not allowed.", 405);
@@ -365,6 +489,16 @@ export default async ({ req, res, error }) => {
 
     if (body.operation === "markSellerOrderPurchased") {
         return markSellerOrderPurchased({
+            req,
+            res,
+            error,
+            databases,
+            databaseId,
+        });
+    }
+
+    if (body.operation === "undoSellerOrderPurchase") {
+        return undoSellerOrderPurchase({
             req,
             res,
             error,
