@@ -174,7 +174,8 @@ export async function listProducts(
         featuredOnly = false,
         category,
         limit = 25,
-        activeOnly = true
+        activeOnly = true,
+        sellerId
     } = options;
 
     const queries: string[] = [
