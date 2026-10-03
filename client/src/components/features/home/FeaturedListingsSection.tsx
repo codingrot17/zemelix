@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import {
     Carousel,
@@ -237,11 +237,26 @@ function FeaturedCard({
 
             {/* Body */}
             <div className="p-4 flex flex-col gap-2 flex-1">
-                <SellerStrip
-                    name={product.sellerName}
-                    avatar={product.sellerAvatar}
-                    vendorType={product.vendorType}
-                />
+                {product.sellerId ? (
+                    <Link
+                        to={`/seller/${product.sellerId}`}
+                        className="block w-fit max-w-full cursor-pointer"
+                        onClick={e => e.stopPropagation()}
+                        aria-label={`View ${product.sellerName} store`}
+                    >
+                        <SellerStrip
+                            name={product.sellerName}
+                            avatar={product.sellerAvatar}
+                            vendorType={product.vendorType}
+                        />
+                    </Link>
+                ) : (
+                    <SellerStrip
+                        name={product.sellerName}
+                        avatar={product.sellerAvatar}
+                        vendorType={product.vendorType}
+                    />
+                )}
 
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2">
                     {product.title}
