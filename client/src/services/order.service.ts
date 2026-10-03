@@ -287,31 +287,50 @@ export async function listOrderItems(orderId: string): Promise<OrderItem[]> {
 
 export async function markOrderPurchased(orderId: string): Promise<Order> {
     assertOrderConfig();
-    const sellerId = await requireCurrentUserId();
+    await requireCurrentUserId();
 
     if (!orderId.trim()) throw new Error("orderId is required.");
 
-    const existing = await databases.getDocument(
-        DB_ID,
-        ORDERS_COLLECTION_ID,
-        orderId
-    ) as OrderDocument;
-
-    if (existing.sellerId !== sellerId) {
-        throw new Error("You can only update your own orders.");
-    }
-    if (existing.status !== "contacted") {
-        throw new Error("Only contacted orders can be marked as purchased.");
-    }
-
-    const document = await databases.updateDocument(
-        DB_ID,
-        ORDERS_COLLECTION_ID,
-        orderId,
-        { status: "purchased", purchasedAt: new Date().toISOString() }
+    const execution = await functions.createExecution(
+        CREATE_SELLER_ORDER_FUNCTION_ID,
+        JSON.stringify({
+            operation: "markSellerOrderPurchased",
+            orderId
+        }),
+        false
     );
 
-    return toOrder(document as OrderDocument);
+    if (
+        execution.responseStatusCode < 200 ||
+        execution.responseStatusCode >= 300
+    ) {
+        let message = "Unable to mark this order as purchased.";
+        try {
+            const response = JSON.parse(execution.responseBody || "{}");
+            if (typeof response.error === "string" && response.error) {
+                message = response.error;
+            }
+        } catch {
+            // Keep the generic message when the function response is not JSON.
+        }
+        throw new Error(message);
+    }
+
+    try {
+        const response = JSON.parse(execution.responseBody || "{}");
+        if (!response.ok || !response.order) {
+            throw new Error("Unable to mark this order as purchased.");
+        }
+        return toOrder(response.order as OrderDocument);
+    } catch (error) {
+        if (
+            error instanceof Error &&
+            error.message !== "Unable to mark this order as purchased."
+        ) {
+            throw error;
+        }
+        throw new Error("Unable to mark this order as purchased.");
+    }
 }
 
 export async function markOrderCancelled(orderId: string): Promise<Order> {
