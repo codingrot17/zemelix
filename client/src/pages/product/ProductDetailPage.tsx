@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { getProduct } from "@/services/product.service";
 import { getPublicSellerProfile } from "@/services/seller.service";
+import { createSellerOrder } from "@/services/order.service";
+import { getCurrentAccount } from "@/lib/appwrite/account";
+import { getUserProfile } from "@/lib/appwrite/database";
 import { getFileViewUrl } from "@/lib/appwrite/storage";
 import { useCart } from "@/hooks/useCart";
 import type { Product } from "@/types/product";
@@ -62,6 +65,8 @@ export default function ProductDetailPage() {
     const [error, setError] = useState<string | null>(null);
     const [wishlisted, setWishlisted] = useState(false);
     const [added, setAdded] = useState(false);
+    const [whatsappLoading, setWhatsappLoading] = useState(false);
+    const [whatsappError, setWhatsappError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!id) {
@@ -128,6 +133,64 @@ export default function ProductDetailPage() {
         });
         setAdded(true);
         setTimeout(() => setAdded(false), 2000);
+    };
+
+    const handleWhatsAppClick = async (
+        event: React.MouseEvent<HTMLAnchorElement>
+    ) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!product?.sellerWhatsapp || !product.sellerId || whatsappLoading) return;
+
+        setWhatsappLoading(true);
+        setWhatsappError(null);
+
+        try {
+            const account = await getCurrentAccount();
+            if (!account?.$id) {
+                throw new Error("Please sign in before contacting a seller.");
+            }
+
+            const profile = await getUserProfile(account.$id);
+            const customerName = profile?.fullName?.trim() || account.name?.trim() || "";
+            const customerPhone = profile?.phoneNumber?.trim() || "";
+            const customerEmail = profile?.email?.trim() || account.email?.trim() || "";
+
+            if (!customerName || !customerPhone) {
+                throw new Error("Please complete your profile with your name and phone number before contacting a seller.");
+            }
+
+            await createSellerOrder({
+                checkoutSessionId: crypto.randomUUID(),
+                sellerId: product.sellerId,
+                customerName,
+                customerEmail: customerEmail || null,
+                customerPhone,
+                items: [
+                    {
+                        productId: product.id,
+                        productTitle: product.title,
+                        quantity: 1,
+                        unitPrice: Number(product.price),
+                        imageUrl: product.imageUrl || null
+                    }
+                ]
+            });
+
+            window.location.assign(
+                buildWhatsAppUrl(product.sellerWhatsapp, product.title)
+            );
+        } catch (err) {
+            console.error("Failed to create WhatsApp lead.", err);
+            setWhatsappError(
+                err instanceof Error
+                    ? err.message
+                    : "Could not start the WhatsApp chat. Please try again."
+            );
+        } finally {
+            setWhatsappLoading(false);
+        }
     };
 
     const handleShare = () => {
@@ -365,16 +428,28 @@ export default function ProductDetailPage() {
                         )}
 
                         {product.sellerWhatsapp && (
-                            <a
-                                href={buildWhatsAppUrl(product.sellerWhatsapp, product.title)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition"
-                                onClick={e => e.stopPropagation()}
-                            >
-                                <MessageCircle className="w-4 h-4" />
-                                Chat on WhatsApp
-                            </a>
+                            <>
+                                <a
+                                    href={buildWhatsAppUrl(product.sellerWhatsapp, product.title)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition"
+                                    onClick={handleWhatsAppClick}
+                                    aria-busy={whatsappLoading}
+                                >
+                                    {whatsappLoading ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <MessageCircle className="w-4 h-4" />
+                                    )}
+                                    {whatsappLoading ? "Starting chat…" : "Chat on WhatsApp"}
+                                </a>
+                                {whatsappError && (
+                                    <p className="mt-2 text-sm text-red-500" role="alert">
+                                        {whatsappError}
+                                    </p>
+                                )}
+                            </>
                         )}
                     </div>
 
