@@ -22,7 +22,7 @@ import {
 } from "@/components/shared/ListingPrimitives";
 
 function buildWhatsAppUrl(phone: string, title: string): string {
-    const cleaned = phone.replace(/D/g, "");
+    const cleaned = phone.replace(/\D/g, "");
     const number = cleaned.startsWith("0") ? "234" + cleaned.slice(1) : cleaned;
     const msg = encodeURIComponent(
         `Hi! I'm interested in: *${title}* — is it still available?`
