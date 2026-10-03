@@ -1,101 +1,116 @@
-import React from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import {
     Package,
     ShoppingBag,
-    DollarSign,
     TrendingUp,
     Plus,
-    Eye,
     Clock,
     CheckCircle,
     AlertCircle,
     Store,
-    Star
+    Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+    listSellerProducts,
+    type SellerProduct
+} from "@/services/product.service";
 
-// ── Mock data — replace with real Appwrite queries when ready ─────────────────
-const mockStats = {
-    totalProducts: 24,
-    pendingOrders: 8,
-    completedOrders: 143,
-    revenue: 328500
-};
-
-const mockRecentOrders = [
-    {
-        id: "ORD-1041",
-        customer: "Chidi Okeke",
-        product: "Wireless Headphones",
-        amount: 12000,
-        status: "pending",
-        date: "1 hour ago"
-    },
-    {
-        id: "ORD-1038",
-        customer: "Amaka Nwosu",
-        product: "Laptop Stand",
-        amount: 7500,
-        status: "completed",
-        date: "3 hours ago"
-    },
-    {
-        id: "ORD-1031",
-        customer: "Emeka Eze",
-        product: "USB-C Hub",
-        amount: 15000,
-        status: "processing",
-        date: "Yesterday"
-    }
-];
-
-const mockTopProducts = [
-    { name: "Wireless Headphones", sales: 42, revenue: 378000 },
-    { name: "Laptop Stand", sales: 31, revenue: 232500 },
-    { name: "USB-C Hub", sales: 28, revenue: 420000 }
-];
-
-// ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
     const styles: Record<string, string> = {
-        completed:
+        active:
             "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-        pending:
-            "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
-        processing:
-            "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+        draft:
+            "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
+        archived:
+            "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300"
     };
-    const icons: Record<string, React.ReactNode> = {
-        completed: <CheckCircle className="w-3 h-3" />,
-        pending: <Clock className="w-3 h-3" />,
-        processing: <AlertCircle className="w-3 h-3" />
-    };
+
     return (
         <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] ?? styles.pending}`}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${styles[status] ?? styles.draft}`}
         >
-            {icons[status]}
             {status}
         </span>
     );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 export default function SellerDashboard() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const [products, setProducts] = useState<SellerProduct[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Pull vendor info from profile if available
     const businessName =
         user?.profile?.businessName ?? user?.name ?? "Your Store";
     const vendorStatus = user?.profile?.vendorStatus ?? "active";
-    const storeStatus = user?.profile?.storeStatus ?? "closed";
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function loadProducts() {
+            if (!user?.$id) {
+                setProducts([]);
+                setLoading(false);
+                return;
+            }
+
+            setLoading(true);
+            setError(null);
+
+            try {
+                const sellerProducts = await listSellerProducts(user.$id);
+                if (!cancelled) setProducts(sellerProducts);
+            } catch (err) {
+                console.error("Failed to load seller dashboard products.", err);
+                if (!cancelled) {
+                    setProducts([]);
+                    setError("Unable to load your products right now.");
+                }
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        }
+
+        void loadProducts();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [user?.$id]);
+
+    const activeProducts = useMemo(
+        () => products.filter(product => product.status === "active"),
+        [products]
+    );
+    const draftProducts = useMemo(
+        () => products.filter(product => product.status === "draft"),
+        [products]
+    );
+    const inventoryValue = useMemo(
+        () =>
+            products.reduce(
+                (sum, product) =>
+                    sum + Number(product.price) * Number(product.stock),
+                0
+            ),
+        [products]
+    );
+    const lowStockProducts = useMemo(
+        () =>
+            products
+                .filter(product => product.stock <= 5)
+                .sort((a, b) => a.stock - b.stock)
+                .slice(0, 3),
+        [products]
+    );
+    const recentProducts = products.slice(0, 3);
 
     return (
         <div className="space-y-6">
-            {/* ── Header ── */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
@@ -104,7 +119,6 @@ export default function SellerDashboard() {
                     <p className="text-gray-600 dark:text-gray-400 mt-1 flex items-center gap-2">
                         <Store className="w-4 h-4" />
                         {businessName}
-                        {/* Vendor status pill */}
                         <span
                             className={`ml-1 px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${
                                 vendorStatus === "active"
@@ -127,7 +141,6 @@ export default function SellerDashboard() {
                 </Button>
             </div>
 
-            {/* ── Vendor account status banner ── */}
             {vendorStatus === "active" && (
                 <div className="flex items-start gap-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                     <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
@@ -158,85 +171,55 @@ export default function SellerDashboard() {
                 </div>
             )}
 
-            {/* ── Stats grid ── */}
+            {error && (
+                <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+                    <AlertCircle className="w-4 h-4" />
+                    {error}
+                </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     icon={<Package className="w-6 h-6" />}
                     label="Total Products"
-                    value={mockStats.totalProducts.toString()}
+                    value={loading ? "…" : products.length.toString()}
                     color="indigo"
                 />
                 <StatCard
-                    icon={<Clock className="w-6 h-6" />}
-                    label="Pending Orders"
-                    value={mockStats.pendingOrders.toString()}
-                    color="yellow"
-                />
-                <StatCard
                     icon={<CheckCircle className="w-6 h-6" />}
-                    label="Completed Orders"
-                    value={mockStats.completedOrders.toString()}
+                    label="Active Listings"
+                    value={loading ? "…" : activeProducts.length.toString()}
                     color="green"
                 />
                 <StatCard
-                    icon={<DollarSign className="w-6 h-6" />}
-                    label="Total Revenue"
-                    value={`₦${(mockStats.revenue / 1000).toFixed(0)}K`}
+                    icon={<Clock className="w-6 h-6" />}
+                    label="Draft Products"
+                    value={loading ? "…" : draftProducts.length.toString()}
+                    color="yellow"
+                />
+                <StatCard
+                    icon={<TrendingUp className="w-6 h-6" />}
+                    label="Inventory Value"
+                    value={
+                        loading
+                            ? "…"
+                            : `₦${inventoryValue.toLocaleString()}`
+                    }
                     color="purple"
                 />
             </div>
 
-            {/* ── Content grid ── */}
             <div className="grid lg:grid-cols-2 gap-6">
-                {/* Recent Orders */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
                     <div className="flex items-center justify-between p-5 border-b">
-                        <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                            Recent Orders
-                        </h2>
-                        <button
-                            onClick={() => navigate("/dashboard/seller/orders")}
-                            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-                        >
-                            View all →
-                        </button>
-                    </div>
-                    <div className="divide-y">
-                        {mockRecentOrders.map(order => (
-                            <div
-                                key={order.id}
-                                className="p-4 hover:bg-gray-50 dark:hover:bg-gray-900/40"
-                            >
-                                <div className="flex items-center justify-between mb-1">
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                            {order.customer}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            {order.product} · {order.id}
-                                        </p>
-                                    </div>
-                                    <StatusBadge status={order.status} />
-                                </div>
-                                <div className="flex items-center justify-between text-xs mt-1">
-                                    <span className="text-gray-500">
-                                        {order.date}
-                                    </span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">
-                                        ₦{order.amount.toLocaleString()}
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Top Products */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
-                    <div className="flex items-center justify-between p-5 border-b">
-                        <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                            Top Products
-                        </h2>
+                        <div>
+                            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                                Recent Products
+                            </h2>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Your latest listings
+                            </p>
+                        </div>
                         <button
                             onClick={() =>
                                 navigate("/dashboard/seller/products")
@@ -247,28 +230,109 @@ export default function SellerDashboard() {
                         </button>
                     </div>
                     <div className="divide-y">
-                        {mockTopProducts.map((product, idx) => (
-                            <div
-                                key={product.name}
-                                className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-900/40"
-                            >
-                                {/* Rank */}
-                                <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                                    {idx + 1}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                        {product.name}
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        {product.sales} sales
-                                    </p>
-                                </div>
-                                <span className="text-sm font-semibold text-gray-900 dark:text-white flex-shrink-0">
-                                    ₦{product.revenue.toLocaleString()}
-                                </span>
+                        {loading ? (
+                            <div className="flex items-center justify-center py-10 text-gray-400">
+                                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                                Loading products…
                             </div>
-                        ))}
+                        ) : recentProducts.length === 0 ? (
+                            <div className="p-8 text-center">
+                                <Package className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                                    You have no products yet.
+                                </p>
+                                <Button
+                                    size="sm"
+                                    onClick={() =>
+                                        navigate("/dashboard/seller/products")
+                                    }
+                                >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add Product
+                                </Button>
+                            </div>
+                        ) : (
+                            recentProducts.map(product => (
+                                <div
+                                    key={product.$id}
+                                    className="flex items-center gap-3 p-4"
+                                >
+                                    <img
+                                        src={
+                                            product.imageUrl ??
+                                            "/images/placeholder.svg"
+                                        }
+                                        alt={product.title}
+                                        className="w-12 h-12 rounded-lg object-cover border flex-shrink-0"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                            {product.title}
+                                        </p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            ₦{Number(product.price).toLocaleString()} ·{" "}
+                                            {product.stock} in stock
+                                        </p>
+                                    </div>
+                                    <StatusBadge status={product.status} />
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
+                    <div className="flex items-center justify-between p-5 border-b">
+                        <div>
+                            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                                Stock Watch
+                            </h2>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Products with 5 or fewer units
+                            </p>
+                        </div>
+                        <button
+                            onClick={() =>
+                                navigate("/dashboard/seller/products")
+                            }
+                            className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                        >
+                            Manage →
+                        </button>
+                    </div>
+                    <div className="divide-y">
+                        {loading ? (
+                            <div className="flex items-center justify-center py-10 text-gray-400">
+                                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                                Loading products…
+                            </div>
+                        ) : lowStockProducts.length === 0 ? (
+                            <div className="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                No low-stock products right now.
+                            </div>
+                        ) : (
+                            lowStockProducts.map(product => (
+                                <div
+                                    key={product.$id}
+                                    className="flex items-center gap-3 p-4"
+                                >
+                                    <div className="w-9 h-9 rounded-full bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 flex items-center justify-center flex-shrink-0">
+                                        <Package className="w-4 h-4" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                            {product.title}
+                                        </p>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                            ₦{Number(product.price).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <span className="text-sm font-semibold text-red-500">
+                                        {product.stock} left
+                                    </span>
+                                </div>
+                            ))
+                        )}
                     </div>
                     <div className="p-4 border-t text-center">
                         <Button
@@ -286,7 +350,6 @@ export default function SellerDashboard() {
                 </div>
             </div>
 
-            {/* ── Quick Actions ── */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow border p-5">
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
                     Quick Actions
@@ -318,7 +381,6 @@ export default function SellerDashboard() {
     );
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
 function StatCard({
     icon,
     label,
@@ -336,6 +398,7 @@ function StatCard({
         green: "bg-green-500",
         purple: "bg-purple-500"
     };
+
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow border p-5">
             <div className="flex items-center justify-between mb-3">
