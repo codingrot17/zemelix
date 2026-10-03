@@ -106,11 +106,21 @@ export default function ProductCard({ product }: { product: Product }) {
             {/* ── Content ── */}
             <div className="flex flex-col flex-1 p-4 gap-3">
                 {/* Seller strip */}
-                <SellerStrip
-                    name={product.sellerName}
-                    avatar={product.sellerAvatar}
-                    vendorType={product.vendorType}
-                />
+                <button
+                    type="button"
+                    className="text-left w-fit max-w-full"
+                    onClick={e => {
+                        e.stopPropagation();
+                        if (product.sellerId) navigate(`/seller/${product.sellerId}`);
+                    }}
+                    disabled={!product.sellerId}
+                >
+                    <SellerStrip
+                        name={product.sellerName}
+                        avatar={product.sellerAvatar}
+                        vendorType={product.vendorType}
+                    />
+                </button>
 
                 {/* Title */}
                 <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100 line-clamp-2 leading-snug">
