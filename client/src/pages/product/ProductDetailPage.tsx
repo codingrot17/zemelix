@@ -4,7 +4,7 @@ import { getProduct } from "@/services/product.service";
 import { getPublicSellerProfile } from "@/services/seller.service";
 import { createSellerOrder } from "@/services/order.service";
 import { getCurrentAccount } from "@/lib/appwrite/account";
-import { getUserProfile } from "@/lib/appwrite/database";
+import { getUserProfile, updateUserProfile } from "@/lib/appwrite/database";
 import { getFileViewUrl } from "@/lib/appwrite/storage";
 import { useCart } from "@/hooks/useCart";
 import type { Product } from "@/types/product";
@@ -67,6 +67,8 @@ export default function ProductDetailPage() {
     const [added, setAdded] = useState(false);
     const [whatsappLoading, setWhatsappLoading] = useState(false);
     const [whatsappError, setWhatsappError] = useState<string | null>(null);
+    const [whatsappPhone, setWhatsappPhone] = useState("");
+    const [whatsappPhoneRequired, setWhatsappPhoneRequired] = useState(false);
 
     useEffect(() => {
         if (!id) {
@@ -136,7 +138,7 @@ export default function ProductDetailPage() {
     };
 
     const handleWhatsAppClick = async (
-        event: React.MouseEvent<HTMLAnchorElement>
+        event: React.MouseEvent<HTMLButtonElement>
     ) => {
         event.preventDefault();
         event.stopPropagation();
@@ -154,11 +156,25 @@ export default function ProductDetailPage() {
 
             const profile = await getUserProfile(account.$id);
             const customerName = profile?.fullName?.trim() || account.name?.trim() || "";
-            const customerPhone = profile?.phoneNumber?.trim() || "";
+            const customerPhone = profile?.phoneNumber?.trim() || account.phone?.trim() || whatsappPhone.trim();
             const customerEmail = profile?.email?.trim() || account.email?.trim() || "";
 
-            if (!customerName || !customerPhone) {
-                throw new Error("Please complete your profile with your name and phone number before contacting a seller.");
+            if (!customerName) {
+                throw new Error("Please add your name to your profile before contacting a seller.");
+            }
+
+            if (!customerPhone) {
+                setWhatsappPhoneRequired(true);
+                throw new Error("Enter your phone number to continue to WhatsApp.");
+            }
+
+            if (!/^\\+?[0-9\\s()-]{7,20}$/.test(customerPhone)) {
+                throw new Error("Enter a valid phone number.");
+            }
+
+            if (!profile?.phoneNumber?.trim() && !account.phone?.trim()) {
+                await updateUserProfile(account.$id, { phoneNumber: customerPhone });
+                setWhatsappPhoneRequired(false);
             }
 
             await createSellerOrder({
@@ -429,22 +445,40 @@ export default function ProductDetailPage() {
 
                         {product.sellerWhatsapp && (
                             <>
-                                <a
-                                    href={buildWhatsAppUrl(product.sellerWhatsapp, product.title)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition"
+                                {whatsappPhoneRequired && (
+                                    <div className="mt-3 space-y-2">
+                                        <label
+                                            htmlFor="whatsapp-phone"
+                                            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                        >
+                                            Your phone number
+                                        </label>
+                                        <input
+                                            id="whatsapp-phone"
+                                            type="tel"
+                                            value={whatsappPhone}
+                                            onChange={event => setWhatsappPhone(event.target.value)}
+                                            placeholder="+234 801 234 5678"
+                                            autoComplete="tel"
+                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-green-500"
+                                        />
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed"
                                     onClick={handleWhatsAppClick}
                                     aria-busy={whatsappLoading}
+                                    disabled={whatsappLoading}
                                 >
                                     {whatsappLoading ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />
                                     ) : (
                                         <MessageCircle className="w-4 h-4" />
                                     )}
-                                    {whatsappLoading ? "Starting chat…" : "Chat on WhatsApp"}
-                                </a>
-                                {whatsappError && (
+                                    {whatsappLoading ? "Starting chat…" : whatsappPhoneRequired ? "Continue to WhatsApp" : "Chat on WhatsApp"}
+                                </button>
+                                                {whatsappError && (
                                     <p className="mt-2 text-sm text-red-500" role="alert">
                                         {whatsappError}
                                     </p>
