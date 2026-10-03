@@ -10,6 +10,7 @@ import HomePage from "@/pages/home/Home";
 import { CollectionsPage } from "@/pages/collections/CollectionsPage";
 import { SingleCollectionPage } from "@/pages/collections/SingleCollectionPage";
 import ProductDetailPage from "@/pages/product/ProductDetailPage";
+import SellerStorePage from "@/pages/seller/SellerStorePage";
 
 // Auth Pages
 import LoginPage from "@/pages/auth/login";
@@ -95,6 +96,7 @@ export default function AppRoutes() {
                         element={<SingleCollectionPage />}
                     />
                     <Route path="product/:id" element={<ProductDetailPage />} />
+                    <Route path="seller/:id" element={<SellerStorePage />} />
                     <Route path="category/:id" element={<CategoryPage />} />
                     <Route path="sellers" element={<SellersPage />} />
                     <Route path="blog" element={<BlogPage />} />
