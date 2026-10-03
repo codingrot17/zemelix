@@ -157,6 +157,7 @@ function docToProduct(doc: ProductDocument): Product {
         featured: doc.featured === true,
         status: toProductStatus(doc.status),
         vendorType: toVendorType(doc.vendorType),
+        sellerId: doc.sellerId ?? "",
         sellerName: doc.sellerName ?? "Unknown Seller",
         sellerAvatar: doc.sellerAvatar ?? "/images/placeholder.svg",
         sellerWhatsapp: doc.sellerWhatsapp ?? undefined
