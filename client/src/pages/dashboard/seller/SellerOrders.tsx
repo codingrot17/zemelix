@@ -331,21 +331,6 @@ export default function SellerOrders() {
                                             </Button>
                                         </div>
                                     )}
-                                            <Button
-                                                onClick={() => void handleMarkPurchased(order.$id)}
-                                                disabled={updatingOrderId !== null}
-                                            >
-                                                {updatingOrderId === order.$id ? (
-                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                ) : (
-                                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                                )}
-                                                {updatingOrderId === order.$id
-                                                    ? "Marking Purchased…"
-                                                    : "Mark as Purchased"}
-                                            </Button>
-                                        </div>
-                                    )}
                                 </div>
                             );
                         })}
