@@ -192,8 +192,8 @@ export default function SellerStorePage() {
 
                         <div className="flex-1 min-w-0">
                             <p
-                                className="text-xs font-semibold uppercase tracking-wide drop-shadow-sm"
-                                style={{ color: brandColor ?? undefined }}
+                                className="inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-sm"
+                                style={{ backgroundColor: brandColor ?? "#374151" }}
                             >
                                 {seller.vendorType || "Seller"}
                             </p>
