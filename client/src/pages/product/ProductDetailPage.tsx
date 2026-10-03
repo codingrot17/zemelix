@@ -57,6 +57,7 @@ export default function ProductDetailPage() {
 
     const [product, setProduct] = useState<Product | null>(null);
     const [sellerCoverUrl, setSellerCoverUrl] = useState("");
+    const [sellerBrandColor, setSellerBrandColor] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [wishlisted, setWishlisted] = useState(false);
@@ -75,6 +76,7 @@ export default function ProductDetailPage() {
             setLoading(true);
             setError(null);
             setSellerCoverUrl("");
+            setSellerBrandColor(null);
 
             try {
                 const result = await getProduct(id);
@@ -85,8 +87,13 @@ export default function ProductDetailPage() {
                 if (result.sellerId) {
                     try {
                         const profile = await getPublicSellerProfile(result.sellerId);
-                        if (!cancelled && profile?.coverImage) {
-                            setSellerCoverUrl(getFileViewUrl(profile.coverImage));
+                        if (!cancelled) {
+                            if (profile?.coverImage) {
+                                setSellerCoverUrl(getFileViewUrl(profile.coverImage));
+                            }
+                            if (profile?.primaryColor && /^#[0-9A-Fa-f]{6}$/.test(profile.primaryColor)) {
+                                setSellerBrandColor(profile.primaryColor);
+                            }
                         }
                     } catch (sellerError) {
                         console.error("Failed to load seller profile.", sellerError);
@@ -277,8 +284,12 @@ export default function ProductDetailPage() {
                                 ? "bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800"
                                 : "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800"
                         }`}
+                        style={sellerBrandColor ? { borderColor: sellerBrandColor } : undefined}
                     >
-                        <p className="text-xs font-semibold text-gray-400 uppercase mb-3">
+                        <p
+                            className="text-xs font-semibold uppercase mb-3"
+                            style={{ color: sellerBrandColor ?? undefined }}
+                        >
                             {isService ? "Service Provider" : "Sold by"}
                         </p>
 
