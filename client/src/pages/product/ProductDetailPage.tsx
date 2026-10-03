@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getProduct } from "@/services/product.service";
+import { getPublicSellerProfile } from "@/services/seller.service";
+import { getFileViewUrl } from "@/lib/appwrite/storage";
 import { useCart } from "@/hooks/useCart";
 import type { Product } from "@/types/product";
 import {
@@ -20,7 +22,7 @@ import {
 } from "@/components/shared/ListingPrimitives";
 
 function buildWhatsAppUrl(phone: string, title: string): string {
-    const cleaned = phone.replace(/\D/g, "");
+    const cleaned = phone.replace(/D/g, "");
     const number = cleaned.startsWith("0") ? "234" + cleaned.slice(1) : cleaned;
     const msg = encodeURIComponent(
         `Hi! I'm interested in: *${title}* — is it still available?`
@@ -54,6 +56,7 @@ export default function ProductDetailPage() {
     const { add } = useCart();
 
     const [product, setProduct] = useState<Product | null>(null);
+    const [sellerCoverUrl, setSellerCoverUrl] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [wishlisted, setWishlisted] = useState(false);
@@ -71,10 +74,24 @@ export default function ProductDetailPage() {
         async function loadProduct() {
             setLoading(true);
             setError(null);
+            setSellerCoverUrl("");
 
             try {
                 const result = await getProduct(id);
-                if (!cancelled) setProduct(result);
+                if (cancelled) return;
+
+                setProduct(result);
+
+                if (result.sellerId) {
+                    try {
+                        const profile = await getPublicSellerProfile(result.sellerId);
+                        if (!cancelled && profile?.coverImage) {
+                            setSellerCoverUrl(getFileViewUrl(profile.coverImage));
+                        }
+                    } catch (sellerError) {
+                        console.error("Failed to load seller profile.", sellerError);
+                    }
+                }
             } catch (err) {
                 console.error("Failed to load product.", err);
                 if (!cancelled) {
@@ -264,6 +281,18 @@ export default function ProductDetailPage() {
                         <p className="text-xs font-semibold text-gray-400 uppercase mb-3">
                             {isService ? "Service Provider" : "Sold by"}
                         </p>
+
+                        {sellerCoverUrl && (
+                            <div className="mb-3 h-20 overflow-hidden rounded-lg">
+                                <img
+                                    src={sellerCoverUrl}
+                                    alt=""
+                                    aria-hidden="true"
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        )}
+
                         <div className="flex items-center gap-3">
                             {product.sellerAvatar ? (
                                 <img
