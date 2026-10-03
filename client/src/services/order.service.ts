@@ -333,6 +333,55 @@ export async function markOrderPurchased(orderId: string): Promise<Order> {
     }
 }
 
+
+export async function undoOrderPurchased(orderId: string): Promise<Order> {
+    assertOrderConfig();
+    await requireCurrentUserId();
+
+    if (!orderId.trim()) throw new Error("orderId is required.");
+
+    const execution = await functions.createExecution(
+        CREATE_SELLER_ORDER_FUNCTION_ID,
+        JSON.stringify({
+            operation: "undoSellerOrderPurchase",
+            orderId
+        }),
+        false
+    );
+
+    if (
+        execution.responseStatusCode < 200 ||
+        execution.responseStatusCode >= 300
+    ) {
+        let message = "Unable to undo this purchase.";
+        try {
+            const response = JSON.parse(execution.responseBody || "{}");
+            if (typeof response.error === "string" && response.error) {
+                message = response.error;
+            }
+        } catch {
+            // Keep the generic message when the function response is not JSON.
+        }
+        throw new Error(message);
+    }
+
+    try {
+        const response = JSON.parse(execution.responseBody || "{}");
+        if (!response.ok || !response.order) {
+            throw new Error("Unable to undo this purchase.");
+        }
+        return toOrder(response.order as OrderDocument);
+    } catch (error) {
+        if (
+            error instanceof Error &&
+            error.message !== "Unable to undo this purchase."
+        ) {
+            throw error;
+        }
+        throw new Error("Unable to undo this purchase.");
+    }
+}
+
 export async function markOrderCancelled(orderId: string): Promise<Order> {
     assertOrderConfig();
     const sellerId = await requireCurrentUserId();
