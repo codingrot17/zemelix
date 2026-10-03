@@ -9,6 +9,10 @@ import { listProducts } from "@/services/product.service";
 import type { Product } from "@/types/product";
 import type { PublicSellerProfile } from "@/types/seller";
 
+function validBrandColor(value: string | null): string | null {
+    return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : null;
+}
+
 function socialEntries(
     value: PublicSellerProfile["socialLinks"]
 ): Array<[string, string]> {
@@ -131,6 +135,7 @@ export default function SellerStorePage() {
 
     const displayName =
         seller.businessName?.trim() || seller.fullName?.trim() || "Seller";
+    const brandColor = validBrandColor(seller.primaryColor);
     const initials = displayName
         .split(" ")
         .map(part => part[0])
@@ -148,7 +153,10 @@ export default function SellerStorePage() {
                 Back
             </button>
 
-            <section className="overflow-hidden rounded-2xl border bg-white dark:bg-zinc-900 shadow-sm">
+            <section
+                className="overflow-hidden rounded-2xl border bg-white dark:bg-zinc-900 shadow-sm"
+                style={brandColor ? { borderColor: brandColor } : undefined}
+            >
                 <div className="relative h-44 sm:h-56 bg-gray-100 dark:bg-zinc-800">
                     {coverUrl ? (
                         <img
@@ -174,13 +182,19 @@ export default function SellerStorePage() {
                                 className="w-20 h-20 rounded-2xl object-cover border-4 border-white dark:border-zinc-900 shadow-md bg-white"
                             />
                         ) : (
-                            <div className="w-20 h-20 rounded-2xl flex items-center justify-center bg-indigo-600 text-white text-xl font-bold border-4 border-white dark:border-zinc-900 shadow-md">
+                            <div
+                                className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-xl font-bold border-4 border-white dark:border-zinc-900 shadow-md"
+                                style={{ backgroundColor: brandColor ?? undefined }}
+                            >
                                 {initials}
                             </div>
                         )}
 
                         <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+                            <p
+                                className="text-xs font-semibold uppercase tracking-wide"
+                                style={{ color: brandColor ?? undefined }}
+                            >
                                 {seller.vendorType || "Seller"}
                             </p>
                             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
