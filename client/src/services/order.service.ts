@@ -4,7 +4,7 @@ import { getCurrentAccount } from "@/lib/appwrite/account";
 const ORDERS_COLLECTION_ID = "orders";
 const ORDER_ITEMS_COLLECTION_ID = "order_items";
 const CREATE_SELLER_ORDER_FUNCTION_ID =
-    import.meta.env.VITE_APPWRITE_CREATE_SELLER_ORDER_FUNCTION_ID;
+    import.meta.env.VITE_APPWRITE_PUBLIC_SELLER_PROFILE_FUNCTION_ID;
 
 export type OrderStatus = "contacted" | "purchased" | "cancelled";
 
@@ -90,7 +90,7 @@ function assertOrderConfig() {
     }
     if (!CREATE_SELLER_ORDER_FUNCTION_ID) {
         throw new Error(
-            "VITE_APPWRITE_CREATE_SELLER_ORDER_FUNCTION_ID is required."
+            "VITE_APPWRITE_PUBLIC_SELLER_PROFILE_FUNCTION_ID is required."
         );
     }
 }
@@ -185,6 +185,7 @@ export async function createSellerOrder(
     const execution = await functions.createExecution(
         CREATE_SELLER_ORDER_FUNCTION_ID,
         JSON.stringify({
+            operation: "createSellerOrder",
             checkoutSessionId: input.checkoutSessionId,
             sellerId: input.sellerId,
             customerName: input.customerName,
