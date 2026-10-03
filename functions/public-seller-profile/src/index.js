@@ -5,6 +5,7 @@ const PUBLIC_FIELDS = [
     "fullName",
     "logo",
     "coverImage",
+    "primaryColor",
     "slogan",
     "businessDescription",
     "vendorType",
