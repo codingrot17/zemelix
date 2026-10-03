@@ -22,6 +22,7 @@ export interface ListProductsOptions {
     category?: string;
     limit?: number;
     activeOnly?: boolean;
+    sellerId?: string;
 }
 
 export interface SellerProductInput {
@@ -184,6 +185,7 @@ export async function listProducts(
     if (featuredOnly) queries.push(Query.equal("featured", true));
     if (activeOnly) queries.push(Query.equal("status", "active"));
     if (category) queries.push(Query.equal("category", category));
+    if (sellerId) queries.push(Query.equal("sellerId", sellerId));
 
     const response = await databases.listDocuments(
         DB_ID,
