@@ -10,13 +10,23 @@ import {
     ListingActionButton
 } from "@/components/shared/ListingPrimitives";
 
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({
+    product,
+    sellerBrandColor
+}: {
+    product: Product;
+    sellerBrandColor?: string | null;
+}) {
     const navigate = useNavigate();
     const { add } = useCart();
     const [wishlisted, setWishlisted] = useState(false);
     const [added, setAdded] = useState(false);
 
     const isService = product.vendorType === "service";
+    const validSellerBrandColor =
+        sellerBrandColor && /^#[0-9A-Fa-f]{6}$/.test(sellerBrandColor)
+            ? sellerBrandColor
+            : null;
     const outOfStock = product.stock === 0;
 
     const handleAction = (e: React.MouseEvent) => {
@@ -55,6 +65,7 @@ export default function ProductCard({ product }: { product: Product }) {
     return (
         <div
             className="group relative flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+            style={validSellerBrandColor ? { borderTopColor: validSellerBrandColor } : undefined}
             onClick={() => navigate(`/product/${product.id}`)}
         >
             {/* ── Image ── */}
