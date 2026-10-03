@@ -12,6 +12,7 @@ type PublicSellerProfileResponse = {
         fullName?: unknown;
         logo?: unknown;
         coverImage?: unknown;
+        primaryColor?: unknown;
         slogan?: unknown;
         businessDescription?: unknown;
         vendorType?: unknown;
@@ -58,6 +59,7 @@ function parsePublicSellerProfile(
         fullName: toNullableString(seller.fullName),
         logo: toNullableString(seller.logo),
         coverImage: toNullableString(seller.coverImage),
+        primaryColor: toNullableString(seller.primaryColor),
         slogan: toNullableString(seller.slogan),
         businessDescription: toNullableString(seller.businessDescription),
         vendorType: toNullableString(seller.vendorType),
