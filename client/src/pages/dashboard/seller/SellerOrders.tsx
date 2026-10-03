@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle, ChevronDown, Loader2, MessageCircle, Package, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle, ChevronDown, Loader2, MessageCircle, Package, RefreshCw, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
     listOrderItems,
     listSellerOrders,
     markOrderPurchased,
+    undoOrderPurchased,
     type Order,
     type OrderItem
 } from "@/services/order.service";
@@ -85,6 +86,33 @@ export default function SellerOrders() {
         } catch (err) {
             console.error("Failed to mark order as purchased.", err);
             setError("Unable to mark this lead as purchased. Please try again.");
+        } finally {
+            setUpdatingOrderId(null);
+        }
+    }
+
+    async function handleUndoPurchased(orderId: string) {
+        const confirmed = window.confirm(
+            "Undo this purchase? The order will return to Open Leads and the purchased quantity will be added back to stock."
+        );
+
+        if (!confirmed) return;
+
+        setUpdatingOrderId(orderId);
+        setError(null);
+
+        try {
+            const updatedOrder = await undoOrderPurchased(orderId);
+            setOrders(current =>
+                current.map(order =>
+                    order.$id === orderId
+                        ? { ...order, ...updatedOrder }
+                        : order
+                )
+            );
+        } catch (err) {
+            console.error("Failed to undo purchased order.", err);
+            setError("Unable to undo this purchase. Please try again.");
         } finally {
             setUpdatingOrderId(null);
         }
@@ -269,6 +297,40 @@ export default function SellerOrders() {
 
                                     {order.status === "contacted" && (
                                         <div className="flex justify-end">
+                                            <Button
+                                                onClick={() => void handleMarkPurchased(order.$id)}
+                                                disabled={updatingOrderId !== null}
+                                            >
+                                                {updatingOrderId === order.$id ? (
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                                )}
+                                                {updatingOrderId === order.$id
+                                                    ? "Marking Purchased…"
+                                                    : "Mark as Purchased"}
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {order.status === "purchased" && (
+                                        <div className="flex justify-end">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => void handleUndoPurchased(order.$id)}
+                                                disabled={updatingOrderId !== null}
+                                            >
+                                                {updatingOrderId === order.$id ? (
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <Undo2 className="w-4 h-4 mr-2" />
+                                                )}
+                                                {updatingOrderId === order.$id
+                                                    ? "Undoing Purchase…"
+                                                    : "Undo Purchase"}
+                                            </Button>
+                                        </div>
+                                    )}
                                             <Button
                                                 onClick={() => void handleMarkPurchased(order.$id)}
                                                 disabled={updatingOrderId !== null}
