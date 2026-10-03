@@ -20,6 +20,8 @@ export interface Product {
     featured?: boolean;
     status?: ProductStatus;
     vendorType: VendorType;
+    // Seller identity — derived from the authenticated seller profile.
+    sellerId: string;
     // Seller contact — direct C2S fields
     sellerName: string;
     sellerAvatar?: string;
