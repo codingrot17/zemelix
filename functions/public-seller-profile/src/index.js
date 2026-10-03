@@ -44,10 +44,9 @@ function jsonError(res, message, status) {
     return res.json({ ok: false, error: message }, status);
 }
 
-function getServerClient() {
+function getServerClient(apiKey) {
     const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT;
     const projectId = process.env.APPWRITE_FUNCTION_PROJECT_ID;
-    const apiKey = process.env.APPWRITE_FUNCTION_API_KEY;
 
     if (!endpoint || !projectId || !apiKey) {
         return null;
@@ -210,7 +209,8 @@ export default async ({ req, res, error }) => {
 
     const databaseId = process.env.APPWRITE_DATABASE_ID;
     const collectionId = process.env.APPWRITE_USER_COLLECTION_ID;
-    const client = getServerClient();
+    const apiKey = req.headers["x-appwrite-key"];
+    const client = getServerClient(apiKey);
 
     if (!databaseId || !collectionId || !client) {
         error("Public seller profile function is missing Appwrite configuration.");
