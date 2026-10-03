@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle, Loader2, MessageCircle, Package, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle, ChevronDown, Loader2, MessageCircle, Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -34,6 +34,7 @@ export default function SellerOrders() {
     const [orders, setOrders] = useState<OrderWithItems[]>([]);
     const [loading, setLoading] = useState(true);
     const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+    const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
     const [error, setError] = useState<string | null>(null);
 
     async function loadOrders() {
@@ -87,6 +88,18 @@ export default function SellerOrders() {
         } finally {
             setUpdatingOrderId(null);
         }
+    }
+
+    function toggleOrderDetails(orderId: string) {
+        setExpandedOrderIds(current => {
+            const next = new Set(current);
+            if (next.has(orderId)) {
+                next.delete(orderId);
+            } else {
+                next.add(orderId);
+            }
+            return next;
+        });
     }
 
     const contactedCount = orders.filter(order => order.status === "contacted").length;
@@ -161,93 +174,119 @@ export default function SellerOrders() {
                     </div>
                 ) : (
                     <div className="divide-y">
-                        {orders.map(order => (
-                            <div key={order.$id} className="p-5 space-y-4">
-                                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
-                                    <div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <h2 className="font-semibold text-gray-900 dark:text-white">
-                                                {order.customerName}
-                                            </h2>
-                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusStyles(order.status)}`}>
-                                                {order.status}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                            Lead created {formatDate(order.contactedAt)}
-                                        </p>
-                                        {order.purchasedAt && (
-                                            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                                                Purchased {formatDate(order.purchasedAt)}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="text-left lg:text-right">
-                                        <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                                            ₦{order.total.toLocaleString()}
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                                            {order.source} lead
-                                        </p>
-                                    </div>
-                                </div>
+                        {orders.map(order => {
+                            const isExpanded = expandedOrderIds.has(order.$id);
+                            const primaryItem = order.items[0];
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="rounded-lg border p-4">
-                                        <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white mb-2">
-                                            <Package className="w-4 h-4" />
-                                            Product
+                            return (
+                                <div key={order.$id} className="p-5 space-y-4">
+                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <h2 className="font-semibold text-gray-900 dark:text-white">
+                                                    {order.customerName}
+                                                </h2>
+                                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusStyles(order.status)}`}>
+                                                    {order.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 truncate">
+                                                {primaryItem?.productTitle ?? "Product details unavailable"}
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                {order.source} · {formatDate(order.contactedAt)}
+                                            </p>
                                         </div>
-                                        {order.items.length === 0 ? (
-                                            <p className="text-sm text-gray-500">No item details found.</p>
-                                        ) : (
-                                            order.items.map(item => (
-                                                <div key={item.$id} className="text-sm">
-                                                    <p className="font-medium text-gray-900 dark:text-white">
-                                                        {item.productTitle}
+
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:shrink-0">
+                                            <div className="text-left sm:text-right">
+                                                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                                                    ₦{order.total.toLocaleString()}
+                                                </p>
+                                                {order.purchasedAt && (
+                                                    <p className="text-xs text-green-600 dark:text-green-400">
+                                                        Purchased {formatDate(order.purchasedAt)}
                                                     </p>
-                                                    <p className="text-gray-500 dark:text-gray-400">
-                                                        {item.quantity} × ₦{item.unitPrice.toLocaleString()}
-                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => toggleOrderDetails(order.$id)}
+                                                aria-expanded={isExpanded}
+                                                className="justify-between sm:justify-center"
+                                            >
+                                                {isExpanded ? "Hide details" : "View details"}
+                                                <ChevronDown
+                                                    className={`w-4 h-4 ml-2 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                                                />
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {isExpanded && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="rounded-lg border p-4">
+                                                <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                                    <Package className="w-4 h-4" />
+                                                    Product
                                                 </div>
-                                            ))
-                                        )}
-                                    </div>
+                                                {order.items.length === 0 ? (
+                                                    <p className="text-sm text-gray-500">No item details found.</p>
+                                                ) : (
+                                                    order.items.map(item => (
+                                                        <div key={item.$id} className="text-sm">
+                                                            <p className="font-medium text-gray-900 dark:text-white">
+                                                                {item.productTitle}
+                                                            </p>
+                                                            <p className="text-gray-500 dark:text-gray-400">
+                                                                {item.quantity} × ₦{item.unitPrice.toLocaleString()}
+                                                            </p>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
 
-                                    <div className="rounded-lg border p-4">
-                                        <div className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                                            Customer contact
+                                            <div className="rounded-lg border p-4">
+                                                <div className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                                    Customer contact
+                                                </div>
+                                                <p className="text-sm text-gray-700 dark:text-gray-300">
+                                                    {order.customerPhone}
+                                                </p>
+                                                {order.customerEmail && (
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 break-all">
+                                                        {order.customerEmail}
+                                                    </p>
+                                                )}
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                                                    Lead created {formatDate(order.contactedAt)}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                                            {order.customerPhone}
-                                        </p>
-                                        {order.customerEmail && (
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 break-all">
-                                                {order.customerEmail}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
+                                    )}
 
-                                {order.status === "contacted" && (
-                                    <div className="flex justify-end">
-                                        <Button
-                                            onClick={() => void handleMarkPurchased(order.$id)}
-                                            disabled={updatingOrderId !== null}
-                                        >
-                                            {updatingOrderId === order.$id ? (
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                            ) : (
-                                                <CheckCircle className="w-4 h-4 mr-2" />
-                                            )}
-                                            {updatingOrderId === order.$id
-                                                ? "Marking Purchased…"
-                                                : "Mark as Purchased"}
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
+                                    {order.status === "contacted" && (
+                                        <div className="flex justify-end">
+                                            <Button
+                                                onClick={() => void handleMarkPurchased(order.$id)}
+                                                disabled={updatingOrderId !== null}
+                                            >
+                                                {updatingOrderId === order.$id ? (
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                                )}
+                                                {updatingOrderId === order.$id
+                                                    ? "Marking Purchased…"
+                                                    : "Mark as Purchased"}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>
