@@ -168,7 +168,7 @@ export default function ProductDetailPage() {
                 throw new Error("Enter your phone number to continue to WhatsApp.");
             }
 
-            if (!/^\\+?[0-9\\s()-]{7,20}$/.test(customerPhone)) {
+            if (!/^\+?[0-9\s()-]{7,20}$/.test(customerPhone)) {
                 throw new Error("Enter a valid phone number.");
             }
 
@@ -478,7 +478,7 @@ export default function ProductDetailPage() {
                                     )}
                                     {whatsappLoading ? "Starting chat…" : whatsappPhoneRequired ? "Continue to WhatsApp" : "Chat on WhatsApp"}
                                 </button>
-                                                {whatsappError && (
+                                {whatsappError && (
                                     <p className="mt-2 text-sm text-red-500" role="alert">
                                         {whatsappError}
                                     </p>
