@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from "react";
 /** Cart item shape — extend if needed */
 export type CartItem = {
     id: string;
+    sellerId: string;
     title?: string;
     price: number;
     qty: number;
@@ -63,6 +64,7 @@ function emitChange() {
                         typeof it === "object" &&
                         it !== null &&
                         typeof (it as Record<string, unknown>).id === "string" &&
+                        typeof (it as Record<string, unknown>).sellerId === "string" &&
                         typeof (it as Record<string, unknown>).price === "number"
                 )
                 .map((it: CartItem) => ({
@@ -84,7 +86,9 @@ function emitChange() {
 })();
 
 /** Internal mutators that operate on module-level _cart and emit changes */
-function _addItem(incoming: Partial<CartItem> & { id: string; price: number }) {
+function _addItem(
+    incoming: Partial<CartItem> & { id: string; sellerId: string; price: number }
+) {
     const idx = _cart.findIndex(p => p.id === incoming.id);
     if (idx >= 0) {
         _cart = _cart.map(p =>
@@ -95,6 +99,7 @@ function _addItem(incoming: Partial<CartItem> & { id: string; price: number }) {
     } else {
         const newItem: CartItem = {
             id: incoming.id,
+            sellerId: incoming.sellerId,
             title: incoming.title || "",
             price: incoming.price,
             qty: incoming.qty && incoming.qty > 0 ? incoming.qty : 1,
