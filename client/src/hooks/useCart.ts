@@ -224,10 +224,28 @@ export function useCart() {
         if (item) updateQty(id, Math.max(0, item.qty - 1));
     };
 
+    const sellerGroups = items.reduce<
+        Array<{ sellerId: string; items: CartItem[]; subtotal: number }>
+    >((groups, item) => {
+        const existing = groups.find(group => group.sellerId === item.sellerId);
+        if (existing) {
+            existing.items.push(item);
+            existing.subtotal += (item.price || 0) * (item.qty || 0);
+        } else {
+            groups.push({
+                sellerId: item.sellerId,
+                items: [item],
+                subtotal: (item.price || 0) * (item.qty || 0)
+            });
+        }
+        return groups;
+    }, []);
+
     return {
         items,
         count,
         subtotal,
+        sellerGroups,
         add,
         updateQty,
         remove,
