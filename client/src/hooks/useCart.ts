@@ -178,7 +178,13 @@ export function useCart() {
 
     // operations that modify the module-level cart and return new snapshot
     const add = useCallback(
-        (incoming: Partial<CartItem> & { id: string; price: number }) => {
+        (
+            incoming: Partial<CartItem> & {
+                id: string;
+                sellerId: string;
+                price: number;
+            }
+        ) => {
             const next = _addItem(incoming);
             setItems(next.slice());
             updateStatsLocal(next);
