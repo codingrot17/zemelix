@@ -37,6 +37,7 @@ export default function ProductCard({
         }
         add({
             id: product.id,
+            sellerId: product.sellerId,
             title: product.title,
             price: product.price,
             imageUrl: product.imageUrl
