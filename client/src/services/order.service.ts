@@ -1,4 +1,5 @@
-import { ID, Query, databases, DB_ID } from "@/lib/appwrite/client";
+import { ID, Permission, Query, Role } from "appwrite";
+import { databases, DB_ID } from "@/lib/appwrite/client";
 import { getCurrentAccount } from "@/lib/appwrite/account";
 
 const ORDERS_COLLECTION_ID = "orders";
@@ -166,13 +167,15 @@ function validateItems(items: CreateOrderItemInput[]) {
 
 function buildOrderPermissions(customerId: string, sellerId: string) {
     return [
-        { read: ["user:" + customerId], update: ["user:" + sellerId] }
+        Permission.read(Role.user(customerId)),
+        Permission.update(Role.user(sellerId))
     ];
 }
 
 function buildOrderItemPermissions(customerId: string, sellerId: string) {
     return [
-        { read: ["user:" + customerId, "user:" + sellerId] }
+        Permission.read(Role.user(customerId)),
+        Permission.read(Role.user(sellerId))
     ];
 }
 
