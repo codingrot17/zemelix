@@ -423,3 +423,39 @@ export async function markOrderCancelled(orderId: string): Promise<Order> {
 
     return toOrder(document as OrderDocument);
 }
+
+export async function undoOrderPurchased(orderId: string): Promise<Order> {
+    assertOrderConfig();
+    const sellerId = await requireCurrentUserId();
+
+    if (!orderId.trim()) {
+        throw new Error("orderId is required.");
+    }
+
+    const existing = await databases.getDocument(
+        DB_ID,
+        ORDERS_COLLECTION_ID,
+        orderId
+    ) as OrderDocument;
+
+    if (existing.sellerId !== sellerId) {
+        throw new Error("You can only update your own orders.");
+    }
+
+    if (existing.status !== "purchased") {
+        throw new Error("Only purchased orders can be undone.");
+    }
+
+    const document = await databases.updateDocument(
+        DB_ID,
+        ORDERS_COLLECTION_ID,
+        orderId,
+        {
+            status: "contacted",
+            purchasedAt: null,
+            cancelledAt: null
+        }
+    );
+
+    return toOrder(document as OrderDocument);
+}
