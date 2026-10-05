@@ -168,6 +168,7 @@ function validateItems(items: CreateOrderItemInput[]) {
 function buildOrderPermissions(customerId: string, sellerId: string) {
     return [
         Permission.read(Role.user(customerId)),
+        Permission.read(Role.user(sellerId)),
         Permission.update(Role.user(sellerId))
     ];
 }
