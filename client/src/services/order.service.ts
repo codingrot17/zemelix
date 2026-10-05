@@ -1,10 +1,8 @@
-import { Query, databases, DB_ID, functions } from "@/lib/appwrite/client";
+import { ID, Permission, Query, Role, databases, DB_ID } from "@/lib/appwrite/client";
 import { getCurrentAccount } from "@/lib/appwrite/account";
 
 const ORDERS_COLLECTION_ID = "orders";
 const ORDER_ITEMS_COLLECTION_ID = "order_items";
-const CREATE_SELLER_ORDER_FUNCTION_ID =
-    import.meta.env.VITE_APPWRITE_PUBLIC_SELLER_PROFILE_FUNCTION_ID;
 
 export type OrderStatus = "contacted" | "purchased" | "cancelled";
 
@@ -60,16 +58,17 @@ type OrderDocument = {
     $createdAt?: string;
     checkoutSessionId?: string;
     sellerId?: string;
-    customerId?: string;
+    customerId?: string | null;
     status?: string;
+    source?: string;
     subtotal?: unknown;
     total?: unknown;
     customerName?: string;
-    customerEmail?: string;
+    customerEmail?: string | null;
     customerPhone?: string;
     contactedAt?: string;
-    purchasedAt?: string;
-    cancelledAt?: string;
+    purchasedAt?: string | null;
+    cancelledAt?: string | null;
 };
 
 type OrderItemDocument = {
@@ -81,16 +80,13 @@ type OrderItemDocument = {
     quantity?: unknown;
     unitPrice?: unknown;
     total?: unknown;
-    imageUrl?: string;
+    imageUrl?: string | null;
 };
 
 function assertOrderConfig() {
     if (!DB_ID) {
-        throw new Error("Appwrite database configuration is missing. Set VITE_APPWRITE_DB_ID.");
-    }
-    if (!CREATE_SELLER_ORDER_FUNCTION_ID) {
         throw new Error(
-            "VITE_APPWRITE_PUBLIC_SELLER_PROFILE_FUNCTION_ID is required."
+            "Appwrite database configuration is missing. Set VITE_APPWRITE_DB_ID."
         );
     }
 }
@@ -109,7 +105,9 @@ function toNumber(value: unknown): number {
 }
 
 function toOrderStatus(value: unknown): OrderStatus {
-    return value === "purchased" || value === "cancelled" ? value : "contacted";
+    return value === "purchased" || value === "cancelled"
+        ? value
+        : "contacted";
 }
 
 function toOrder(document: OrderDocument): Order {
@@ -159,234 +157,208 @@ function validateItems(items: CreateOrderItemInput[]) {
             throw new Error("Order item quantity must be at least 1.");
         }
         if (!Number.isFinite(item.unitPrice) || item.unitPrice < 0) {
-            throw new Error("Order item price must be a valid non-negative number.");
+            throw new Error(
+                "Order item price must be a valid non-negative number."
+            );
         }
     }
+}
+
+function buildOrderPermissions(customerId: string, sellerId: string) {
+    return [
+        Permission.read(Role.user(customerId)),
+        Permission.read(Role.user(sellerId)),
+        Permission.update(Role.user(sellerId))
+    ];
+}
+
+function buildOrderItemPermissions(customerId: string, sellerId: string) {
+    return [
+        Permission.read(Role.user(customerId)),
+        Permission.read(Role.user(sellerId))
+    ];
 }
 
 export async function createSellerOrder(
     input: CreateSellerOrderInput
 ): Promise<{ order: Order; items: OrderItem[] }> {
     assertOrderConfig();
-    await requireCurrentUserId();
 
-    if (!input.sellerId.trim()) throw new Error("sellerId is required.");
-    if (!input.checkoutSessionId.trim()) throw new Error("checkoutSessionId is required.");
+    const customerId = await requireCurrentUserId();
+
+    if (!input.sellerId.trim()) {
+        throw new Error("sellerId is required.");
+    }
+    if (!input.checkoutSessionId.trim()) {
+        throw new Error("checkoutSessionId is required.");
+    }
     if (!input.customerName.trim() || !input.customerPhone.trim()) {
         throw new Error("Customer name and phone are required.");
     }
 
     validateItems(input.items);
 
-    if (input.items.length !== 1) {
-        throw new Error("Seller order creation currently supports one product at a time.");
-    }
+    const items = input.items.map(item => ({
+        ...item,
+        total: item.quantity * item.unitPrice
+    }));
 
-    const execution = await functions.createExecution(
-        CREATE_SELLER_ORDER_FUNCTION_ID,
-        JSON.stringify({
-            operation: "createSellerOrder",
+    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+    const contactedAt = new Date().toISOString();
+
+    const orderDocument = await databases.createDocument(
+        DB_ID,
+        ORDERS_COLLECTION_ID,
+        ID.unique(),
+        {
             checkoutSessionId: input.checkoutSessionId,
             sellerId: input.sellerId,
-            customerName: input.customerName,
-            customerEmail: input.customerEmail ?? null,
-            customerPhone: input.customerPhone,
-            productId: input.items[0].productId
-        }),
-        false
+            customerId,
+            status: "contacted",
+            source: "whatsapp",
+            subtotal,
+            total: subtotal,
+            customerName: input.customerName.trim(),
+            customerEmail: input.customerEmail?.trim() || null,
+            customerPhone: input.customerPhone.trim(),
+            contactedAt,
+            purchasedAt: null,
+            cancelledAt: null
+        },
+        buildOrderPermissions(customerId, input.sellerId)
     );
 
-    if (
-        execution.responseStatusCode < 200 ||
-        execution.responseStatusCode >= 300
-    ) {
-        let message = "Could not create the seller lead.";
-        try {
-            const response = JSON.parse(execution.responseBody || "{}");
-            if (typeof response.error === "string" && response.error) {
-                message = response.error;
-            }
-        } catch {
-            // Keep the generic message when the function response is not JSON.
-        }
-        throw new Error(message);
+    const createdItems: OrderItem[] = [];
+
+    for (const item of items) {
+        const itemDocument = await databases.createDocument(
+            DB_ID,
+            ORDER_ITEMS_COLLECTION_ID,
+            ID.unique(),
+            {
+                orderId: orderDocument.$id,
+                productId: item.productId,
+                productTitle: item.productTitle,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.total,
+                imageUrl: item.imageUrl ?? null
+            },
+            buildOrderItemPermissions(customerId, input.sellerId)
+        );
+
+        createdItems.push(toOrderItem(itemDocument as OrderItemDocument));
     }
 
-    try {
-        const response = JSON.parse(execution.responseBody || "{}");
-        if (!response.ok || !response.order || !response.item) {
-            throw new Error("Could not create the seller lead.");
-        }
-
-        return {
-            order: toOrder(response.order as OrderDocument),
-            items: [toOrderItem(response.item as OrderItemDocument)]
-        };
-    } catch (error) {
-        if (error instanceof Error && error.message !== "Could not create the seller lead.") {
-            throw error;
-        }
-        throw new Error("Could not create the seller lead.");
-    }
+    return {
+        order: toOrder(orderDocument as OrderDocument),
+        items: createdItems
+    };
 }
 
-export async function listSellerOrders(sellerId: string, limit = 100): Promise<Order[]> {
+export async function listSellerOrders(
+    sellerId: string,
+    limit = 100
+): Promise<Order[]> {
     assertOrderConfig();
+
     const currentUserId = await requireCurrentUserId();
 
     if (currentUserId !== sellerId) {
         throw new Error("You can only access your own orders.");
     }
 
-    const response = await databases.listDocuments(DB_ID, ORDERS_COLLECTION_ID, [
-        Query.equal("sellerId", sellerId),
-        Query.orderDesc("$createdAt"),
-        Query.limit(limit)
-    ]);
+    const response = await databases.listDocuments(
+        DB_ID,
+        ORDERS_COLLECTION_ID,
+        [
+            Query.equal("sellerId", sellerId),
+            Query.orderDesc("$createdAt"),
+            Query.limit(limit)
+        ]
+    );
 
-    return response.documents.map(document => toOrder(document as OrderDocument));
+    return response.documents.map(document =>
+        toOrder(document as OrderDocument)
+    );
 }
 
 export async function listCustomerOrders(limit = 100): Promise<Order[]> {
     assertOrderConfig();
+
     const customerId = await requireCurrentUserId();
 
-    const response = await databases.listDocuments(DB_ID, ORDERS_COLLECTION_ID, [
-        Query.equal("customerId", customerId),
-        Query.orderDesc("$createdAt"),
-        Query.limit(limit)
-    ]);
+    const response = await databases.listDocuments(
+        DB_ID,
+        ORDERS_COLLECTION_ID,
+        [
+            Query.equal("customerId", customerId),
+            Query.orderDesc("$createdAt"),
+            Query.limit(limit)
+        ]
+    );
 
-    return response.documents.map(document => toOrder(document as OrderDocument));
+    return response.documents.map(document =>
+        toOrder(document as OrderDocument)
+    );
 }
 
 export async function getOrder(orderId: string): Promise<Order> {
     assertOrderConfig();
-    if (!orderId.trim()) throw new Error("orderId is required.");
 
-    await requireCurrentUserId();
+    if (!orderId.trim()) {
+        throw new Error("orderId is required.");
+    }
 
-    const document = await databases.getDocument(DB_ID, ORDERS_COLLECTION_ID, orderId);
-    return toOrder(document as OrderDocument);
+    const currentUserId = await requireCurrentUserId();
+    const document = await databases.getDocument(
+        DB_ID,
+        ORDERS_COLLECTION_ID,
+        orderId
+    ) as OrderDocument;
+
+    if (
+        document.customerId !== currentUserId &&
+        document.sellerId !== currentUserId
+    ) {
+        throw new Error("You do not have access to this order.");
+    }
+
+    return toOrder(document);
 }
 
 export async function listOrderItems(orderId: string): Promise<OrderItem[]> {
     assertOrderConfig();
-    if (!orderId.trim()) throw new Error("orderId is required.");
 
-    await requireCurrentUserId();
+    if (!orderId.trim()) {
+        throw new Error("orderId is required.");
+    }
 
-    const response = await databases.listDocuments(DB_ID, ORDER_ITEMS_COLLECTION_ID, [
-        Query.equal("orderId", orderId),
-        Query.orderAsc("$createdAt"),
-        Query.limit(100)
-    ]);
+    await getOrder(orderId);
 
-    return response.documents.map(document => toOrderItem(document as OrderItemDocument));
+    const response = await databases.listDocuments(
+        DB_ID,
+        ORDER_ITEMS_COLLECTION_ID,
+        [
+            Query.equal("orderId", orderId),
+            Query.orderAsc("$createdAt"),
+            Query.limit(100)
+        ]
+    );
+
+    return response.documents.map(document =>
+        toOrderItem(document as OrderItemDocument)
+    );
 }
 
 export async function markOrderPurchased(orderId: string): Promise<Order> {
     assertOrderConfig();
-    await requireCurrentUserId();
 
-    if (!orderId.trim()) throw new Error("orderId is required.");
-
-    const execution = await functions.createExecution(
-        CREATE_SELLER_ORDER_FUNCTION_ID,
-        JSON.stringify({
-            operation: "markSellerOrderPurchased",
-            orderId
-        }),
-        false
-    );
-
-    if (
-        execution.responseStatusCode < 200 ||
-        execution.responseStatusCode >= 300
-    ) {
-        let message = "Unable to mark this order as purchased.";
-        try {
-            const response = JSON.parse(execution.responseBody || "{}");
-            if (typeof response.error === "string" && response.error) {
-                message = response.error;
-            }
-        } catch {
-            // Keep the generic message when the function response is not JSON.
-        }
-        throw new Error(message);
-    }
-
-    try {
-        const response = JSON.parse(execution.responseBody || "{}");
-        if (!response.ok || !response.order) {
-            throw new Error("Unable to mark this order as purchased.");
-        }
-        return toOrder(response.order as OrderDocument);
-    } catch (error) {
-        if (
-            error instanceof Error &&
-            error.message !== "Unable to mark this order as purchased."
-        ) {
-            throw error;
-        }
-        throw new Error("Unable to mark this order as purchased.");
-    }
-}
-
-
-export async function undoOrderPurchased(orderId: string): Promise<Order> {
-    assertOrderConfig();
-    await requireCurrentUserId();
-
-    if (!orderId.trim()) throw new Error("orderId is required.");
-
-    const execution = await functions.createExecution(
-        CREATE_SELLER_ORDER_FUNCTION_ID,
-        JSON.stringify({
-            operation: "undoSellerOrderPurchase",
-            orderId
-        }),
-        false
-    );
-
-    if (
-        execution.responseStatusCode < 200 ||
-        execution.responseStatusCode >= 300
-    ) {
-        let message = "Unable to undo this purchase.";
-        try {
-            const response = JSON.parse(execution.responseBody || "{}");
-            if (typeof response.error === "string" && response.error) {
-                message = response.error;
-            }
-        } catch {
-            // Keep the generic message when the function response is not JSON.
-        }
-        throw new Error(message);
-    }
-
-    try {
-        const response = JSON.parse(execution.responseBody || "{}");
-        if (!response.ok || !response.order) {
-            throw new Error("Unable to undo this purchase.");
-        }
-        return toOrder(response.order as OrderDocument);
-    } catch (error) {
-        if (
-            error instanceof Error &&
-            error.message !== "Unable to undo this purchase."
-        ) {
-            throw error;
-        }
-        throw new Error("Unable to undo this purchase.");
-    }
-}
-
-export async function markOrderCancelled(orderId: string): Promise<Order> {
-    assertOrderConfig();
     const sellerId = await requireCurrentUserId();
 
-    if (!orderId.trim()) throw new Error("orderId is required.");
+    if (!orderId.trim()) {
+        throw new Error("orderId is required.");
+    }
 
     const existing = await databases.getDocument(
         DB_ID,
@@ -397,6 +369,44 @@ export async function markOrderCancelled(orderId: string): Promise<Order> {
     if (existing.sellerId !== sellerId) {
         throw new Error("You can only update your own orders.");
     }
+
+    if (existing.status !== "contacted") {
+        throw new Error("Only contacted orders can be marked as purchased.");
+    }
+
+    const document = await databases.updateDocument(
+        DB_ID,
+        ORDERS_COLLECTION_ID,
+        orderId,
+        {
+            status: "purchased",
+            purchasedAt: new Date().toISOString(),
+            cancelledAt: null
+        }
+    );
+
+    return toOrder(document as OrderDocument);
+}
+
+export async function markOrderCancelled(orderId: string): Promise<Order> {
+    assertOrderConfig();
+
+    const sellerId = await requireCurrentUserId();
+
+    if (!orderId.trim()) {
+        throw new Error("orderId is required.");
+    }
+
+    const existing = await databases.getDocument(
+        DB_ID,
+        ORDERS_COLLECTION_ID,
+        orderId
+    ) as OrderDocument;
+
+    if (existing.sellerId !== sellerId) {
+        throw new Error("You can only update your own orders.");
+    }
+
     if (existing.status !== "contacted") {
         throw new Error("Only contacted orders can be cancelled.");
     }
@@ -405,7 +415,10 @@ export async function markOrderCancelled(orderId: string): Promise<Order> {
         DB_ID,
         ORDERS_COLLECTION_ID,
         orderId,
-        { status: "cancelled", cancelledAt: new Date().toISOString() }
+        {
+            status: "cancelled",
+            cancelledAt: new Date().toISOString()
+        }
     );
 
     return toOrder(document as OrderDocument);
