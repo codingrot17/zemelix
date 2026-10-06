@@ -72,6 +72,7 @@ export default function ProductDetailPage() {
     const [whatsappPhoneRequired, setWhatsappPhoneRequired] = useState(false);
     const [bookingOpen, setBookingOpen] = useState(false);
     const [bookingDateTime, setBookingDateTime] = useState("");
+    const [bookingPhone, setBookingPhone] = useState("");
     const [bookingMode, setBookingMode] = useState("In person");
     const [bookingLocation, setBookingLocation] = useState("");
     const [bookingNotes, setBookingNotes] = useState("");
@@ -237,10 +238,10 @@ export default function ProductDetailPage() {
             if (!account?.$id) throw new Error("Please sign in before requesting a booking.");
             const profile = await getUserProfile(account.$id);
             const customerName = profile?.fullName?.trim() || account.name?.trim() || "";
-            const customerPhone = profile?.phoneNumber?.trim() || account.phone?.trim() || "";
+            const customerPhone = bookingPhone.trim() || profile?.phoneNumber?.trim() || account.phone?.trim() || "";
             const customerEmail = profile?.email?.trim() || account.email?.trim() || "";
             if (!customerName) throw new Error("Please add your name to your profile first.");
-            if (!customerPhone) throw new Error("Please add your phone number to your profile first.");
+            if (!customerPhone) throw new Error("Please enter your phone number.");
             if (!bookingDateTime) throw new Error("Choose a preferred date and time.");
             const localDate = new Date(bookingDateTime);
             if (Number.isNaN(localDate.getTime()) || localDate.getTime() <= Date.now()) {
@@ -260,6 +261,7 @@ export default function ProductDetailPage() {
             setBookingSuccess(true);
             setBookingOpen(false);
             setBookingDateTime("");
+            setBookingPhone("");
             setBookingLocation("");
             setBookingNotes("");
         } catch (err) {
@@ -554,6 +556,9 @@ export default function ProductDetailPage() {
                                 <h2 className="font-semibold text-gray-900 dark:text-white">Request a booking</h2>
                                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Choose a preferred time. The provider will confirm the request.</p>
                             </div>
+                            <label className="block text-sm font-medium">Phone number
+                                <input type="tel" required value={bookingPhone} onChange={e=>setBookingPhone(e.target.value)} placeholder="e.g. 08012345678" className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
+                            </label>
                             <label className="block text-sm font-medium">Preferred date & time
                                 <input type="datetime-local" required value={bookingDateTime} onChange={e=>setBookingDateTime(e.target.value)} className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
                             </label>
