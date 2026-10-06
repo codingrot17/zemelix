@@ -92,7 +92,7 @@ export function getVendorCapabilities(
 }
 
 export interface VendorProfile {
-    vendorType?: VendorType | null;
+    vendorType?: string | null;
     businessCategory?: string | null;
     businessName?: string | null;
     businessDescription?: string | null;
