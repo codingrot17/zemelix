@@ -1,9 +1,10 @@
 import { ID, Permission, Query, Role } from "appwrite";
-import { databases, DB_ID } from "@/lib/appwrite/client";
+import { databases, DB_ID, functions } from "@/lib/appwrite/client";
 import { getCurrentAccount } from "@/lib/appwrite/account";
 
 const ORDERS_COLLECTION_ID = "orders";
 const ORDER_ITEMS_COLLECTION_ID = "order_items";
+const PUBLIC_SELLER_PROFILE_FUNCTION_ID = "public-seller-profile";
 
 export type OrderStatus = "contacted" | "purchased" | "cancelled";
 
@@ -185,7 +186,7 @@ export async function createSellerOrder(
 ): Promise<{ order: Order; items: OrderItem[] }> {
     assertOrderConfig();
 
-    const customerId = await requireCurrentUserId();
+    await requireCurrentUserId();
 
     if (!input.sellerId.trim()) {
         throw new Error("sellerId is required.");
@@ -199,61 +200,62 @@ export async function createSellerOrder(
 
     validateItems(input.items);
 
-    const items = input.items.map(item => ({
-        ...item,
-        total: item.quantity * item.unitPrice
-    }));
+    if (input.items.length !== 1 || input.items[0].quantity !== 1) {
+        throw new Error("Single-product lead creation requires exactly one item.");
+    }
 
-    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-    const contactedAt = new Date().toISOString();
+    const item = input.items[0];
 
-    const orderDocument = await databases.createDocument(
-        DB_ID,
-        ORDERS_COLLECTION_ID,
-        ID.unique(),
-        {
-            checkoutSessionId: input.checkoutSessionId,
-            sellerId: input.sellerId,
-            customerId,
-            status: "contacted",
-            source: "whatsapp",
-            subtotal,
-            total: subtotal,
+    const execution = await functions.createExecution(
+        PUBLIC_SELLER_PROFILE_FUNCTION_ID,
+        JSON.stringify({
+            operation: "createSellerOrder",
+            sellerId: input.sellerId.trim(),
+            productId: item.productId.trim(),
+            checkoutSessionId: input.checkoutSessionId.trim(),
             customerName: input.customerName.trim(),
             customerEmail: input.customerEmail?.trim() || null,
-            customerPhone: input.customerPhone.trim(),
-            contactedAt,
-            purchasedAt: null,
-            cancelledAt: null
-        },
-        buildOrderPermissions(customerId, input.sellerId)
+            customerPhone: input.customerPhone.trim()
+        })
     );
 
-    const createdItems: OrderItem[] = [];
+    if (execution.responseStatusCode < 200 || execution.responseStatusCode >= 300) {
+        let message = "Could not create the WhatsApp lead.";
+        try {
+            const body = JSON.parse(execution.responseBody || "{}");
+            if (typeof body.error === "string" && body.error.trim()) {
+                message = body.error;
+            }
+        } catch {
+            // Keep the generic error when the Function response is not JSON.
+        }
+        throw new Error(message);
+    }
 
-    for (const item of items) {
-        const itemDocument = await databases.createDocument(
-            DB_ID,
-            ORDER_ITEMS_COLLECTION_ID,
-            ID.unique(),
-            {
-                orderId: orderDocument.$id,
-                productId: item.productId,
-                productTitle: item.productTitle,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                total: item.total,
-                imageUrl: item.imageUrl ?? null
-            },
-            buildOrderItemPermissions(customerId, input.sellerId)
+    let responseBody: {
+        ok?: boolean;
+        order?: OrderDocument;
+        item?: OrderItemDocument;
+        error?: string;
+    };
+
+    try {
+        responseBody = JSON.parse(execution.responseBody || "{}");
+    } catch {
+        throw new Error("The seller lead Function returned an invalid response.");
+    }
+
+    if (!responseBody.ok || !responseBody.order || !responseBody.item) {
+        throw new Error(
+            typeof responseBody.error === "string" && responseBody.error.trim()
+                ? responseBody.error
+                : "Could not create the WhatsApp lead."
         );
-
-        createdItems.push(toOrderItem(itemDocument as OrderItemDocument));
     }
 
     return {
-        order: toOrder(orderDocument as OrderDocument),
-        items: createdItems
+        order: toOrder(responseBody.order),
+        items: [toOrderItem(responseBody.item)]
     };
 }
 
