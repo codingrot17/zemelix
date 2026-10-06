@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle, ChevronDown, Loader2, MessageCircle, Package, RefreshCw, Undo2 } from "lucide-react";
+import { Archive, ArchiveRestore, AlertCircle, CheckCircle, ChevronDown, Loader2, MessageCircle, Package, RefreshCw, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -7,6 +7,7 @@ import {
     listSellerOrders,
     markOrderPurchased,
     undoOrderPurchased,
+    setOrderArchived,
     type Order,
     type OrderItem
 } from "@/services/order.service";
@@ -37,7 +38,7 @@ export default function SellerOrders() {
     const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
     const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
     const [error, setError] = useState<string | null>(null);
-    const [view, setView] = useState<"active" | "history">("active");
+    const [view, setView] = useState<"active" | "history" | "archived">("active");
 
     async function loadOrders() {
         if (!user?.$id) {
@@ -119,6 +120,39 @@ export default function SellerOrders() {
         }
     }
 
+    async function handleArchive(orderId: string, archived: boolean) {
+        const confirmed = window.confirm(
+            archived
+                ? "Archive this lead? It will leave Active but remain available in Archived."
+                : "Restore this lead to Active?"
+        );
+
+        if (!confirmed) return;
+
+        setUpdatingOrderId(orderId);
+        setError(null);
+
+        try {
+            const updatedOrder = await setOrderArchived(orderId, archived);
+            setOrders(current =>
+                current.map(order =>
+                    order.$id === orderId
+                        ? { ...order, ...updatedOrder }
+                        : order
+                )
+            );
+        } catch (err) {
+            console.error("Failed to update lead archive state.", err);
+            setError(
+                archived
+                    ? "Unable to archive this lead. Please try again."
+                    : "Unable to restore this lead. Please try again."
+            );
+        } finally {
+            setUpdatingOrderId(null);
+        }
+    }
+
     function toggleOrderDetails(orderId: string) {
         setExpandedOrderIds(current => {
             const next = new Set(current);
@@ -134,6 +168,7 @@ export default function SellerOrders() {
     const contactedCount = orders.filter(order => order.status === "contacted").length;
     const purchasedCount = orders.filter(order => order.status === "purchased").length;
     const cancelledCount = orders.filter(order => order.status === "cancelled").length;
+    const archivedCount = orders.filter(order => order.isArchived && order.status === "contacted").length;
     const visibleOrders = useMemo(
         () =>
             orders.filter(order =>
@@ -201,7 +236,7 @@ export default function SellerOrders() {
                         size="sm"
                         onClick={() => setView("active")}
                     >
-                        Active ({contactedCount})
+                        Active ({contactedCount - archivedCount})
                     </Button>
                     <Button
                         variant={view === "history" ? "default" : "ghost"}
@@ -209,6 +244,13 @@ export default function SellerOrders() {
                         onClick={() => setView("history")}
                     >
                         History ({purchasedCount + cancelledCount})
+                    </Button>
+                    <Button
+                        variant={view === "archived" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setView("archived")}
+                    >
+                        Archived ({archivedCount})
                     </Button>
                 </div>
 
@@ -221,12 +263,18 @@ export default function SellerOrders() {
                     <div className="p-12 text-center">
                         <MessageCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                         <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                            {view === "active" ? "No active leads" : "No order history"}
+                            {view === "active"
+                                ? "No active leads"
+                                : view === "archived"
+                                    ? "No archived leads"
+                                    : "No order history"}
                         </h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             {view === "active"
                                 ? "New WhatsApp leads will appear here until they are purchased or cancelled."
-                                : "Purchased and cancelled orders will remain here as your history."}
+                                : view === "archived"
+                                    ? "Archived leads remain here until you restore them."
+                                    : "Purchased and cancelled orders will remain here as your history."}
                         </p>
                     </div>
                 ) : (
@@ -324,21 +372,40 @@ export default function SellerOrders() {
                                         </div>
                                     )}
 
+
                                     {order.status === "contacted" && (
-                                        <div className="flex justify-end">
+                                        <div className="flex justify-end gap-2">
                                             <Button
-                                                onClick={() => void handleMarkPurchased(order.$id)}
+                                                variant="outline"
+                                                onClick={() => void handleArchive(order.$id, !order.isArchived)}
                                                 disabled={updatingOrderId !== null}
                                             >
                                                 {updatingOrderId === order.$id ? (
                                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                ) : order.isArchived ? (
+                                                    <ArchiveRestore className="w-4 h-4 mr-2" />
                                                 ) : (
-                                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                                    <Archive className="w-4 h-4 mr-2" />
                                                 )}
                                                 {updatingOrderId === order.$id
-                                                    ? "Marking Purchased…"
-                                                    : "Mark as Purchased"}
+                                                    ? order.isArchived ? "Restoring…" : "Archiving…"
+                                                    : order.isArchived ? "Restore Lead" : "Archive Lead"}
                                             </Button>
+                                            {!order.isArchived && (
+                                                <Button
+                                                    onClick={() => void handleMarkPurchased(order.$id)}
+                                                    disabled={updatingOrderId !== null}
+                                                >
+                                                    {updatingOrderId === order.$id ? (
+                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                    ) : (
+                                                        <CheckCircle className="w-4 h-4 mr-2" />
+                                                    )}
+                                                    {updatingOrderId === order.$id
+                                                        ? "Marking Purchased…"
+                                                        : "Mark as Purchased"}
+                                                </Button>
+                                            )}
                                         </div>
                                     )}
 
