@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Archive, ArchiveRestore, AlertCircle, CheckCircle, ChevronDown, Loader2, MessageCircle, Package, RefreshCw, Undo2 } from "lucide-react";
+import { Archive, ArchiveRestore, AlertCircle, CheckCircle, ChevronDown, Loader2, MessageCircle, Package, RefreshCw, Undo2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import {
     listOrderItems,
     listSellerOrders,
     markOrderPurchased,
+    markOrderCancelled,
     undoOrderPurchased,
     setOrderArchived,
     type Order,
@@ -88,6 +89,33 @@ export default function SellerOrders() {
         } catch (err) {
             console.error("Failed to mark order as purchased.", err);
             setError("Unable to mark this lead as purchased. Please try again.");
+        } finally {
+            setUpdatingOrderId(null);
+        }
+    }
+
+    async function handleCancel(orderId: string) {
+        const confirmed = window.confirm(
+            "Cancel this lead? It will move to History as Cancelled and cannot be returned to Active."
+        );
+
+        if (!confirmed) return;
+
+        setUpdatingOrderId(orderId);
+        setError(null);
+
+        try {
+            const updatedOrder = await markOrderCancelled(orderId);
+            setOrders(current =>
+                current.map(order =>
+                    order.$id === orderId
+                        ? { ...order, ...updatedOrder }
+                        : order
+                )
+            );
+        } catch (err) {
+            console.error("Failed to cancel order.", err);
+            setError("Unable to cancel this lead. Please try again.");
         } finally {
             setUpdatingOrderId(null);
         }
@@ -397,6 +425,22 @@ export default function SellerOrders() {
                                                     ? order.isArchived ? "Restoring…" : "Archiving…"
                                                     : order.isArchived ? "Restore Lead" : "Archive Lead"}
                                             </Button>
+                                            {!order.isArchived && (
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() => void handleCancel(order.$id)}
+                                                    disabled={updatingOrderId !== null}
+                                                >
+                                                    {updatingOrderId === order.$id ? (
+                                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                    ) : (
+                                                        <XCircle className="w-4 h-4 mr-2" />
+                                                    )}
+                                                    {updatingOrderId === order.$id
+                                                        ? "Cancelling…"
+                                                        : "Cancel Lead"}
+                                                </Button>
+                                            )}
                                             {!order.isArchived && (
                                                 <Button
                                                     onClick={() => void handleMarkPurchased(order.$id)}
