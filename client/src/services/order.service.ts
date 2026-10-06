@@ -53,6 +53,7 @@ export interface Order {
     contactedAt: string;
     purchasedAt: string | null;
     cancelledAt: string | null;
+    isArchived: boolean;
 }
 
 type OrderDocument = {
@@ -71,6 +72,7 @@ type OrderDocument = {
     contactedAt?: string;
     purchasedAt?: string | null;
     cancelledAt?: string | null;
+    isArchived?: boolean;
 };
 
 type OrderItemDocument = {
@@ -128,7 +130,8 @@ function toOrder(document: OrderDocument): Order {
         customerPhone: document.customerPhone ?? "",
         contactedAt: document.contactedAt ?? "",
         purchasedAt: document.purchasedAt ?? null,
-        cancelledAt: document.cancelledAt ?? null
+        cancelledAt: document.cancelledAt ?? null,
+        isArchived: document.isArchived === true
     };
 }
 
@@ -182,7 +185,7 @@ function buildOrderItemPermissions(customerId: string, sellerId: string) {
 }
 
 async function executeSellerOrderOperation(
-    operation: "markSellerOrderPurchased" | "undoSellerOrderPurchase",
+    operation: "markSellerOrderPurchased" | "undoSellerOrderPurchase" | "archiveSellerOrder" | "unarchiveSellerOrder",
     orderId: string
 ): Promise<Order> {
     const execution = await functions.createExecution(
@@ -440,6 +443,24 @@ export async function markOrderCancelled(orderId: string): Promise<Order> {
     );
 
     return toOrder(document as OrderDocument);
+}
+
+export async function setOrderArchived(
+    orderId: string,
+    archived: boolean
+): Promise<Order> {
+    assertOrderConfig();
+
+    await requireCurrentUserId();
+
+    if (!orderId.trim()) {
+        throw new Error("orderId is required.");
+    }
+
+    return executeSellerOrderOperation(
+        archived ? "archiveSellerOrder" : "unarchiveSellerOrder",
+        orderId
+    );
 }
 
 export async function undoOrderPurchased(orderId: string): Promise<Order> {
