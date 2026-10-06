@@ -112,8 +112,9 @@ export function CuratedCollectionsCarousel() {
             sellerId: product.sellerId,
             title: product.title,
             price: product.price,
-            imageUrl: product.imageUrl
+            imageUrl: product.imageUrl,
             sellerWhatsapp: product.sellerWhatsapp,
+
             sellerName: product.sellerName,
         });
         setAddedIds(prev => new Set(prev).add(product.id));
