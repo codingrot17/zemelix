@@ -40,8 +40,9 @@ export default function ProductCard({
             sellerId: product.sellerId,
             title: product.title,
             price: product.price,
-            imageUrl: product.imageUrl
+            imageUrl: product.imageUrl,
             sellerWhatsapp: product.sellerWhatsapp,
+
             sellerName: product.sellerName,
         });
         setAdded(true);
