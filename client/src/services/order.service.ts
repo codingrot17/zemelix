@@ -243,22 +243,19 @@ export async function createSellerOrder(
 
     validateItems(input.items);
 
-    if (input.items.length !== 1 || input.items[0].quantity !== 1) {
-        throw new Error("Single-product lead creation requires exactly one item.");
-    }
-
-    const item = input.items[0];
-
     const execution = await functions.createExecution(
         PUBLIC_SELLER_PROFILE_FUNCTION_ID,
         JSON.stringify({
             operation: "createSellerOrder",
             sellerId: input.sellerId.trim(),
-            productId: item.productId.trim(),
             checkoutSessionId: input.checkoutSessionId.trim(),
             customerName: input.customerName.trim(),
             customerEmail: input.customerEmail?.trim() || null,
-            customerPhone: input.customerPhone.trim()
+            customerPhone: input.customerPhone.trim(),
+            items: input.items.map(item => ({
+                productId: item.productId.trim(),
+                quantity: item.quantity
+            }))
         })
     );
 
@@ -278,6 +275,7 @@ export async function createSellerOrder(
     let responseBody: {
         ok?: boolean;
         order?: OrderDocument;
+        items?: OrderItemDocument[];
         item?: OrderItemDocument;
         error?: string;
     };
@@ -288,7 +286,12 @@ export async function createSellerOrder(
         throw new Error("The seller lead Function returned an invalid response.");
     }
 
-    if (!responseBody.ok || !responseBody.order || !responseBody.item) {
+    if (
+        !responseBody.ok ||
+        !responseBody.order ||
+        !Array.isArray(responseBody.items) ||
+        responseBody.items.length === 0
+    ) {
         throw new Error(
             typeof responseBody.error === "string" && responseBody.error.trim()
                 ? responseBody.error
@@ -298,7 +301,7 @@ export async function createSellerOrder(
 
     return {
         order: toOrder(responseBody.order),
-        items: [toOrderItem(responseBody.item)]
+        items: responseBody.items.map(item => toOrderItem(item))
     };
 }
 
