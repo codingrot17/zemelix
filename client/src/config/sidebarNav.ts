@@ -30,6 +30,7 @@ import {
       { label: "Dashboard", to: "/dashboard", icon: HiOutlineHome },
       { label: "My Products", to: "/dashboard/seller/products", icon: HiOutlineCollection },
       { label: "Orders", to: "/dashboard/seller/orders", icon: HiOutlineClipboardList },
+      { label: "Bookings", to: "/dashboard/seller/bookings", icon: HiOutlineClipboardList },
       { label: "Store Profile", to: "/dashboard/seller/profile", icon: HiOutlineUsers },
       { label: "Analytics", to: "/dashboard/seller/analytics", icon: HiOutlineChartPie },
       { label: "Notifications", to: "/dashboard/seller/notifications", icon: HiOutlineBell },
@@ -38,6 +39,7 @@ import {
     customer: [
       { label: "Dashboard", to: "/dashboard", icon: HiOutlineHome },
       { label: "My Orders", to: "/dashboard/user/orders", icon: HiOutlineShoppingCart },
+      { label: "My Bookings", to: "/dashboard/user/bookings", icon: HiOutlineClipboardList },
       { label: "Favorites", to: "/dashboard/user/favorites", icon: HiOutlineTag },
       { label: "Profile", to: "/dashboard/user/profile", icon: HiOutlineUserCircle },
       { label: "Notifications", to: "/dashboard/user/notifications", icon: HiOutlineBell },
