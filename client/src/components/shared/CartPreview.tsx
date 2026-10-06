@@ -41,7 +41,7 @@ export const CartPreview: React.FC<{ onClose?: () => void }> = ({ onClose }) => 
 
             const links: Array<{ sellerName: string; url: string }> = [];
             for (const group of sellerGroups) {
-                const sellerPhone = group.items[0]?.sellerWhatsapp;
+                const sellerPhone = String(group.items[0]?.sellerWhatsapp || "").trim();
                 if (!sellerPhone) throw new Error("A seller in your cart does not have a WhatsApp number configured.");
                 await createSellerOrder({
                     checkoutSessionId: crypto.randomUUID(),
@@ -57,7 +57,7 @@ export const CartPreview: React.FC<{ onClose?: () => void }> = ({ onClose }) => 
                         imageUrl: item.imageUrl || null
                     }))
                 });
-                links.push({ sellerName: group.items[0]?.sellerName || "Seller", url: buildWhatsAppUrl(sellerPhone, group.items) });
+                links.push({ sellerName: String(group.items[0]?.sellerName || "Seller"), url: buildWhatsAppUrl(sellerPhone, group.items) });
             }
             setSellerLinks(links);
             clear();
