@@ -1,6 +1,136 @@
 import { Client, Databases, ID, Permission, Role, Query } from "node-appwrite";
 
-const ORDERS_COLLECTION_ID = "orders";
+const ORDERS_COLLECTION_ID = "orders";\n
+const BOOKINGS_TABLE_ID = "bookings";
+const BOOKING_STATUSES = ["requested","accepted","declined","cancelled","completed","no_show","expired"];
+
+async function getBooking({ databases, databaseId, bookingId }) {
+    return databases.getDocument(databaseId, BOOKINGS_TABLE_ID, bookingId);
+}
+
+function bookingPermissions(buyerId, providerId) {
+    return [
+        Permission.read(Role.user(buyerId)),
+        Permission.read(Role.user(providerId)),
+    ];
+}
+
+async function createBookingRequest({ req, res, error, databases, databaseId, userCollectionId }) {
+    const buyerId = req.headers["x-appwrite-user-id"];
+    const body = req.bodyJson ?? {};
+    const {
+        serviceId, providerId, requestedDateTime, customerName, customerPhone,
+        customerEmail = null, serviceMode = null, serviceLocation = null, notes = null
+    } = body;
+
+    if (!buyerId) return jsonError(res, "You must be signed in to request a booking.", 401);
+    if (!isNonEmptyString(serviceId, 128) || !isValidSellerId(providerId)) return jsonError(res, "A valid service and provider are required.", 400);
+    if (!isNonEmptyString(requestedDateTime, 80) || Number.isNaN(Date.parse(requestedDateTime))) return jsonError(res, "A valid requested date and time are required.", 400);
+    if (new Date(requestedDateTime).getTime() <= Date.now()) return jsonError(res, "Requested date and time must be in the future.", 400);
+    if (!isNonEmptyString(customerName, 200) || !isNonEmptyString(customerPhone, 50)) return jsonError(res, "Customer name and phone are required.", 400);
+    if (customerEmail !== null && !isNonEmptyString(customerEmail, 320)) return jsonError(res, "Customer email is invalid.", 400);
+
+    try {
+        const provider = await databases.getDocument(databaseId, userCollectionId, providerId);
+        if (provider.role !== "seller" || provider.accountStatus !== "active" || provider.vendorStatus !== "active") {
+            return jsonError(res, "Service provider is not available.", 404);
+        }
+
+        const service = await databases.getDocument(databaseId, PRODUCTS_COLLECTION_ID, serviceId);
+        if (service.sellerId !== providerId || service.status !== "active" || service.vendorType !== "service") {
+            return jsonError(res, "Service is not available from this provider.", 400);
+        }
+
+        const booking = await databases.createDocument(
+            databaseId,
+            BOOKINGS_TABLE_ID,
+            ID.unique(),
+            {
+                buyerId,
+                providerId,
+                serviceId,
+                serviceTitleSnapshot: String(service.title ?? "").trim(),
+                priceSnapshot: toNumber(service.price),
+                requestedDateTime: new Date(requestedDateTime).toISOString(),
+                customerName: customerName.trim(),
+                customerPhone: customerPhone.trim(),
+                customerEmail: customerEmail?.trim() || null,
+                serviceMode: isNonEmptyString(serviceMode, 100) ? serviceMode.trim() : null,
+                serviceLocation: typeof serviceLocation === "string" ? serviceLocation.trim().slice(0, 2000) : null,
+                notes: typeof notes === "string" ? notes.trim().slice(0, 4000) : null,
+                status: "requested",
+                providerResponseAt: null,
+                completedAt: null,
+                cancelledAt: null,
+                cancellationReason: null,
+                isArchived: false,
+            },
+            bookingPermissions(buyerId, providerId)
+        );
+
+        return res.json({ ok: true, booking });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Provider or service not found.", 404);
+        error(err?.message ?? "Booking request creation failed.");
+        return jsonError(res, "Booking request creation failed.", 500);
+    }
+}
+
+async function mutateBooking({ req, res, error, databases, databaseId, action }) {
+    const actorId = req.headers["x-appwrite-user-id"];
+    const bookingId = req.bodyJson?.bookingId;
+    if (!actorId) return jsonError(res, "You must be signed in to update a booking.", 401);
+    if (!isNonEmptyString(bookingId, 128)) return jsonError(res, "A valid bookingId is required.", 400);
+
+    try {
+        const booking = await getBooking({ databases, databaseId, bookingId });
+        const isProvider = booking.providerId === actorId;
+        const isBuyer = booking.buyerId === actorId;
+        if (!isProvider && !isBuyer) return jsonError(res, "You can only update your own bookings.", 403);
+
+        const now = new Date().toISOString();
+        let data = null;
+
+        if (action === "acceptBooking" && isProvider && booking.status === "requested") {
+            data = { status: "accepted", providerResponseAt: now };
+        } else if (action === "declineBooking" && isProvider && booking.status === "requested") {
+            data = { status: "declined", providerResponseAt: now };
+        } else if (action === "cancelBooking" && ((isBuyer && ["requested","accepted"].includes(booking.status)) || (isProvider && ["requested","accepted"].includes(booking.status)))) {
+            data = { status: "cancelled", cancelledAt: now };
+        } else if (action === "completeBooking" && isProvider && booking.status === "accepted") {
+            data = { status: "completed", completedAt: now };
+        } else if (action === "noShowBooking" && isProvider && booking.status === "accepted") {
+            data = { status: "no_show", completedAt: now };
+        }
+
+        if (!data) return jsonError(res, "This booking cannot be updated with that action.", 409);
+        const updated = await databases.updateDocument(databaseId, BOOKINGS_TABLE_ID, bookingId, data);
+        return res.json({ ok: true, booking: updated });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Booking not found.", 404);
+        error(err?.message ?? "Booking update failed.");
+        return jsonError(res, "Booking update failed.", 500);
+    }
+}
+
+async function setBookingArchived({ req, res, error, databases, databaseId, archived }) {
+    const actorId = req.headers["x-appwrite-user-id"];
+    const bookingId = req.bodyJson?.bookingId;
+    if (!actorId) return jsonError(res, "You must be signed in to archive bookings.", 401);
+    if (!isNonEmptyString(bookingId, 128)) return jsonError(res, "A valid bookingId is required.", 400);
+
+    try {
+        const booking = await getBooking({ databases, databaseId, bookingId });
+        if (booking.providerId !== actorId) return jsonError(res, "Only the provider can archive bookings.", 403);
+        const updated = await databases.updateDocument(databaseId, BOOKINGS_TABLE_ID, bookingId, { isArchived: archived });
+        return res.json({ ok: true, booking: updated });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Booking not found.", 404);
+        error(err?.message ?? "Booking archive update failed.");
+        return jsonError(res, "Booking archive update failed.", 500);
+    }
+}
+
 const ORDER_ITEMS_COLLECTION_ID = "order_items";
 const PRODUCTS_COLLECTION_ID = "products";
 const PUBLIC_FIELDS = [
@@ -327,6 +457,18 @@ export default async ({ req, res, error }) => {
     const databases = new Databases(client);
     const body = req.bodyJson ?? {};
 
+    if (body.operation === "createBookingRequest") {
+        return createBookingRequest({ req, res, error, databases, databaseId, userCollectionId: collectionId });
+    }
+    if (["acceptBooking","declineBooking","cancelBooking","completeBooking","noShowBooking"].includes(body.operation)) {
+        return mutateBooking({ req, res, error, databases, databaseId, action: body.operation });
+    }
+    if (body.operation === "archiveBooking") {
+        return setBookingArchived({ req, res, error, databases, databaseId, archived: true });
+    }
+    if (body.operation === "unarchiveBooking") {
+        return setBookingArchived({ req, res, error, databases, databaseId, archived: false });
+    }
     if (body.operation === "createSellerOrder") {
         return createSellerOrder({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     }
