@@ -52,18 +52,33 @@ async function createSellerOrder({ req, res, error, databases, databaseId, userC
     if (!customerId) return jsonError(res, "You must be signed in to create an order.", 401);
 
     const body = req.bodyJson ?? {};
-    const { sellerId, productId, checkoutSessionId, customerName, customerPhone } = body;
+    const { sellerId, checkoutSessionId, customerName, customerPhone } = body;
     const customerEmail = body.customerEmail ?? null;
+    const items = Array.isArray(body.items) ? body.items : [];
 
-    if (!isValidSellerId(sellerId) || !isNonEmptyString(productId, 128)) {
-        return jsonError(res, "A valid sellerId and productId are required.", 400);
+    if (!isValidSellerId(sellerId)) {
+        return jsonError(res, "A valid sellerId is required.", 400);
     }
-    if (!isNonEmptyString(checkoutSessionId, 128)) return jsonError(res, "A valid checkoutSessionId is required.", 400);
+    if (!isNonEmptyString(checkoutSessionId, 128)) {
+        return jsonError(res, "A valid checkoutSessionId is required.", 400);
+    }
     if (!isNonEmptyString(customerName, 200) || !isNonEmptyString(customerPhone, 50)) {
         return jsonError(res, "Customer name and phone are required.", 400);
     }
     if (customerEmail !== null && !isNonEmptyString(customerEmail, 320)) {
         return jsonError(res, "Customer email is invalid.", 400);
+    }
+    if (
+        items.length === 0 ||
+        items.length > 50 ||
+        items.some(
+            item =>
+                !isNonEmptyString(item?.productId, 128) ||
+                !Number.isInteger(Number(item?.quantity)) ||
+                Number(item.quantity) < 1
+        )
+    ) {
+        return jsonError(res, "At least one valid order item is required.", 400);
     }
 
     try {
@@ -72,14 +87,40 @@ async function createSellerOrder({ req, res, error, databases, databaseId, userC
             return jsonError(res, "Seller is not available.", 404);
         }
 
-        const product = await databases.getDocument(databaseId, PRODUCTS_COLLECTION_ID, productId);
-        if (product.sellerId !== sellerId || product.status !== "active") {
-            return jsonError(res, "Product is not available from this seller.", 400);
+        const products = [];
+        const seenProductIds = new Set();
+
+        for (const item of items) {
+            const productId = item.productId.trim();
+            const quantity = Number(item.quantity);
+
+            if (seenProductIds.has(productId)) {
+                return jsonError(res, "Each product may only appear once per seller order.", 400);
+            }
+            seenProductIds.add(productId);
+
+            const product = await databases.getDocument(databaseId, PRODUCTS_COLLECTION_ID, productId);
+            if (product.sellerId !== sellerId || product.status !== "active") {
+                return jsonError(res, "Product is not available from this seller.", 400);
+            }
+
+            const unitPrice = toNumber(product.price);
+            const productTitle = typeof product.title === "string" ? product.title.trim() : "";
+            if (!productTitle || unitPrice < 0) return jsonError(res, "Product data is invalid.", 400);
+
+            products.push({
+                productId,
+                quantity,
+                productTitle,
+                unitPrice,
+                imageUrl: typeof product.imageUrl === "string" ? product.imageUrl : null
+            });
         }
 
-        const unitPrice = toNumber(product.price);
-        const productTitle = typeof product.title === "string" ? product.title.trim() : "";
-        if (!productTitle || unitPrice < 0) return jsonError(res, "Product data is invalid.", 400);
+        const subtotal = products.reduce(
+            (sum, item) => sum + item.unitPrice * item.quantity,
+            0
+        );
 
         const orderDocument = await databases.createDocument(
             databaseId,
@@ -91,8 +132,8 @@ async function createSellerOrder({ req, res, error, databases, databaseId, userC
                 customerId,
                 status: "contacted",
                 source: "whatsapp",
-                subtotal: unitPrice,
-                total: unitPrice,
+                subtotal,
+                total: subtotal,
                 customerName: customerName.trim(),
                 customerEmail: customerEmail?.trim() || null,
                 customerPhone: customerPhone.trim(),
@@ -104,22 +145,27 @@ async function createSellerOrder({ req, res, error, databases, databaseId, userC
         );
 
         try {
-            const itemDocument = await databases.createDocument(
-                databaseId,
-                ORDER_ITEMS_COLLECTION_ID,
-                ID.unique(),
-                {
-                    orderId: orderDocument.$id,
-                    productId,
-                    productTitle,
-                    quantity: 1,
-                    unitPrice,
-                    total: unitPrice,
-                    imageUrl: typeof product.imageUrl === "string" ? product.imageUrl : null,
-                },
-                [Permission.read(Role.user(customerId)), Permission.read(Role.user(sellerId))]
-            );
-            return res.json({ ok: true, order: orderDocument, item: itemDocument });
+            const createdItems = [];
+            for (const product of products) {
+                createdItems.push(
+                    await databases.createDocument(
+                        databaseId,
+                        ORDER_ITEMS_COLLECTION_ID,
+                        ID.unique(),
+                        {
+                            orderId: orderDocument.$id,
+                            productId: product.productId,
+                            productTitle: product.productTitle,
+                            quantity: product.quantity,
+                            unitPrice: product.unitPrice,
+                            total: product.unitPrice * product.quantity,
+                            imageUrl: product.imageUrl,
+                        },
+                        [Permission.read(Role.user(customerId)), Permission.read(Role.user(sellerId))]
+                    )
+                );
+            }
+            return res.json({ ok: true, order: orderDocument, items: createdItems });
         } catch (itemError) {
             try { await databases.deleteDocument(databaseId, ORDERS_COLLECTION_ID, orderDocument.$id); } catch { /* preserve original error */ }
             throw itemError;
@@ -130,7 +176,6 @@ async function createSellerOrder({ req, res, error, databases, databaseId, userC
         return jsonError(res, "Seller order creation failed.", 500);
     }
 }
-
 async function markSellerOrderPurchased({ req, res, error, databases, databaseId }) {
     const sellerId = req.headers["x-appwrite-user-id"];
     const orderId = req.bodyJson?.orderId;
