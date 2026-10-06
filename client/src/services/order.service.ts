@@ -181,6 +181,46 @@ function buildOrderItemPermissions(customerId: string, sellerId: string) {
     ];
 }
 
+async function executeSellerOrderOperation(
+    operation: "markSellerOrderPurchased" | "undoSellerOrderPurchase",
+    orderId: string
+): Promise<Order> {
+    const execution = await functions.createExecution(
+        PUBLIC_SELLER_PROFILE_FUNCTION_ID,
+        JSON.stringify({ operation, orderId: orderId.trim() })
+    );
+
+    if (execution.responseStatusCode < 200 || execution.responseStatusCode >= 300) {
+        let message = "Could not update the seller order.";
+        try {
+            const body = JSON.parse(execution.responseBody || "{}");
+            if (typeof body.error === "string" && body.error.trim()) {
+                message = body.error;
+            }
+        } catch {
+            // Keep the generic error when the Function response is not JSON.
+        }
+        throw new Error(message);
+    }
+
+    try {
+        const body = JSON.parse(execution.responseBody || "{}");
+        if (!body.ok || !body.order) {
+            throw new Error(
+                typeof body.error === "string" && body.error.trim()
+                    ? body.error
+                    : "Could not update the seller order."
+            );
+        }
+        return toOrder(body.order as OrderDocument);
+    } catch (error) {
+        if (error instanceof Error && error.message !== "Unexpected end of JSON input") {
+            throw error;
+        }
+        throw new Error("The seller order Function returned an invalid response.");
+    }
+}
+
 export async function createSellerOrder(
     input: CreateSellerOrderInput
 ): Promise<{ order: Order; items: OrderItem[] }> {
@@ -357,38 +397,13 @@ export async function listOrderItems(orderId: string): Promise<OrderItem[]> {
 export async function markOrderPurchased(orderId: string): Promise<Order> {
     assertOrderConfig();
 
-    const sellerId = await requireCurrentUserId();
+    await requireCurrentUserId();
 
     if (!orderId.trim()) {
         throw new Error("orderId is required.");
     }
 
-    const existing = await databases.getDocument(
-        DB_ID,
-        ORDERS_COLLECTION_ID,
-        orderId
-    ) as OrderDocument;
-
-    if (existing.sellerId !== sellerId) {
-        throw new Error("You can only update your own orders.");
-    }
-
-    if (existing.status !== "contacted") {
-        throw new Error("Only contacted orders can be marked as purchased.");
-    }
-
-    const document = await databases.updateDocument(
-        DB_ID,
-        ORDERS_COLLECTION_ID,
-        orderId,
-        {
-            status: "purchased",
-            purchasedAt: new Date().toISOString(),
-            cancelledAt: null
-        }
-    );
-
-    return toOrder(document as OrderDocument);
+    return executeSellerOrderOperation("markSellerOrderPurchased", orderId);
 }
 
 export async function markOrderCancelled(orderId: string): Promise<Order> {
@@ -429,36 +444,12 @@ export async function markOrderCancelled(orderId: string): Promise<Order> {
 
 export async function undoOrderPurchased(orderId: string): Promise<Order> {
     assertOrderConfig();
-    const sellerId = await requireCurrentUserId();
+
+    await requireCurrentUserId();
 
     if (!orderId.trim()) {
         throw new Error("orderId is required.");
     }
 
-    const existing = await databases.getDocument(
-        DB_ID,
-        ORDERS_COLLECTION_ID,
-        orderId
-    ) as OrderDocument;
-
-    if (existing.sellerId !== sellerId) {
-        throw new Error("You can only update your own orders.");
-    }
-
-    if (existing.status !== "purchased") {
-        throw new Error("Only purchased orders can be undone.");
-    }
-
-    const document = await databases.updateDocument(
-        DB_ID,
-        ORDERS_COLLECTION_ID,
-        orderId,
-        {
-            status: "contacted",
-            purchasedAt: null,
-            cancelledAt: null
-        }
-    );
-
-    return toOrder(document as OrderDocument);
+    return executeSellerOrderOperation("undoSellerOrderPurchase", orderId);
 }
