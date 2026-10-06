@@ -1,6 +1,7 @@
 import { Client, Databases, ID, Permission, Role, Query } from "node-appwrite";
 
-const ORDERS_COLLECTION_ID = "orders";\n
+const ORDERS_COLLECTION_ID = "orders";
+
 const BOOKINGS_TABLE_ID = "bookings";
 const BOOKING_STATUSES = ["requested","accepted","declined","cancelled","completed","no_show","expired"];
 
