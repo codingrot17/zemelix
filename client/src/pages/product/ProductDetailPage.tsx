@@ -134,6 +134,7 @@ export default function ProductDetailPage() {
             price: product.price,
             imageUrl: product.imageUrl
             sellerWhatsapp: product.sellerWhatsapp,
+            sellerName: product.sellerName,
         });
         setAdded(true);
         setTimeout(() => setAdded(false), 2000);
