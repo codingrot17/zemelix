@@ -236,10 +236,9 @@ async function undoSellerOrderPurchase({ req, res, error, databases, databaseId 
     }
 }
 
-async function setSellerOrderArchived({ req, res, error, databases, databaseId }) {
+async function setSellerOrderArchived({ req, res, error, databases, databaseId, archived }) {
     const sellerId = req.headers["x-appwrite-user-id"];
     const orderId = req.bodyJson?.orderId;
-    const archived = req.bodyJson?.archived;
 
     if (!sellerId) return jsonError(res, "You must be signed in to archive orders.", 401);
     if (!isNonEmptyString(orderId, 128)) return jsonError(res, "A valid orderId is required.", 400);
@@ -293,12 +292,10 @@ export default async ({ req, res, error }) => {
         return undoSellerOrderPurchase({ req, res, error, databases, databaseId });
     }
     if (body.operation === "archiveSellerOrder") {
-        req.bodyJson.archived = true;
-        return setSellerOrderArchived({ req, res, error, databases, databaseId });
+        return setSellerOrderArchived({ req, res, error, databases, databaseId, archived: true });
     }
     if (body.operation === "unarchiveSellerOrder") {
-        req.bodyJson.archived = false;
-        return setSellerOrderArchived({ req, res, error, databases, databaseId });
+        return setSellerOrderArchived({ req, res, error, databases, databaseId, archived: false });
     }
 
     const sellerId = body.sellerId;
