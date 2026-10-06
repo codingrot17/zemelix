@@ -67,6 +67,7 @@ export function FeaturedListingsCarousel() {
             title: product.title,
             price: product.price,
             imageUrl: product.imageUrl
+            sellerWhatsapp: product.sellerWhatsapp,
         });
         setAddedIds(prev => new Set(prev).add(product.id));
         setTimeout(
