@@ -133,6 +133,7 @@ export default function ProductDetailPage() {
             title: product.title,
             price: product.price,
             imageUrl: product.imageUrl
+            sellerWhatsapp: product.sellerWhatsapp,
         });
         setAdded(true);
         setTimeout(() => setAdded(false), 2000);
