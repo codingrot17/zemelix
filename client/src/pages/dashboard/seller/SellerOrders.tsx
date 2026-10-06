@@ -408,8 +408,8 @@ export default function SellerOrders() {
 
 
                                     {order.status === "contacted" && (
-                                        <div className="flex justify-end gap-2">
-                                            <Button
+                                        <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+                                            <Button className="w-full sm:w-auto"
                                                 variant="outline"
                                                 onClick={() => void handleArchive(order.$id, !order.isArchived)}
                                                 disabled={updatingOrderId !== null}
@@ -443,6 +443,7 @@ export default function SellerOrders() {
                                             )}
                                             {!order.isArchived && (
                                                 <Button
+                                                    className="w-full sm:w-auto"
                                                     onClick={() => void handleMarkPurchased(order.$id)}
                                                     disabled={updatingOrderId !== null}
                                                 >
