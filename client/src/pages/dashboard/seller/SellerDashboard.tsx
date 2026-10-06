@@ -10,13 +10,20 @@ import {
     CheckCircle,
     AlertCircle,
     Store,
-    Loader2
+    Loader2,
+    MessageCircle,
+    DollarSign,
+    XCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     listSellerProducts,
     type SellerProduct
 } from "@/services/product.service";
+import {
+    listSellerOrders,
+    type Order
+} from "@/services/order.service";
 
 function StatusBadge({ status }: { status: string }) {
     const styles: Record<string, string> = {
@@ -41,6 +48,7 @@ export default function SellerDashboard() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [products, setProducts] = useState<SellerProduct[]>([]);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -51,9 +59,10 @@ export default function SellerDashboard() {
     useEffect(() => {
         let cancelled = false;
 
-        async function loadProducts() {
+        async function loadDashboard() {
             if (!user?.$id) {
                 setProducts([]);
+                setOrders([]);
                 setLoading(false);
                 return;
             }
@@ -62,20 +71,28 @@ export default function SellerDashboard() {
             setError(null);
 
             try {
-                const sellerProducts = await listSellerProducts(user.$id);
-                if (!cancelled) setProducts(sellerProducts);
+                const [sellerProducts, sellerOrders] = await Promise.all([
+                    listSellerProducts(user.$id),
+                    listSellerOrders(user.$id)
+                ]);
+
+                if (!cancelled) {
+                    setProducts(sellerProducts);
+                    setOrders(sellerOrders);
+                }
             } catch (err) {
-                console.error("Failed to load seller dashboard products.", err);
+                console.error("Failed to load seller dashboard data.", err);
                 if (!cancelled) {
                     setProducts([]);
-                    setError("Unable to load your products right now.");
+                    setOrders([]);
+                    setError("Unable to load your dashboard data right now.");
                 }
             } finally {
                 if (!cancelled) setLoading(false);
             }
         }
 
-        void loadProducts();
+        void loadDashboard();
 
         return () => {
             cancelled = true;
@@ -108,6 +125,23 @@ export default function SellerDashboard() {
         [products]
     );
     const recentProducts = products.slice(0, 3);
+    const activeLeads = useMemo(
+        () => orders.filter(order => order.status === "contacted" && !order.isArchived),
+        [orders]
+    );
+    const purchasedOrders = useMemo(
+        () => orders.filter(order => order.status === "purchased"),
+        [orders]
+    );
+    const cancelledOrders = useMemo(
+        () => orders.filter(order => order.status === "cancelled"),
+        [orders]
+    );
+    const purchasedRevenue = useMemo(
+        () => purchasedOrders.reduce((sum, order) => sum + order.total, 0),
+        [purchasedOrders]
+    );
+
 
     return (
         <div className="space-y-6">
@@ -207,6 +241,51 @@ export default function SellerDashboard() {
                     }
                     color="purple"
                 />
+            </div>
+
+            <div>
+                <div className="flex items-center justify-between mb-3">
+                    <div>
+                        <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                            Leads & Revenue
+                        </h2>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Your current lead pipeline and confirmed sales
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => navigate("/dashboard/seller/orders")}
+                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                    >
+                        View orders →
+                    </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard
+                        icon={<MessageCircle className="w-6 h-6" />}
+                        label="Active Leads"
+                        value={loading ? "…" : activeLeads.length.toString()}
+                        color="indigo"
+                    />
+                    <StatCard
+                        icon={<CheckCircle className="w-6 h-6" />}
+                        label="Purchased Orders"
+                        value={loading ? "…" : purchasedOrders.length.toString()}
+                        color="green"
+                    />
+                    <StatCard
+                        icon={<DollarSign className="w-6 h-6" />}
+                        label="Purchased Revenue"
+                        value={loading ? "…" : `₦${purchasedRevenue.toLocaleString()}`}
+                        color="purple"
+                    />
+                    <StatCard
+                        icon={<XCircle className="w-6 h-6" />}
+                        label="Cancelled Orders"
+                        value={loading ? "…" : cancelledOrders.length.toString()}
+                        color="yellow"
+                    />
+                </div>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-6">
