@@ -3,16 +3,17 @@ import {
     searchCategories,
     type BusinessCategory
 } from "@/data/businessCategories";
+import type { VendorType } from "@/types/vendor";
 
 export type { BusinessCategory };
 
-export function listCategories(vendorType?: string): BusinessCategory[] {
+export function listCategories(vendorType?: VendorType): BusinessCategory[] {
     return vendorType ? getCategoriesForType(vendorType) : [];
 }
 
 export function findCategories(
     query: string,
-    vendorType?: string
+    vendorType?: VendorType
 ): BusinessCategory[] {
     return searchCategories(query, vendorType);
 }
