@@ -171,11 +171,17 @@ export default function SellerOrders() {
     const archivedCount = orders.filter(order => order.isArchived && order.status === "contacted").length;
     const visibleOrders = useMemo(
         () =>
-            orders.filter(order =>
-                view === "active"
-                    ? order.status === "contacted"
-                    : order.status === "purchased" || order.status === "cancelled"
-            ),
+            orders.filter(order => {
+                if (view === "active") {
+                    return order.status === "contacted" && !order.isArchived;
+                }
+
+                if (view === "archived") {
+                    return order.status === "contacted" && order.isArchived;
+                }
+
+                return order.status === "purchased" || order.status === "cancelled";
+            }),
         [orders, view]
     );
 
