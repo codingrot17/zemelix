@@ -702,7 +702,7 @@ export const categoryDatabase: CategoryGroup[] = [
 /**
  * Get categories for specific vendor type
  */
-export function getCategoriesForType(vendorType: VendorType | "hybrid"): BusinessCategory[] {
+export function getCategoriesForType(vendorType: string): BusinessCategory[] {
     const group = categoryDatabase.find(g => g.type === vendorType);
     return group?.categories || [];
 }
