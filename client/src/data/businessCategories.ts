@@ -5,6 +5,8 @@
  * and global marketplace standards
  */
 
+import { VENDOR_TYPES, type VendorType } from "@/types/vendor";
+
 export interface BusinessCategory {
     id: string;
     name: string;
@@ -700,7 +702,7 @@ export const categoryDatabase: CategoryGroup[] = [
 /**
  * Get categories for specific vendor type
  */
-export function getCategoriesForType(vendorType: string): BusinessCategory[] {
+export function getCategoriesForType(vendorType: VendorType | "hybrid"): BusinessCategory[] {
     const group = categoryDatabase.find(g => g.type === vendorType);
     return group?.categories || [];
 }
@@ -737,25 +739,25 @@ export const vendorTypeOptions = [
         icon: "🛍️"
     },
     {
-        id: "service-provider",
+        id: VENDOR_TYPES[1],
         label: "Service Provider",
         description: "Offer bookable professional services",
         icon: "⚡"
     },
     {
-        id: "digital-creator",
+        id: VENDOR_TYPES[2],
         label: "Digital Creator",
         description: "Sell digital products and downloads",
         icon: "💻"
     },
     {
-        id: "wholesaler",
+        id: VENDOR_TYPES[3],
         label: "Wholesaler",
         description: "Bulk sales to businesses (B2B)",
         icon: "📦"
     },
     {
-        id: "other",
+        id: VENDOR_TYPES[4],
         label: "Other",
         description: "Other business types",
         icon: "🔄"
