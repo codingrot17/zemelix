@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle, ChevronDown, Loader2, MessageCircle, Package, RefreshCw, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,6 +37,7 @@ export default function SellerOrders() {
     const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
     const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
     const [error, setError] = useState<string | null>(null);
+    const [view, setView] = useState<"active" | "history">("active");
 
     async function loadOrders() {
         if (!user?.$id) {
@@ -132,6 +133,16 @@ export default function SellerOrders() {
 
     const contactedCount = orders.filter(order => order.status === "contacted").length;
     const purchasedCount = orders.filter(order => order.status === "purchased").length;
+    const cancelledCount = orders.filter(order => order.status === "cancelled").length;
+    const visibleOrders = useMemo(
+        () =>
+            orders.filter(order =>
+                view === "active"
+                    ? order.status === "contacted"
+                    : order.status === "purchased" || order.status === "cancelled"
+            ),
+        [orders, view]
+    );
 
     return (
         <div className="space-y-6">
@@ -184,25 +195,43 @@ export default function SellerOrders() {
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow border overflow-hidden">
+                <div className="flex flex-wrap items-center gap-2 border-b p-3">
+                    <Button
+                        variant={view === "active" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setView("active")}
+                    >
+                        Active ({contactedCount})
+                    </Button>
+                    <Button
+                        variant={view === "history" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setView("history")}
+                    >
+                        History ({purchasedCount + cancelledCount})
+                    </Button>
+                </div>
+
                 {loading ? (
                     <div className="flex items-center justify-center py-16 text-gray-400">
                         <Loader2 className="w-5 h-5 animate-spin mr-2" />
                         Loading leads…
                     </div>
-                ) : orders.length === 0 ? (
+                ) : visibleOrders.length === 0 ? (
                     <div className="p-12 text-center">
                         <MessageCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                         <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                            No leads yet
+                            {view === "active" ? "No active leads" : "No order history"}
                         </h2>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            When a customer starts a WhatsApp conversation from one of your products,
-                            the lead will appear here.
+                            {view === "active"
+                                ? "New WhatsApp leads will appear here until they are purchased or cancelled."
+                                : "Purchased and cancelled orders will remain here as your history."}
                         </p>
                     </div>
                 ) : (
                     <div className="divide-y">
-                        {orders.map(order => {
+                        {visibleOrders.map(order => {
                             const isExpanded = expandedOrderIds.has(order.$id);
                             const primaryItem = order.items[0];
 
