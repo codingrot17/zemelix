@@ -236,6 +236,37 @@ async function undoSellerOrderPurchase({ req, res, error, databases, databaseId 
     }
 }
 
+async function setSellerOrderArchived({ req, res, error, databases, databaseId }) {
+    const sellerId = req.headers["x-appwrite-user-id"];
+    const orderId = req.bodyJson?.orderId;
+    const archived = req.bodyJson?.archived;
+
+    if (!sellerId) return jsonError(res, "You must be signed in to archive orders.", 401);
+    if (!isNonEmptyString(orderId, 128)) return jsonError(res, "A valid orderId is required.", 400);
+    if (typeof archived !== "boolean") return jsonError(res, "A valid archived value is required.", 400);
+
+    try {
+        const order = await databases.getDocument(databaseId, ORDERS_COLLECTION_ID, orderId);
+        if (order.sellerId !== sellerId) return jsonError(res, "You can only update your own orders.", 403);
+        if (order.status !== "contacted") {
+            return jsonError(res, "Only active leads can be archived or restored.", 409);
+        }
+
+        const updatedOrder = await databases.updateDocument(
+            databaseId,
+            ORDERS_COLLECTION_ID,
+            orderId,
+            { isArchived: archived }
+        );
+
+        return res.json({ ok: true, order: updatedOrder });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Order not found.", 404);
+        error(err?.message ?? "Seller order archive update failed.");
+        return jsonError(res, "Seller order archive update failed.", 500);
+    }
+}
+
 export default async ({ req, res, error }) => {
     if (req.method !== "POST") return jsonError(res, "Method not allowed.", 405);
 
@@ -260,6 +291,14 @@ export default async ({ req, res, error }) => {
     }
     if (body.operation === "undoSellerOrderPurchase") {
         return undoSellerOrderPurchase({ req, res, error, databases, databaseId });
+    }
+    if (body.operation === "archiveSellerOrder") {
+        req.bodyJson.archived = true;
+        return setSellerOrderArchived({ req, res, error, databases, databaseId });
+    }
+    if (body.operation === "unarchiveSellerOrder") {
+        req.bodyJson.archived = false;
+        return setSellerOrderArchived({ req, res, error, databases, databaseId });
     }
 
     const sellerId = body.sellerId;
