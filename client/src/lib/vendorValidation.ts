@@ -1,14 +1,8 @@
 import { z } from "zod";
+import { VENDOR_TYPES, type VendorType } from "@/types/vendor";
 
-const VENDOR_TYPES = [
-    "product-seller",
-    "service-provider",
-    "digital-creator",
-    "wholesaler",
-    "other"
-] as const;
-
-export type VendorType = (typeof VENDOR_TYPES)[number];
+export { VENDOR_TYPES };
+export type { VendorType };
 
 export const vendorSetupSchema = z.object({
     vendorType: z.enum(VENDOR_TYPES, {
