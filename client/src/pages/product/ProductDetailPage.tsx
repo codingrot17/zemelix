@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { getProduct } from "@/services/product.service";
 import { getPublicSellerProfile } from "@/services/seller.service";
 import { createSellerOrder } from "@/services/order.service";
+import { createBookingRequest } from "@/services/booking.service";
 import { getCurrentAccount } from "@/lib/appwrite/account";
 import { getUserProfile, updateUserProfile } from "@/lib/appwrite/database";
 import { getFileViewUrl } from "@/lib/appwrite/storage";
@@ -69,6 +70,14 @@ export default function ProductDetailPage() {
     const [whatsappError, setWhatsappError] = useState<string | null>(null);
     const [whatsappPhone, setWhatsappPhone] = useState("");
     const [whatsappPhoneRequired, setWhatsappPhoneRequired] = useState(false);
+    const [bookingOpen, setBookingOpen] = useState(false);
+    const [bookingDateTime, setBookingDateTime] = useState("");
+    const [bookingMode, setBookingMode] = useState("In person");
+    const [bookingLocation, setBookingLocation] = useState("");
+    const [bookingNotes, setBookingNotes] = useState("");
+    const [bookingSubmitting, setBookingSubmitting] = useState(false);
+    const [bookingError, setBookingError] = useState<string | null>(null);
+    const [bookingSuccess, setBookingSuccess] = useState(false);
 
     useEffect(() => {
         if (!id) {
@@ -126,7 +135,12 @@ export default function ProductDetailPage() {
 
     const handleAction = () => {
         if (!product) return;
-        if (product.vendorType === "service") return;
+        if (product.vendorType === "service") {
+            setBookingError(null);
+            setBookingSuccess(false);
+            setBookingOpen(true);
+            return;
+        }
         add({
             id: product.id,
             sellerId: product.sellerId,
@@ -210,6 +224,49 @@ export default function ProductDetailPage() {
             );
         } finally {
             setWhatsappLoading(false);
+        }
+    };
+
+    const handleBookingSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!product || product.vendorType !== "service" || !product.sellerId) return;
+        setBookingSubmitting(true);
+        setBookingError(null);
+        try {
+            const account = await getCurrentAccount();
+            if (!account?.$id) throw new Error("Please sign in before requesting a booking.");
+            const profile = await getUserProfile(account.$id);
+            const customerName = profile?.fullName?.trim() || account.name?.trim() || "";
+            const customerPhone = profile?.phoneNumber?.trim() || account.phone?.trim() || "";
+            const customerEmail = profile?.email?.trim() || account.email?.trim() || "";
+            if (!customerName) throw new Error("Please add your name to your profile first.");
+            if (!customerPhone) throw new Error("Please add your phone number to your profile first.");
+            if (!bookingDateTime) throw new Error("Choose a preferred date and time.");
+            const localDate = new Date(bookingDateTime);
+            if (Number.isNaN(localDate.getTime()) || localDate.getTime() <= Date.now()) {
+                throw new Error("Choose a future date and time.");
+            }
+            await createBookingRequest({
+                serviceId: product.id,
+                providerId: product.sellerId,
+                requestedDateTime: localDate.toISOString(),
+                customerName,
+                customerPhone,
+                customerEmail: customerEmail || null,
+                serviceMode: bookingMode,
+                serviceLocation: bookingLocation.trim() || null,
+                notes: bookingNotes.trim() || null,
+            });
+            setBookingSuccess(true);
+            setBookingOpen(false);
+            setBookingDateTime("");
+            setBookingLocation("");
+            setBookingNotes("");
+        } catch (err) {
+            console.error("Failed to create booking request.", err);
+            setBookingError(err instanceof Error ? err.message : "Unable to send the booking request.");
+        } finally {
+            setBookingSubmitting(false);
         }
     };
 
@@ -490,6 +547,39 @@ export default function ProductDetailPage() {
                             </>
                         )}
                     </div>
+
+                    {bookingOpen && (
+                        <form onSubmit={handleBookingSubmit} className="rounded-xl border border-teal-200 bg-teal-50 dark:bg-teal-900/20 dark:border-teal-800 p-4 space-y-3">
+                            <div>
+                                <h2 className="font-semibold text-gray-900 dark:text-white">Request a booking</h2>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Choose a preferred time. The provider will confirm the request.</p>
+                            </div>
+                            <label className="block text-sm font-medium">Preferred date & time
+                                <input type="datetime-local" required value={bookingDateTime} onChange={e=>setBookingDateTime(e.target.value)} className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
+                            </label>
+                            <label className="block text-sm font-medium">Service mode
+                                <select value={bookingMode} onChange={e=>setBookingMode(e.target.value)} className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm">
+                                    <option>In person</option><option>Online</option><option>Phone</option><option>Provider location</option>
+                                </select>
+                            </label>
+                            <label className="block text-sm font-medium">Location (optional)
+                                <input value={bookingLocation} onChange={e=>setBookingLocation(e.target.value)} placeholder="Address or meeting details" className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
+                            </label>
+                            <label className="block text-sm font-medium">Notes (optional)
+                                <textarea value={bookingNotes} onChange={e=>setBookingNotes(e.target.value)} rows={3} placeholder="Tell the provider anything they should know." className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
+                            </label>
+                            {bookingError && <p className="text-sm text-red-600" role="alert">{bookingError}</p>}
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <Button type="submit" disabled={bookingSubmitting} className="w-full sm:w-auto">{bookingSubmitting ? "Sending…" : "Send booking request"}</Button>
+                                <Button type="button" variant="outline" disabled={bookingSubmitting} onClick={()=>setBookingOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+                            </div>
+                        </form>
+                    )}
+                    {bookingSuccess && (
+                        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                            Booking request sent. You can track the provider's response in My Bookings.
+                        </div>
+                    )}
 
                     <div className="flex gap-3 mt-2">
                         <ListingActionButton
