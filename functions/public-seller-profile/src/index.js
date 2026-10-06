@@ -17,9 +17,7 @@ const PUBLIC_FIELDS = [
 ];
 
 function isNonEmptyString(value, maxLength = 500) {
-    return typeof value === "string" &&
-        value.trim().length > 0 &&
-        value.length <= maxLength;
+    return typeof value === "string" && value.trim().length > 0 && value.length <= maxLength;
 }
 
 function isValidSellerId(value) {
@@ -34,9 +32,7 @@ function toNumber(value) {
 function toPublicSellerProfile(document) {
     return {
         id: document.$id,
-        ...Object.fromEntries(
-            PUBLIC_FIELDS.map(field => [field, document[field] ?? null])
-        ),
+        ...Object.fromEntries(PUBLIC_FIELDS.map(field => [field, document[field] ?? null])),
     };
 }
 
@@ -47,86 +43,44 @@ function jsonError(res, message, status) {
 function getServerClient(apiKey) {
     const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT;
     const projectId = process.env.APPWRITE_FUNCTION_PROJECT_ID;
-
-    if (!endpoint || !projectId || !apiKey) {
-        return null;
-    }
-
-    return new Client()
-        .setEndpoint(endpoint)
-        .setProject(projectId)
-        .setKey(apiKey);
+    if (!endpoint || !projectId || !apiKey) return null;
+    return new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey);
 }
 
 async function createSellerOrder({ req, res, error, databases, databaseId, userCollectionId }) {
     const customerId = req.headers["x-appwrite-user-id"];
-
-    if (!customerId) {
-        return jsonError(res, "You must be signed in to create an order.", 401);
-    }
+    if (!customerId) return jsonError(res, "You must be signed in to create an order.", 401);
 
     const body = req.bodyJson ?? {};
-    const sellerId = body.sellerId;
-    const productId = body.productId;
-    const checkoutSessionId = body.checkoutSessionId;
-    const customerName = body.customerName;
+    const { sellerId, productId, checkoutSessionId, customerName, customerPhone } = body;
     const customerEmail = body.customerEmail ?? null;
-    const customerPhone = body.customerPhone;
 
     if (!isValidSellerId(sellerId) || !isNonEmptyString(productId, 128)) {
         return jsonError(res, "A valid sellerId and productId are required.", 400);
     }
-
-    if (!isNonEmptyString(checkoutSessionId, 128)) {
-        return jsonError(res, "A valid checkoutSessionId is required.", 400);
-    }
-
+    if (!isNonEmptyString(checkoutSessionId, 128)) return jsonError(res, "A valid checkoutSessionId is required.", 400);
     if (!isNonEmptyString(customerName, 200) || !isNonEmptyString(customerPhone, 50)) {
         return jsonError(res, "Customer name and phone are required.", 400);
     }
-
     if (customerEmail !== null && !isNonEmptyString(customerEmail, 320)) {
         return jsonError(res, "Customer email is invalid.", 400);
     }
 
     try {
-        const seller = await databases.getDocument(
-            databaseId,
-            userCollectionId,
-            sellerId
-        );
-
-        if (
-            seller.role !== "seller" ||
-            seller.accountStatus !== "active" ||
-            seller.vendorStatus !== "active"
-        ) {
+        const seller = await databases.getDocument(databaseId, userCollectionId, sellerId);
+        if (seller.role !== "seller" || seller.accountStatus !== "active" || seller.vendorStatus !== "active") {
             return jsonError(res, "Seller is not available.", 404);
         }
 
-        const product = await databases.getDocument(
-            databaseId,
-            PRODUCTS_COLLECTION_ID,
-            productId
-        );
-
-        if (
-            product.sellerId !== sellerId ||
-            product.status !== "active"
-        ) {
+        const product = await databases.getDocument(databaseId, PRODUCTS_COLLECTION_ID, productId);
+        if (product.sellerId !== sellerId || product.status !== "active") {
             return jsonError(res, "Product is not available from this seller.", 400);
         }
 
         const unitPrice = toNumber(product.price);
-        const productTitle = typeof product.title === "string"
-            ? product.title.trim()
-            : "";
+        const productTitle = typeof product.title === "string" ? product.title.trim() : "";
+        if (!productTitle || unitPrice < 0) return jsonError(res, "Product data is invalid.", 400);
 
-        if (!productTitle || unitPrice < 0) {
-            return jsonError(res, "Product data is invalid.", 400);
-        }
-
-        const contactedAt = new Date().toISOString();
         const orderDocument = await databases.createDocument(
             databaseId,
             ORDERS_COLLECTION_ID,
@@ -142,15 +96,11 @@ async function createSellerOrder({ req, res, error, databases, databaseId, userC
                 customerName: customerName.trim(),
                 customerEmail: customerEmail?.trim() || null,
                 customerPhone: customerPhone.trim(),
-                contactedAt,
+                contactedAt: new Date().toISOString(),
                 purchasedAt: null,
                 cancelledAt: null,
             },
-            [
-                Permission.read(Role.user(customerId)),
-                Permission.read(Role.user(sellerId)),
-                Permission.update(Role.user(sellerId)),
-            ]
+            [Permission.read(Role.user(customerId)), Permission.read(Role.user(sellerId)), Permission.update(Role.user(sellerId))]
         );
 
         try {
@@ -165,38 +115,17 @@ async function createSellerOrder({ req, res, error, databases, databaseId, userC
                     quantity: 1,
                     unitPrice,
                     total: unitPrice,
-                    imageUrl: typeof product.imageUrl === "string"
-                        ? product.imageUrl
-                        : null,
+                    imageUrl: typeof product.imageUrl === "string" ? product.imageUrl : null,
                 },
-                [
-                    Permission.read(Role.user(customerId)),
-                    Permission.read(Role.user(sellerId)),
-                ]
+                [Permission.read(Role.user(customerId)), Permission.read(Role.user(sellerId))]
             );
-
-            return res.json({
-                ok: true,
-                order: orderDocument,
-                item: itemDocument,
-            });
+            return res.json({ ok: true, order: orderDocument, item: itemDocument });
         } catch (itemError) {
-            try {
-                await databases.deleteDocument(
-                    databaseId,
-                    ORDERS_COLLECTION_ID,
-                    orderDocument.$id
-                );
-            } catch {
-                // Preserve the original item creation error.
-            }
+            try { await databases.deleteDocument(databaseId, ORDERS_COLLECTION_ID, orderDocument.$id); } catch { /* preserve original error */ }
             throw itemError;
         }
     } catch (err) {
-        if (err?.code === 404) {
-            return jsonError(res, "Seller or product not found.", 404);
-        }
-
+        if (err?.code === 404) return jsonError(res, "Seller or product not found.", 404);
         error(err?.message ?? "Seller order creation failed.");
         return jsonError(res, "Seller order creation failed.", 500);
     }
@@ -205,263 +134,110 @@ async function createSellerOrder({ req, res, error, databases, databaseId, userC
 async function markSellerOrderPurchased({ req, res, error, databases, databaseId }) {
     const sellerId = req.headers["x-appwrite-user-id"];
     const orderId = req.bodyJson?.orderId;
-
-    if (!sellerId) {
-        return jsonError(res, "You must be signed in to mark an order as purchased.", 401);
-    }
-
-    if (!isNonEmptyString(orderId, 128)) {
-        return jsonError(res, "A valid orderId is required.", 400);
-    }
+    if (!sellerId) return jsonError(res, "You must be signed in to mark an order as purchased.", 401);
+    if (!isNonEmptyString(orderId, 128)) return jsonError(res, "A valid orderId is required.", 400);
 
     try {
-        const order = await databases.getDocument(
-            databaseId,
-            ORDERS_COLLECTION_ID,
-            orderId
-        );
+        const order = await databases.getDocument(databaseId, ORDERS_COLLECTION_ID, orderId);
+        if (order.sellerId !== sellerId) return jsonError(res, "You can only update your own orders.", 403);
+        if (order.status !== "contacted") return jsonError(res, "Only contacted orders can be marked as purchased.", 409);
 
-        if (order.sellerId !== sellerId) {
-            return jsonError(res, "You can only update your own orders.", 403);
-        }
-
-        if (order.status !== "contacted") {
-            return jsonError(res, "Only contacted orders can be marked as purchased.", 409);
-        }
-
-        const itemResponse = await databases.listDocuments(
-            databaseId,
-            ORDER_ITEMS_COLLECTION_ID,
-            [
-                Query.equal("orderId", orderId),
-                Query.limit(100),
-            ]
-        );
-
-        if (itemResponse.documents.length === 0) {
-            return jsonError(res, "Order has no items to purchase.", 400);
-        }
+        const itemResponse = await databases.listDocuments(databaseId, ORDER_ITEMS_COLLECTION_ID, [Query.equal("orderId", orderId), Query.limit(100)]);
+        if (itemResponse.documents.length === 0) return jsonError(res, "Order has no items to purchase.", 400);
 
         const updates = [];
-
         for (const item of itemResponse.documents) {
             const quantity = toNumber(item.quantity);
+            if (!Number.isInteger(quantity) || quantity < 1) return jsonError(res, "Order contains an invalid item quantity.", 400);
 
-            if (!Number.isInteger(quantity) || quantity < 1) {
-                return jsonError(res, "Order contains an invalid item quantity.", 400);
-            }
-
-            const product = await databases.getDocument(
-                databaseId,
-                PRODUCTS_COLLECTION_ID,
-                item.productId
-            );
-
-            if (product.sellerId !== sellerId) {
-                return jsonError(res, "Order contains a product owned by another seller.", 403);
-            }
+            const product = await databases.getDocument(databaseId, PRODUCTS_COLLECTION_ID, item.productId);
+            if (product.sellerId !== sellerId) return jsonError(res, "Order contains a product owned by another seller.", 403);
 
             const currentStock = toNumber(product.stock);
-
             if (currentStock < quantity) {
-                return jsonError(
-                    res,
-                    `Insufficient stock for "${product.title ?? item.productTitle}". Available: ${currentStock}.`,
-                    409
-                );
+                return jsonError(res, `Insufficient stock for "${product.title ?? item.productTitle}". Available: ${currentStock}.`, 409);
             }
-
-            updates.push({
-                productId: product.$id,
-                previousStock: currentStock,
-                nextStock: currentStock - quantity,
-            });
+            updates.push({ productId: product.$id, previousStock: currentStock, nextStock: currentStock - quantity });
         }
 
         const appliedUpdates = [];
-
         try {
             for (const update of updates) {
-                await databases.updateDocument(
-                    databaseId,
-                    PRODUCTS_COLLECTION_ID,
-                    update.productId,
-                    { stock: update.nextStock }
-                );
+                await databases.updateDocument(databaseId, PRODUCTS_COLLECTION_ID, update.productId, { stock: update.nextStock });
                 appliedUpdates.push(update);
             }
-
-            const purchasedAt = new Date().toISOString();
-            const updatedOrder = await databases.updateDocument(
-                databaseId,
-                ORDERS_COLLECTION_ID,
-                orderId,
-                {
-                    status: "purchased",
-                    purchasedAt,
-                }
-            );
-
-            return res.json({
-                ok: true,
-                order: updatedOrder,
+            const updatedOrder = await databases.updateDocument(databaseId, ORDERS_COLLECTION_ID, orderId, {
+                status: "purchased",
+                purchasedAt: new Date().toISOString(),
             });
+            return res.json({ ok: true, order: updatedOrder });
         } catch (purchaseError) {
             for (const update of appliedUpdates.reverse()) {
-                try {
-                    await databases.updateDocument(
-                        databaseId,
-                        PRODUCTS_COLLECTION_ID,
-                        update.productId,
-                        { stock: update.previousStock }
-                    );
-                } catch (rollbackError) {
-                    error(
-                        rollbackError?.message ??
-                        `Failed to restore stock for product ${update.productId}.`
-                    );
-                }
+                try { await databases.updateDocument(databaseId, PRODUCTS_COLLECTION_ID, update.productId, { stock: update.previousStock }); }
+                catch (rollbackError) { error(rollbackError?.message ?? `Failed to restore stock for product ${update.productId}.`); }
             }
             throw purchaseError;
         }
     } catch (err) {
-        if (err?.code === 404) {
-            return jsonError(res, "Order or product not found.", 404);
-        }
-
+        if (err?.code === 404) return jsonError(res, "Order or product not found.", 404);
         error(err?.message ?? "Seller order purchase confirmation failed.");
         return jsonError(res, "Seller order purchase confirmation failed.", 500);
     }
 }
 
-
 async function undoSellerOrderPurchase({ req, res, error, databases, databaseId }) {
     const sellerId = req.headers["x-appwrite-user-id"];
     const orderId = req.bodyJson?.orderId;
-
-    if (!sellerId) {
-        return jsonError(res, "You must be signed in to undo a purchase.", 401);
-    }
-
-    if (!isNonEmptyString(orderId, 128)) {
-        return jsonError(res, "A valid orderId is required.", 400);
-    }
+    if (!sellerId) return jsonError(res, "You must be signed in to undo a purchase.", 401);
+    if (!isNonEmptyString(orderId, 128)) return jsonError(res, "A valid orderId is required.", 400);
 
     try {
-        const order = await databases.getDocument(
-            databaseId,
-            ORDERS_COLLECTION_ID,
-            orderId
-        );
+        const order = await databases.getDocument(databaseId, ORDERS_COLLECTION_ID, orderId);
+        if (order.sellerId !== sellerId) return jsonError(res, "You can only update your own orders.", 403);
+        if (order.status !== "purchased") return jsonError(res, "Only purchased orders can be reverted.", 409);
 
-        if (order.sellerId !== sellerId) {
-            return jsonError(res, "You can only update your own orders.", 403);
-        }
-
-        if (order.status !== "purchased") {
-            return jsonError(res, "Only purchased orders can be reverted.", 409);
-        }
-
-        const itemResponse = await databases.listDocuments(
-            databaseId,
-            ORDER_ITEMS_COLLECTION_ID,
-            [
-                Query.equal("orderId", orderId),
-                Query.limit(100),
-            ]
-        );
-
-        if (itemResponse.documents.length === 0) {
-            return jsonError(res, "Order has no items to restore.", 400);
-        }
+        const itemResponse = await databases.listDocuments(databaseId, ORDER_ITEMS_COLLECTION_ID, [Query.equal("orderId", orderId), Query.limit(100)]);
+        if (itemResponse.documents.length === 0) return jsonError(res, "Order has no items to restore.", 400);
 
         const updates = [];
-
         for (const item of itemResponse.documents) {
             const quantity = toNumber(item.quantity);
+            if (!Number.isInteger(quantity) || quantity < 1) return jsonError(res, "Order contains an invalid item quantity.", 400);
 
-            if (!Number.isInteger(quantity) || quantity < 1) {
-                return jsonError(res, "Order contains an invalid item quantity.", 400);
-            }
-
-            const product = await databases.getDocument(
-                databaseId,
-                PRODUCTS_COLLECTION_ID,
-                item.productId
-            );
-
-            if (product.sellerId !== sellerId) {
-                return jsonError(res, "Order contains a product owned by another seller.", 403);
-            }
+            const product = await databases.getDocument(databaseId, PRODUCTS_COLLECTION_ID, item.productId);
+            if (product.sellerId !== sellerId) return jsonError(res, "Order contains a product owned by another seller.", 403);
 
             const currentStock = toNumber(product.stock);
-
-            updates.push({
-                productId: product.$id,
-                previousStock: currentStock,
-                nextStock: currentStock + quantity,
-            });
+            updates.push({ productId: product.$id, previousStock: currentStock, nextStock: currentStock + quantity });
         }
 
         const appliedUpdates = [];
-
         try {
             for (const update of updates) {
-                await databases.updateDocument(
-                    databaseId,
-                    PRODUCTS_COLLECTION_ID,
-                    update.productId,
-                    { stock: update.nextStock }
-                );
+                await databases.updateDocument(databaseId, PRODUCTS_COLLECTION_ID, update.productId, { stock: update.nextStock });
                 appliedUpdates.push(update);
             }
-
-            const updatedOrder = await databases.updateDocument(
-                databaseId,
-                ORDERS_COLLECTION_ID,
-                orderId,
-                {
-                    status: "contacted",
-                    purchasedAt: null,
-                }
-            );
-
-            return res.json({
-                ok: true,
-                order: updatedOrder,
+            const updatedOrder = await databases.updateDocument(databaseId, ORDERS_COLLECTION_ID, orderId, {
+                status: "contacted",
+                purchasedAt: null,
             });
+            return res.json({ ok: true, order: updatedOrder });
         } catch (undoError) {
             for (const update of appliedUpdates.reverse()) {
-                try {
-                    await databases.updateDocument(
-                        databaseId,
-                        PRODUCTS_COLLECTION_ID,
-                        update.productId,
-                        { stock: update.previousStock }
-                    );
-                } catch (rollbackError) {
-                    error(
-                        rollbackError?.message ??
-                        `Failed to restore stock rollback for product ${update.productId}.`
-                    );
-                }
+                try { await databases.updateDocument(databaseId, PRODUCTS_COLLECTION_ID, update.productId, { stock: update.previousStock }); }
+                catch (rollbackError) { error(rollbackError?.message ?? `Failed to restore stock for product ${update.productId}.`); }
             }
             throw undoError;
         }
     } catch (err) {
-        if (err?.code === 404) {
-            return jsonError(res, "Order or product not found.", 404);
-        }
-
+        if (err?.code === 404) return jsonError(res, "Order or product not found.", 404);
         error(err?.message ?? "Seller purchase undo failed.");
         return jsonError(res, "Seller purchase undo failed.", 500);
     }
 }
 
 export default async ({ req, res, error }) => {
-    if (req.method !== "POST") {
-        return jsonError(res, "Method not allowed.", 405);
-    }
+    if (req.method !== "POST") return jsonError(res, "Method not allowed.", 405);
 
     const databaseId = process.env.APPWRITE_DATABASE_ID;
     const collectionId = process.env.APPWRITE_USER_COLLECTION_ID;
@@ -477,66 +253,26 @@ export default async ({ req, res, error }) => {
     const body = req.bodyJson ?? {};
 
     if (body.operation === "createSellerOrder") {
-        return createSellerOrder({
-            req,
-            res,
-            error,
-            databases,
-            databaseId,
-            userCollectionId: collectionId,
-        });
+        return createSellerOrder({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     }
-
     if (body.operation === "markSellerOrderPurchased") {
-        return markSellerOrderPurchased({
-            req,
-            res,
-            error,
-            databases,
-            databaseId,
-        });
+        return markSellerOrderPurchased({ req, res, error, databases, databaseId });
     }
-
     if (body.operation === "undoSellerOrderPurchase") {
-        return undoSellerOrderPurchase({
-            req,
-            res,
-            error,
-            databases,
-            databaseId,
-        });
+        return undoSellerOrderPurchase({ req, res, error, databases, databaseId });
     }
 
     const sellerId = body.sellerId;
-
-    if (!isValidSellerId(sellerId)) {
-        return jsonError(res, "A valid sellerId is required.", 400);
-    }
+    if (!isValidSellerId(sellerId)) return jsonError(res, "A valid sellerId is required.", 400);
 
     try {
-        const document = await databases.getDocument(
-            databaseId,
-            collectionId,
-            sellerId
-        );
-
-        if (
-            document.role !== "seller" ||
-            document.accountStatus !== "active" ||
-            document.vendorStatus !== "active"
-        ) {
+        const document = await databases.getDocument(databaseId, collectionId, sellerId);
+        if (document.role !== "seller" || document.accountStatus !== "active" || document.vendorStatus !== "active") {
             return jsonError(res, "Seller profile not found.", 404);
         }
-
-        return res.json({
-            ok: true,
-            seller: toPublicSellerProfile(document),
-        });
+        return res.json({ ok: true, seller: toPublicSellerProfile(document) });
     } catch (err) {
-        if (err?.code === 404) {
-            return jsonError(res, "Seller profile not found.", 404);
-        }
-
+        if (err?.code === 404) return jsonError(res, "Seller profile not found.", 404);
         error(err?.message ?? "Public seller profile lookup failed.");
         return jsonError(res, "Public seller profile lookup failed.", 500);
     }
