@@ -38,6 +38,7 @@ import AdminSettings from "@/pages/dashboard/admin/AdminSettings";
 // ── Seller sub-pages ──────────────────────────────────────────────────────────
 import SellerProducts from "@/pages/dashboard/seller/Products";
 import SellerOrders from "@/pages/dashboard/seller/SellerOrders";
+import SellerBookings from "@/pages/dashboard/seller/SellerBookings";
 import SellerAnalytics from "@/pages/dashboard/seller/SellerAnalytics";
 import SellerProfile from "@/pages/dashboard/seller/SellerProfile";
 import SellerNotifications from "@/pages/dashboard/seller/SellerNotifications";
@@ -45,6 +46,7 @@ import SellerSettings from "@/pages/dashboard/seller/SellerSettings";
 
 // ── Customer/User sub-pages ───────────────────────────────────────────────────
 import UserOrdersPage from "@/pages/dashboard/user/UserOrdersPage";
+import UserBookingsPage from "@/pages/dashboard/user/UserBookingsPage";
 import UserFavorites from "@/pages/dashboard/user/UserFavorites";
 import UserProfile from "@/pages/dashboard/user/UserProfile";
 import UserNotifications from "@/pages/dashboard/user/UserNotifications";
@@ -190,6 +192,7 @@ export default function AppRoutes() {
                                 element={<SellerProducts />}
                             />
                             <Route path="orders" element={<SellerOrders />} />
+                            <Route path="bookings" element={<SellerBookings />} />
                             <Route
                                 path="analytics"
                                 element={<SellerAnalytics />}
@@ -213,6 +216,7 @@ export default function AppRoutes() {
                         <Route path="user">
                             <Route index element={<CustomerDashboard />} />
                             <Route path="orders" element={<UserOrdersPage />} />
+                            <Route path="bookings" element={<UserBookingsPage />} />
                             <Route
                                 path="favorites"
                                 element={<UserFavorites />}
