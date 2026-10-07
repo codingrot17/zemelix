@@ -34,6 +34,7 @@ import AdminMarketing from "@/pages/dashboard/admin/AdminMarketing";
 import AdminNotifications from "@/pages/dashboard/admin/AdminNotifications";
 import AdminFinance from "@/pages/dashboard/admin/AdminFinance";
 import AdminSettings from "@/pages/dashboard/admin/AdminSettings";
+import AdminFeedback from "@/pages/dashboard/admin/AdminFeedback";
 
 // ── Seller sub-pages ──────────────────────────────────────────────────────────
 import SellerProducts from "@/pages/dashboard/seller/Products";
@@ -53,6 +54,7 @@ import UserProfile from "@/pages/dashboard/user/UserProfile";
 import UserNotifications from "@/pages/dashboard/user/UserNotifications";
 import UserWallet from "@/pages/dashboard/user/UserWallet";
 import UserSettings from "@/pages/dashboard/user/UserSettings";
+import UserFeedback from "@/pages/dashboard/user/UserFeedback";
 
 // ── Public stub pages ─────────────────────────────────────────────────────────
 import SellersPage from "@/pages/public/SellersPage";
@@ -238,6 +240,7 @@ export default function AppRoutes() {
                             />
                             <Route path="wallet" element={<UserWallet />} />
                             <Route path="settings" element={<UserSettings />} />
+                            <Route path="feedback" element={<UserFeedback />} />
                         </Route>
                     </Route>
                 </Route>
