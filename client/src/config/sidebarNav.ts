@@ -17,6 +17,7 @@ export function getSidebarNav(role: UserRole, vendorType?: string | null) {
     if (isServiceProvider(vendorType)) {
         return [
             sidebarNavConfig.seller[0],
+            { label:"My Services", to:"/dashboard/seller/services", icon:HiOutlineCollection },
             { label:"Bookings", to:"/dashboard/seller/bookings", icon:HiOutlineClipboardList },
             ...sidebarNavConfig.seller.slice(2)
         ];
