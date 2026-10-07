@@ -43,14 +43,16 @@ export function ListingTypeChip({ vendorType, size = "sm" }: { vendorType: Vendo
 }
 
 export function StockLabel({ vendorType, stock }: { vendorType: VendorType | string; stock: number }) {
-    const isService = vendorType === "service";
+    // Services use request-first booking; stock is only a legacy compatibility field.
+    if (vendorType === "service") return null;
+
     const isLow = stock <= 5;
     return (
         <span className={cn(
             "text-xs font-medium",
             isLow ? "text-red-500 dark:text-red-400" : "text-gray-500 dark:text-gray-400"
         )}>
-            {isService ? `${stock} slot${stock !== 1 ? "s" : ""} left` : `${stock} in stock`}
+            {stock} in stock
         </span>
     );
 }
