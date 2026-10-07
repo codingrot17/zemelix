@@ -346,7 +346,7 @@ export default function ProductDetailPage() {
     }
 
     const isService = product.vendorType === "service";
-    const outOfStock = product.stock === 0;
+    const outOfStock = !isService && product.stock === 0;
     const sellerInitials = product.sellerName
         .split(" ")
         .map(n => n[0])
