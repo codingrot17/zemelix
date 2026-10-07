@@ -1,7 +1,7 @@
 // SidebarNavigation.tsx
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { sidebarNavConfig } from "@/config/sidebarNav";
+import { getSidebarNav } from "@/config/sidebarNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { normalizeRole } from "@/lib/authHelpers";
 import type { UserRole } from "@/types/auth";
@@ -27,7 +27,7 @@ export default function SidebarNavigation({
 
     // sidebarNavConfig only has keys for valid UserRole values.
     // If resolvedRole is somehow not a key (shouldn't happen), fall back to [].
-    const navItems = sidebarNavConfig[resolvedRole] ?? [];
+    const navItems = getSidebarNav(resolvedRole, user?.profile?.vendorType);
 
     return (
         <aside
