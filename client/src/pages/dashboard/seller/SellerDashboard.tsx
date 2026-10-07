@@ -254,21 +254,6 @@ export default function SellerDashboard() {
             <div className="grid lg:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
                     <div className="flex items-center justify-between p-5 border-b">
-                        <div><h2 className="text-base font-semibold text-gray-900 dark:text-white">{provider ? "Recent Booking Requests" : "Recent Orders"}</h2><p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your latest customer activity</p></div>
-                        <button onClick={() => navigate(provider ? "/dashboard/seller/bookings" : "/dashboard/seller/orders")} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">View all →</button>
-                    </div>
-                    <div className="divide-y">
-                        {loading ? <div className="py-10 text-center text-gray-400"><Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Loading activity…</div> :
-                            provider ? (bookings.slice(0, 5).length === 0 ? <div className="p-8 text-center text-sm text-gray-500">No booking activity yet.</div> :
-                                bookings.slice(0, 5).map(booking => <button key={booking.$id} onClick={() => navigate("/dashboard/seller/bookings")} className="w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-gray-900/40"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-sm font-medium text-gray-900 dark:text-white truncate">{booking.serviceTitleSnapshot}</p><p className="text-xs text-gray-500 mt-1">{booking.requestedDateTime ? new Date(booking.requestedDateTime).toLocaleString() : "Requested date pending"}</p></div><span className="text-xs capitalize px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{booking.status.replace("_", " ")}</span></div></button>)) :
-                            (orders.slice(0, 5).length === 0 ? <div className="p-8 text-center text-sm text-gray-500">No order activity yet.</div> :
-                                orders.slice(0, 5).map(order => <button key={order.$id} onClick={() => navigate("/dashboard/seller/orders")} className="w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-gray-900/40"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-sm font-medium text-gray-900 dark:text-white">Order {order.$id.slice(0, 8)}</p><p className="text-xs text-gray-500 mt-1">{new Date(order.$createdAt).toLocaleString()}</p></div><div className="text-right"><p className="text-sm font-semibold text-gray-900 dark:text-white">₦{order.total.toLocaleString()}</p><span className="text-xs capitalize text-gray-500">{order.status}</span></div></div></button>))}
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
-                    <div className="flex items-center justify-between p-5 border-b">
                         <div>
                             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
                                 {provider ? "Recent Services" : "Recent Products"}
