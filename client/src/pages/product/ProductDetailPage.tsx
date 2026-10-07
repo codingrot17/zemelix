@@ -274,7 +274,7 @@ export default function ProductDetailPage() {
             const customerEmail = profile?.email?.trim() || account.email?.trim() || "";
             if (!customerName) throw new Error("Please add your name to your profile first.");
             if (!customerPhone) throw new Error("Please enter your phone number.");
-            if (!/^\\+?[0-9\\s()-]{7,20}$/.test(customerPhone)) throw new Error("Enter a valid phone number.");
+            if (!/^\+?[0-9\s()-]{7,20}$/.test(customerPhone)) throw new Error("Enter a valid phone number.");
             if (!profile?.phoneNumber?.trim() && !account.phone?.trim()) {
                 await updateUserProfile(account.$id, { phoneNumber: customerPhone });
                 setBookingPhoneLocked(true);
@@ -544,10 +544,7 @@ export default function ProductDetailPage() {
                             </div>
                         )}
 
-                        {isService ? (
-                            <Button type="button" onClick={() => void openBooking()} className="mt-3 w-full bg-teal-600 hover:bg-teal-700 text-white">Book Now</Button>
-                        ) : (
-                            product.sellerWhatsapp && (
+                        {!isService && product.sellerWhatsapp && (
                                 <>
                                     {whatsappPhoneRequired && (
                                         <div className="mt-3 space-y-2">
