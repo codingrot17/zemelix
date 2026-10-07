@@ -174,7 +174,7 @@ export default function SellerDashboard() {
                     </p>
                 </div>
                 <Button
-                    onClick={() => navigate("/dashboard/seller/products")}
+                    onClick={() => navigate(provider ? "/dashboard/seller/services" : "/dashboard/seller/products")}
                     className="flex items-center gap-2 w-full sm:w-auto"
                 >
                     <Plus className="w-4 h-4" />
@@ -264,7 +264,7 @@ export default function SellerDashboard() {
                         </div>
                         <button
                             onClick={() =>
-                                navigate("/dashboard/seller/products")
+                                navigate(provider ? "/dashboard/seller/services" : "/dashboard/seller/products")
                             }
                             className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
                         >
@@ -286,7 +286,7 @@ export default function SellerDashboard() {
                                 <Button
                                     size="sm"
                                     onClick={() =>
-                                        navigate("/dashboard/seller/products")
+                                        navigate(provider ? "/dashboard/seller/services" : "/dashboard/seller/products")
                                     }
                                 >
                                     <Plus className="w-4 h-4 mr-2" />
