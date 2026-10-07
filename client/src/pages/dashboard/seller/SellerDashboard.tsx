@@ -237,16 +237,7 @@ export default function SellerDashboard() {
                     value={loading ? "…" : draftProducts.length.toString()}
                     color="yellow"
                 />
-                <StatCard
-                    icon={<TrendingUp className="w-6 h-6" />}
-                    label="Inventory Value"
-                    value={
-                        loading
-                            ? "…"
-                            : `₦${inventoryValue.toLocaleString()}`
-                    }
-                    color="purple"
-                />
+                {!provider && <StatCard icon={<TrendingUp className="w-6 h-6" />} label="Inventory Value" value={loading ? "…" : `₦${inventoryValue.toLocaleString()}`} color="purple" />}
             </div>
 
             {provider ? (
@@ -281,7 +272,7 @@ export default function SellerDashboard() {
                     <div className="flex items-center justify-between p-5 border-b">
                         <div>
                             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                                Recent Products
+                                {provider ? "Recent Services" : "Recent Products"}
                             </h2>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 Your latest listings
@@ -306,7 +297,7 @@ export default function SellerDashboard() {
                             <div className="p-8 text-center">
                                 <Package className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                                    You have no products yet.
+                                    {provider ? "You have no services yet." : "You have no products yet."}
                                 </p>
                                 <Button
                                     size="sm"
@@ -348,7 +339,7 @@ export default function SellerDashboard() {
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
+                {!provider && (                <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
                     <div className="flex items-center justify-between p-5 border-b">
                         <div>
                             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
@@ -414,7 +405,8 @@ export default function SellerDashboard() {
                             Add New Product
                         </Button>
                     </div>
-                </div>
+                </div>)}
+
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow border p-5">
@@ -423,7 +415,7 @@ export default function SellerDashboard() {
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <QuickAction
-                        label="My Products"
+                        label={provider ? "My Services" : "My Products"}
                         icon={<Package className="w-5 h-5" />}
                         onClick={() => navigate("/dashboard/seller/products")}
                     />
