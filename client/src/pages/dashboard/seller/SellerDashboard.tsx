@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { listProviderBookings, type Booking } from "@/services/booking.service";
+import { isServiceProvider } from "@/lib/vendorAccess";
 import {
     Package,
     ShoppingBag,
@@ -49,12 +51,14 @@ export default function SellerDashboard() {
     const navigate = useNavigate();
     const [products, setProducts] = useState<SellerProduct[]>([]);
     const [orders, setOrders] = useState<Order[]>([]);
+    const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const businessName =
         user?.profile?.businessName ?? user?.name ?? "Your Store";
     const vendorStatus = user?.profile?.vendorStatus ?? "active";
+    const provider = isServiceProvider(user?.profile?.vendorType);
 
     useEffect(() => {
         let cancelled = false;
@@ -71,14 +75,14 @@ export default function SellerDashboard() {
             setError(null);
 
             try {
-                const [sellerProducts, sellerOrders] = await Promise.all([
-                    listSellerProducts(user.$id),
-                    listSellerOrders(user.$id)
-                ]);
+                const sellerProducts = await listSellerProducts(user.$id);
+                const sellerOrders = provider ? [] : await listSellerOrders(user.$id);
+                const providerBookings = provider ? await listProviderBookings(user.$id) : [];
 
                 if (!cancelled) {
                     setProducts(sellerProducts);
                     setOrders(sellerOrders);
+                    setBookings(providerBookings);
                 }
             } catch (err) {
                 console.error("Failed to load seller dashboard data.", err);
@@ -97,7 +101,7 @@ export default function SellerDashboard() {
         return () => {
             cancelled = true;
         };
-    }, [user?.$id]);
+    }, [user?.$id, provider]);
 
     const activeProducts = useMemo(
         () => products.filter(product => product.status === "active"),
@@ -137,6 +141,9 @@ export default function SellerDashboard() {
         () => orders.filter(order => order.status === "cancelled"),
         [orders]
     );
+    const bookingActive = useMemo(() => bookings.filter(b => !b.isArchived && (b.status === "requested" || b.status === "accepted")), [bookings]);
+    const bookingHistory = useMemo(() => bookings.filter(b => !b.isArchived && ["declined","cancelled","completed","no_show","expired"].includes(b.status)), [bookings]);
+    const bookingRevenue = useMemo(() => bookings.filter(b => b.status === "completed").reduce((sum,b) => sum + b.priceSnapshot, 0), [bookings]);
     const purchasedRevenue = useMemo(
         () => purchasedOrders.reduce((sum, order) => sum + order.total, 0),
         [purchasedOrders]
@@ -148,7 +155,7 @@ export default function SellerDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                        Seller Dashboard
+                        {provider ? "Provider Dashboard" : "Seller Dashboard"}
                     </h1>
                     <p className="text-gray-600 dark:text-gray-400 mt-1 flex items-center gap-2">
                         <Store className="w-4 h-4" />
@@ -180,11 +187,10 @@ export default function SellerDashboard() {
                     <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                     <div>
                         <p className="text-sm font-semibold text-green-800 dark:text-green-200">
-                            Seller account active
+                            {provider ? "Provider account active" : "Seller account active"}
                         </p>
                         <p className="text-sm text-green-700 dark:text-green-300 mt-0.5">
-                            Your seller account is active. You can create and
-                            publish products on Zemelix right away.
+                            {provider ? "Your service provider account is active. You can create and publish services on Zemelix right away." : "Your seller account is active. You can create and publish products on Zemelix right away."}
                         </p>
                     </div>
                 </div>
@@ -243,51 +249,33 @@ export default function SellerDashboard() {
                 />
             </div>
 
-            <div>
-                <div className="flex items-center justify-between mb-3">
-                    <div>
-                        <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-                            Leads & Revenue
-                        </h2>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Your current lead pipeline and confirmed sales
-                        </p>
+            {provider ? (
+                <div>
+                    <div className="flex items-center justify-between mb-3">
+                        <div><h2 className="text-base font-semibold text-gray-900 dark:text-white">Bookings</h2><p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your service request pipeline and completed bookings</p></div>
+                        <button onClick={() => navigate("/dashboard/seller/bookings")} className="text-xs text-teal-600 hover:text-teal-700 font-medium">View bookings →</button>
                     </div>
-                    <button
-                        onClick={() => navigate("/dashboard/seller/orders")}
-                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-                    >
-                        View orders →
-                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <StatCard icon={<Clock className="w-6 h-6" />} label="Active Bookings" value={loading ? "…" : bookingActive.length.toString()} color="indigo" />
+                        <StatCard icon={<CheckCircle className="w-6 h-6" />} label="Booking History" value={loading ? "…" : bookingHistory.length.toString()} color="green" />
+                        <StatCard icon={<DollarSign className="w-6 h-6" />} label="Completed Revenue" value={loading ? "…" : `₦${bookingRevenue.toLocaleString()}`} color="purple" />
+                    </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <StatCard
-                        icon={<MessageCircle className="w-6 h-6" />}
-                        label="Active Leads"
-                        value={loading ? "…" : activeLeads.length.toString()}
-                        color="indigo"
-                    />
-                    <StatCard
-                        icon={<CheckCircle className="w-6 h-6" />}
-                        label="Purchased Orders"
-                        value={loading ? "…" : purchasedOrders.length.toString()}
-                        color="green"
-                    />
-                    <StatCard
-                        icon={<DollarSign className="w-6 h-6" />}
-                        label="Purchased Revenue"
-                        value={loading ? "…" : `₦${purchasedRevenue.toLocaleString()}`}
-                        color="purple"
-                    />
-                    <StatCard
-                        icon={<XCircle className="w-6 h-6" />}
-                        label="Cancelled Orders"
-                        value={loading ? "…" : cancelledOrders.length.toString()}
-                        color="yellow"
-                    />
+            ) : (
+                <div>
+                    <div className="flex items-center justify-between mb-3">
+                        <div><h2 className="text-base font-semibold text-gray-900 dark:text-white">Leads & Revenue</h2><p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your current lead pipeline and confirmed sales</p></div>
+                        <button onClick={() => navigate("/dashboard/seller/orders")} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">View orders →</button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <StatCard icon={<MessageCircle className="w-6 h-6" />} label="Active Leads" value={loading ? "…" : activeLeads.length.toString()} color="indigo" />
+                        <StatCard icon={<CheckCircle className="w-6 h-6" />} label="Purchased Orders" value={loading ? "…" : purchasedOrders.length.toString()} color="green" />
+                        <StatCard icon={<DollarSign className="w-6 h-6" />} label="Purchased Revenue" value={loading ? "…" : `₦${purchasedRevenue.toLocaleString()}`} color="purple" />
+                        <StatCard icon={<XCircle className="w-6 h-6" />} label="Cancelled Orders" value={loading ? "…" : cancelledOrders.length.toString()} color="yellow" />
+                    </div>
                 </div>
-            </div>
-
+            )}
+            
             <div className="grid lg:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
                     <div className="flex items-center justify-between p-5 border-b">
@@ -327,7 +315,7 @@ export default function SellerDashboard() {
                                     }
                                 >
                                     <Plus className="w-4 h-4 mr-2" />
-                                    Add Product
+                                    {provider ? "Add Service" : "Add Product"}
                                 </Button>
                             </div>
                         ) : (
@@ -440,9 +428,9 @@ export default function SellerDashboard() {
                         onClick={() => navigate("/dashboard/seller/products")}
                     />
                     <QuickAction
-                        label="Orders"
+                        label={provider ? "Bookings" : "Orders"}
                         icon={<ShoppingBag className="w-5 h-5" />}
-                        onClick={() => navigate("/dashboard/seller/orders")}
+                        onClick={() => navigate(provider ? "/dashboard/seller/bookings" : "/dashboard/seller/orders")}
                     />
                     <QuickAction
                         label="Analytics"
