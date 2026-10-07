@@ -1,4 +1,2 @@
-import ComingSoon from "@/components/ui/ComingSoon";
-export default function AccountPage() {
-  return <ComingSoon title="My Account" backTo="/" backLabel="Back" />;
-}
+import { Navigate } from "react-router-dom";
+export default function AccountPage() { return <Navigate to="/dashboard/user" replace />; }
