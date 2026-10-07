@@ -132,6 +132,58 @@ async function setBookingArchived({ req, res, error, databases, databaseId, arch
     }
 }
 
+
+const FEEDBACK_TABLE_ID = "feedback";
+
+async function requireAdmin({ req, databases, databaseId, userCollectionId }) {
+    const actorId = req.headers["x-appwrite-user-id"];
+    if (!actorId) return { error: jsonError(req.res, "You must be signed in.", 401) };
+    try {
+        const user = await databases.getDocument(databaseId, userCollectionId, actorId);
+        if (user.role !== "admin" || user.accountStatus !== "active") {
+            return { error: jsonError(req.res, "Admin access required.", 403) };
+        }
+        return { user };
+    } catch (err) {
+        return { error: jsonError(req.res, "Admin access required.", 403) };
+    }
+}
+
+async function listFeedback({ req, res, error, databases, databaseId, userCollectionId }) {
+    const auth = await requireAdmin({ req: { ...req, res }, databases, databaseId, userCollectionId });
+    if (auth.error) return auth.error;
+    try {
+        const result = await databases.listDocuments(databaseId, FEEDBACK_TABLE_ID, [Query.orderDesc("$createdAt"), Query.limit(100)]);
+        return res.json({ ok: true, feedback: result.documents });
+    } catch (err) {
+        error(err?.message ?? "Feedback lookup failed.");
+        return jsonError(res, "Feedback lookup failed.", 500);
+    }
+}
+
+async function updateFeedbackStatus({ req, res, error, databases, databaseId, userCollectionId }) {
+    const auth = await requireAdmin({ req: { ...req, res }, databases, databaseId, userCollectionId });
+    if (auth.error) return auth.error;
+    const { feedbackId, status, adminNote = null } = req.bodyJson ?? {};
+    if (!isNonEmptyString(feedbackId, 128) || !["open", "in-review", "resolved"].includes(status)) {
+        return jsonError(res, "A valid feedbackId and status are required.", 400);
+    }
+    if (adminNote !== null && typeof adminNote !== "string") return jsonError(res, "adminNote must be text.", 400);
+    try {
+        const feedback = await databases.getDocument(databaseId, FEEDBACK_TABLE_ID, feedbackId);
+        const updated = await databases.updateDocument(databaseId, FEEDBACK_TABLE_ID, feedbackId, {
+            status,
+            adminNote: typeof adminNote === "string" && adminNote.trim() ? adminNote.trim().slice(0, 5000) : null,
+            resolvedAt: status === "resolved" ? new Date().toISOString() : null,
+        });
+        return res.json({ ok: true, feedback: updated });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Feedback submission not found.", 404);
+        error(err?.message ?? "Feedback update failed.");
+        return jsonError(res, "Feedback update failed.", 500);
+    }
+}
+
 const ORDER_ITEMS_COLLECTION_ID = "order_items";
 const PRODUCTS_COLLECTION_ID = "products";
 const PUBLIC_FIELDS = [
@@ -458,6 +510,12 @@ export default async ({ req, res, error }) => {
     const databases = new Databases(client);
     const body = req.bodyJson ?? {};
 
+    if (body.operation === "listFeedback") {
+        return listFeedback({ req, res, error, databases, databaseId, userCollectionId: collectionId });
+    }
+    if (body.operation === "updateFeedbackStatus") {
+        return updateFeedbackStatus({ req, res, error, databases, databaseId, userCollectionId: collectionId });
+    }
     if (body.operation === "createBookingRequest") {
         return createBookingRequest({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     }
