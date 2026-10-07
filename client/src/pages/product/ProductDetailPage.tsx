@@ -18,6 +18,7 @@ import {
     Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
     BadgeChip,
     ListingTypeChip,
@@ -73,6 +74,7 @@ export default function ProductDetailPage() {
     const [bookingOpen, setBookingOpen] = useState(false);
     const [bookingDateTime, setBookingDateTime] = useState("");
     const [bookingPhone, setBookingPhone] = useState("");
+    const [bookingPhoneLocked, setBookingPhoneLocked] = useState(false);
     const [bookingMode, setBookingMode] = useState("In person");
     const [bookingLocation, setBookingLocation] = useState("");
     const [bookingNotes, setBookingNotes] = useState("");
@@ -228,6 +230,36 @@ export default function ProductDetailPage() {
         }
     };
 
+    const openBooking = async () => {
+        setBookingError(null);
+        setBookingSuccess(false);
+        try {
+            const account = await getCurrentAccount();
+            if (!account?.$id) throw new Error("Please sign in before requesting a booking.");
+            const profile = await getUserProfile(account.$id);
+            const savedPhone = profile?.phoneNumber?.trim() || account.phone?.trim() || "";
+            setBookingPhone(savedPhone);
+            setBookingPhoneLocked(Boolean(savedPhone));
+            setBookingOpen(true);
+        } catch (err) {
+            setBookingError(err instanceof Error ? err.message : "Unable to open the booking form.");
+        }
+    };
+
+    const buildBookingWhatsAppUrl = (phone: string) => {
+        const cleaned = phone.replace(/\\D/g, "");
+        const number = cleaned.startsWith("0") ? "234" + cleaned.slice(1) : cleaned;
+        const date = new Date(bookingDateTime).toLocaleString();
+        const message = [
+            `Hi! I just submitted a booking request for *${product?.title ?? "your service"}* on Zemelix.`,
+            `Preferred time: ${date}`,
+            `Mode: ${bookingMode}`,
+            bookingLocation.trim() ? `Location: ${bookingLocation.trim()}` : "",
+            bookingNotes.trim() ? `Notes: ${bookingNotes.trim()}` : "",
+        ].filter(Boolean).join("\\n");
+        return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+    };
+
     const handleBookingSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (!product || product.vendorType !== "service" || !product.sellerId) return;
@@ -242,6 +274,11 @@ export default function ProductDetailPage() {
             const customerEmail = profile?.email?.trim() || account.email?.trim() || "";
             if (!customerName) throw new Error("Please add your name to your profile first.");
             if (!customerPhone) throw new Error("Please enter your phone number.");
+            if (!/^\\+?[0-9\\s()-]{7,20}$/.test(customerPhone)) throw new Error("Enter a valid phone number.");
+            if (!profile?.phoneNumber?.trim() && !account.phone?.trim()) {
+                await updateUserProfile(account.$id, { phoneNumber: customerPhone });
+                setBookingPhoneLocked(true);
+            }
             if (!bookingDateTime) throw new Error("Choose a preferred date and time.");
             const localDate = new Date(bookingDateTime);
             if (Number.isNaN(localDate.getTime()) || localDate.getTime() <= Date.now()) {
@@ -260,6 +297,7 @@ export default function ProductDetailPage() {
             });
             setBookingSuccess(true);
             setBookingOpen(false);
+            if (product.sellerWhatsapp) window.location.assign(buildBookingWhatsAppUrl(product.sellerWhatsapp));
             setBookingDateTime("");
             setBookingPhone("");
             setBookingLocation("");
@@ -506,6 +544,9 @@ export default function ProductDetailPage() {
                             </div>
                         )}
 
+                        {isService ? (
+                            <Button type="button" onClick={() => void openBooking()} className="mt-3 w-full bg-teal-600 hover:bg-teal-700 text-white">Book Now</Button>
+                        ) : (
                         {product.sellerWhatsapp && (
                             <>
                                 {whatsappPhoneRequired && (
@@ -527,6 +568,7 @@ export default function ProductDetailPage() {
                                         />
                                     </div>
                                 )}
+                        )}
                                 <button
                                     type="button"
                                     className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed"
@@ -550,42 +592,6 @@ export default function ProductDetailPage() {
                         )}
                     </div>
 
-                    {bookingOpen && (
-                        <form onSubmit={handleBookingSubmit} className="rounded-xl border border-teal-200 bg-teal-50 dark:bg-teal-900/20 dark:border-teal-800 p-4 space-y-3">
-                            <div>
-                                <h2 className="font-semibold text-gray-900 dark:text-white">Request a booking</h2>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Choose a preferred time. The provider will confirm the request.</p>
-                            </div>
-                            <label className="block text-sm font-medium">Phone number
-                                <input type="tel" required value={bookingPhone} onChange={e=>setBookingPhone(e.target.value)} placeholder="e.g. 08012345678" className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
-                            </label>
-                            <label className="block text-sm font-medium">Preferred date & time
-                                <input type="datetime-local" required value={bookingDateTime} onChange={e=>setBookingDateTime(e.target.value)} className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
-                            </label>
-                            <label className="block text-sm font-medium">Service mode
-                                <select value={bookingMode} onChange={e=>setBookingMode(e.target.value)} className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm">
-                                    <option>In person</option><option>Online</option><option>Phone</option><option>Provider location</option>
-                                </select>
-                            </label>
-                            <label className="block text-sm font-medium">Location (optional)
-                                <input value={bookingLocation} onChange={e=>setBookingLocation(e.target.value)} placeholder="Address or meeting details" className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
-                            </label>
-                            <label className="block text-sm font-medium">Notes (optional)
-                                <textarea value={bookingNotes} onChange={e=>setBookingNotes(e.target.value)} rows={3} placeholder="Tell the provider anything they should know." className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
-                            </label>
-                            {bookingError && <p className="text-sm text-red-600" role="alert">{bookingError}</p>}
-                            <div className="flex flex-col sm:flex-row gap-2">
-                                <Button type="submit" disabled={bookingSubmitting} className="w-full sm:w-auto">{bookingSubmitting ? "Sending…" : "Send booking request"}</Button>
-                                <Button type="button" variant="outline" disabled={bookingSubmitting} onClick={()=>setBookingOpen(false)} className="w-full sm:w-auto">Cancel</Button>
-                            </div>
-                        </form>
-                    )}
-                    {bookingSuccess && (
-                        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                            Booking request sent. You can track the provider's response in My Bookings.
-                        </div>
-                    )}
-
                     <div className="flex gap-3 mt-2">
                         <ListingActionButton
                             vendorType={product.vendorType}
@@ -606,6 +612,30 @@ export default function ProductDetailPage() {
                     </div>
                 </div>
             </div>
-        </div>
+                    <Dialog open={bookingOpen} onOpenChange={open => { if (!bookingSubmitting) setBookingOpen(open); }}>
+                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader><DialogTitle>Request a booking</DialogTitle><DialogDescription>Choose a preferred time. The provider will confirm the request.</DialogDescription></DialogHeader>
+                    <form onSubmit={handleBookingSubmit} className="space-y-4">
+                        <label className="block text-sm font-medium">Phone number
+                            <input type="tel" required value={bookingPhone} disabled={bookingPhoneLocked} onChange={e=>setBookingPhone(e.target.value)} placeholder="e.g. 08012345678" autoComplete="tel" className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm disabled:opacity-70"/>
+                        </label>
+                        <label className="block text-sm font-medium">Preferred date & time
+                            <input type="datetime-local" required value={bookingDateTime} onChange={e=>setBookingDateTime(e.target.value)} className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
+                        </label>
+                        <label className="block text-sm font-medium">Service mode
+                            <select value={bookingMode} onChange={e=>setBookingMode(e.target.value)} className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"><option>In person</option><option>Online</option><option>Phone</option><option>Provider location</option></select>
+                        </label>
+                        <label className="block text-sm font-medium">Location (optional)
+                            <input value={bookingLocation} onChange={e=>setBookingLocation(e.target.value)} placeholder="Address or meeting details" className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
+                        </label>
+                        <label className="block text-sm font-medium">Notes (optional)
+                            <textarea value={bookingNotes} onChange={e=>setBookingNotes(e.target.value)} rows={3} placeholder="Tell the provider anything they should know." className="mt-1 w-full rounded-lg border bg-white dark:bg-gray-900 px-3 py-2.5 text-sm"/>
+                        </label>
+                        {bookingError && <p className="text-sm text-red-600" role="alert">{bookingError}</p>}
+                        <div className="flex flex-col sm:flex-row gap-2"><Button type="submit" disabled={bookingSubmitting} className="w-full sm:w-auto">{bookingSubmitting ? "Sending…" : "Send booking request"}</Button><Button type="button" variant="outline" disabled={bookingSubmitting} onClick={()=>setBookingOpen(false)} className="w-full sm:w-auto">Cancel</Button></div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+</div>
     );
 }
