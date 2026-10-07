@@ -207,7 +207,7 @@ function FeaturedCard({
     onView: () => void;
 }) {
     const isService = product.vendorType === "service";
-    const outOfStock = product.stock === 0;
+    const outOfStock = !isService && product.stock === 0;
 
     return (
         <div
