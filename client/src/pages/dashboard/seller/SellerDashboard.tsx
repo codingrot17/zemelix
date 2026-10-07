@@ -266,7 +266,7 @@ export default function SellerDashboard() {
                     </div>
                 </div>
 
-            <div className="grid lg:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
                     <div className="flex items-center justify-between p-5 border-b">
                         <div>
