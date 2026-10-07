@@ -547,50 +547,22 @@ export default function ProductDetailPage() {
                         {isService ? (
                             <Button type="button" onClick={() => void openBooking()} className="mt-3 w-full bg-teal-600 hover:bg-teal-700 text-white">Book Now</Button>
                         ) : (
-                        {product.sellerWhatsapp && (
-                            <>
-                                {whatsappPhoneRequired && (
-                                    <div className="mt-3 space-y-2">
-                                        <label
-                                            htmlFor="whatsapp-phone"
-                                            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-                                        >
-                                            Your phone number
-                                        </label>
-                                        <input
-                                            id="whatsapp-phone"
-                                            type="tel"
-                                            value={whatsappPhone}
-                                            onChange={event => setWhatsappPhone(event.target.value)}
-                                            placeholder="+234 801 234 5678"
-                                            autoComplete="tel"
-                                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-green-500"
-                                        />
-                                    </div>
-                                )}
-                        )}
-                                <button
-                                    type="button"
-                                    className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed"
-                                    onClick={handleWhatsAppClick}
-                                    aria-busy={whatsappLoading}
-                                    disabled={whatsappLoading}
-                                >
-                                    {whatsappLoading ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <MessageCircle className="w-4 h-4" />
+                            product.sellerWhatsapp && (
+                                <>
+                                    {whatsappPhoneRequired && (
+                                        <div className="mt-3 space-y-2">
+                                            <label htmlFor="whatsapp-phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Your phone number</label>
+                                            <input id="whatsapp-phone" type="tel" value={whatsappPhone} onChange={event => setWhatsappPhone(event.target.value)} placeholder="+234 801 234 5678" autoComplete="tel" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-green-500"/>
+                                        </div>
                                     )}
-                                    {whatsappLoading ? "Starting chat…" : whatsappPhoneRequired ? "Continue to WhatsApp" : "Chat on WhatsApp"}
-                                </button>
-                                {whatsappError && (
-                                    <p className="mt-2 text-sm text-red-500" role="alert">
-                                        {whatsappError}
-                                    </p>
-                                )}
-                            </>
+                                    <button type="button" className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed" onClick={handleWhatsAppClick} aria-busy={whatsappLoading} disabled={whatsappLoading}>
+                                        {whatsappLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                                        {whatsappLoading ? "Starting chat…" : whatsappPhoneRequired ? "Continue to WhatsApp" : "Chat on WhatsApp"}
+                                    </button>
+                                    {whatsappError && <p className="mt-2 text-sm text-red-500" role="alert">{whatsappError}</p>}
+                                </>
+                            )
                         )}
-                    </div>
 
                     <div className="flex gap-3 mt-2">
                         <ListingActionButton
