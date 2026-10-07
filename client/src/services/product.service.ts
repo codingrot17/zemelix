@@ -335,6 +335,67 @@ export async function updateSellerProduct(
     return toSellerProduct(document as ProductDocument);
 }
 
+
+export async function listProviderServices(
+    providerId: string,
+    limit = 100
+): Promise<SellerProduct[]> {
+    assertProductConfig();
+    const currentUserId = await requireCurrentUserId();
+    if (!ownsResource(currentUserId, providerId)) {
+        throw new Error("You can only access your own services.");
+    }
+
+    const response = await databases.listDocuments(DB_ID, COLLECTION_ID, [
+        Query.equal("sellerId", currentUserId),
+        Query.equal("vendorType", "service"),
+        Query.orderDesc("$createdAt"),
+        Query.limit(limit)
+    ]);
+
+    return response.documents.map(document =>
+        toSellerProduct(document as ProductDocument)
+    );
+}
+
+export interface ProviderServiceInput {
+    title: string;
+    shortDescription: string;
+    longDescription?: string | null;
+    price: number;
+    category: string;
+    tags: string[];
+    sellerWhatsapp?: string | null;
+    imageUrl?: string | null;
+}
+
+export async function createProviderService(
+    input: ProviderServiceInput
+): Promise<SellerProduct> {
+    return createSellerProduct({
+        ...input,
+        stock: 1,
+        badge: null,
+        vendorType: "service"
+    });
+}
+
+export async function updateProviderService(
+    serviceId: string,
+    input: Partial<ProviderServiceInput>
+): Promise<SellerProduct> {
+    return updateSellerProduct(serviceId, {
+        ...input,
+        stock: 1,
+        badge: null,
+        vendorType: "service"
+    });
+}
+
+export async function deleteProviderService(serviceId: string): Promise<void> {
+    return deleteSellerProduct(serviceId);
+}
+
 export async function deleteSellerProduct(productId: string): Promise<void> {
     assertProductConfig();
     const currentUserId = await requireCurrentUserId();
