@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AlertCircle, DollarSign, Edit, Eye, ImagePlus, Loader2, Package, Plus, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -6,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
+import { isServiceProvider } from "@/lib/vendorAccess";
 import { createSellerProduct, deleteSellerProduct, listSellerProducts, type SellerProduct, updateSellerProduct, uploadProductImage } from "@/services/product.service";
 
 const CATEGORIES = ["Fashion", "Beauty", "Electronics", "Gadgets", "Home & Living", "Food & Drinks", "Graphic Design", "Digital Services", "Furniture", "Automobile", "Photography", "Tech Services", "Other"];
@@ -18,6 +20,8 @@ const parseTags = (value: string) => value.split(",").map(tag => tag.trim()).fil
 
 export default function SellerProducts() {
     const { user } = useAuth();
+    const navigate = useNavigate();
+    const provider = isServiceProvider(user?.profile?.vendorType);
     const [products, setProducts] = useState<SellerProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
@@ -41,7 +45,13 @@ export default function SellerProducts() {
         catch (error: any) { setFetchError(error?.message ?? "Failed to load products."); }
         finally { setLoading(false); }
     };
-    useEffect(() => { void fetchProducts(); }, [user?.$id]);
+    useEffect(() => {
+        if (provider) {
+            navigate("/dashboard/seller/bookings", { replace: true });
+            return;
+        }
+        void fetchProducts();
+    }, [user?.$id, provider, navigate]);
 
     const filtered = products.filter(product => {
         const query = searchQuery.toLowerCase();
