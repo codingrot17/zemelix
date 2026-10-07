@@ -106,7 +106,96 @@ export default function SellerProducts() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4"><StatCard icon={<Package className="w-8 h-8 text-indigo-500" />} label="Total Products" value={String(products.length)} /><StatCard icon={<Eye className="w-8 h-8 text-emerald-500" />} label="Total Stock" value={String(totalStock)} /><StatCard icon={<DollarSign className="w-8 h-8 text-yellow-500" />} label="Inventory Value" value={`₦${totalValue.toLocaleString()}`} /></div>
         <div className="flex flex-col sm:flex-row gap-3"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><Input placeholder="Search by product name or category…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9" /></div></div>
         {fetchError && <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300"><AlertCircle className="w-4 h-4" />{fetchError}</div>}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border overflow-hidden">{loading ? <div className="flex items-center justify-center py-20 text-gray-400"><Loader2 className="w-6 h-6 animate-spin mr-2" />Loading your products…</div> : filtered.length === 0 ? <div className="py-16 text-center"><Package className="w-14 h-14 text-gray-300 mx-auto mb-3" /><p className="text-gray-500 dark:text-gray-400 mb-4">{searchQuery ? `No products matching "${searchQuery}"` : "No products yet"}</p><Button onClick={openAdd}>Add Your First Product</Button></div> : <div className="hidden md:block overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50 dark:bg-gray-900 border-b"><tr>{["Product", "Category", "Price", "Stock", "Status", "Actions"].map(header => <th key={header} className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide ${header === "Actions" ? "text-right" : "text-left"}`}>{header}</th>)}</tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-700">{filtered.map(product => <tr key={product.$id} className="hover:bg-gray-50 dark:hover:bg-gray-900/40 transition"><td className="px-4 py-3"><div className="flex items-center gap-3"><img src={product.imageUrl || "/images/placeholder.svg"} alt={product.title} className="w-10 h-10 rounded-lg object-cover border" /><div><p className="font-medium text-gray-900 dark:text-white line-clamp-1">{product.title}</p>{product.badge && <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">{product.badge}</span>}</div></div></td><td className="px-4 py-3 text-gray-600 dark:text-gray-400">{product.category}</td><td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">₦{Number(product.price).toLocaleString()}</td><td className="px-4 py-3 text-gray-600 dark:text-gray-400"><span className={Number(product.stock) <= 5 ? "text-red-500 font-semibold" : ""}>{product.stock}</span></td><td className="px-4 py-3"><StatusBadge status={product.status} /></td><td className="px-4 py-3"><div className="flex justify-end gap-1"><Button size="sm" variant="ghost" onClick={() => openEdit(product)}><Edit className="w-4 h-4" /></Button><Button size="sm" variant="ghost" disabled={deletingId === product.$id} onClick={() => handleDelete(product)}>{deletingId === product.$id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 text-red-500" />}</Button></div></td></tr>)}</tbody></table><div className="px-4 py-3 border-t text-xs text-gray-400">Showing {filtered.length} of {products.length} products</div></div><div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">{filtered.map(product => <div key={product.$id} className="p-4"><div className="flex gap-3"><img src={product.imageUrl || "/images/placeholder.svg"} alt={product.title} className="w-16 h-16 rounded-lg object-cover border shrink-0" /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="font-medium text-gray-900 dark:text-white truncate">{product.title}</p><p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{product.category}</p></div><StatusBadge status={product.status} /></div><div className="grid grid-cols-2 gap-3 mt-3 text-sm"><div><p className="text-xs text-gray-400">Price</p><p className="font-semibold text-gray-900 dark:text-white">₦{Number(product.price).toLocaleString()}</p></div><div><p className="text-xs text-gray-400">Stock</p><p className={`font-medium ${Number(product.stock) <= 5 ? "text-red-500" : "text-gray-700 dark:text-gray-300"}`}>{product.stock}</p></div></div></div></div><div className="flex justify-end gap-2 mt-3"><Button size="sm" variant="outline" onClick={() => openEdit(product)}><Edit className="w-4 h-4 mr-1" />Edit</Button><Button size="sm" variant="outline" disabled={deletingId === product.$id} onClick={() => handleDelete(product)}>{deletingId === product.$id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1 text-red-500" />Delete</>}</Button></div></div>)}<div className="px-4 py-3 border-t text-xs text-gray-400">Showing {filtered.length} of {products.length} products</div></div></div>}</div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border overflow-hidden">
+            {loading ? (
+                <div className="flex items-center justify-center py-20 text-gray-400">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2" />Loading your products…
+                </div>
+            ) : filtered.length === 0 ? (
+                <div className="py-16 text-center">
+                    <Package className="w-14 h-14 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                        {searchQuery ? `No products matching "${searchQuery}"` : "No products yet"}
+                    </p>
+                    <Button onClick={openAdd}>Add Your First Product</Button>
+                </div>
+            ) : (
+                <>
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50 dark:bg-gray-900 border-b">
+                                <tr>
+                                    {["Product", "Category", "Price", "Stock", "Status", "Actions"].map(header => (
+                                        <th key={header} className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide ${header === "Actions" ? "text-right" : "text-left"}`}>
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                {filtered.map(product => (
+                                    <tr key={product.$id} className="hover:bg-gray-50 dark:hover:bg-gray-900/40 transition">
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-3">
+                                                <img src={product.imageUrl || "/images/placeholder.svg"} alt={product.title} className="w-10 h-10 rounded-lg object-cover border" />
+                                                <div>
+                                                    <p className="font-medium text-gray-900 dark:text-white line-clamp-1">{product.title}</p>
+                                                    {product.badge && <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">{product.badge}</span>}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{product.category}</td>
+                                        <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">₦{Number(product.price).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                                            <span className={Number(product.stock) <= 5 ? "text-red-500 font-semibold" : ""}>{product.stock}</span>
+                                        </td>
+                                        <td className="px-4 py-3"><StatusBadge status={product.status} /></td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex justify-end gap-1">
+                                                <Button size="sm" variant="ghost" onClick={() => openEdit(product)}><Edit className="w-4 h-4" /></Button>
+                                                <Button size="sm" variant="ghost" disabled={deletingId === product.$id} onClick={() => handleDelete(product)}>
+                                                    {deletingId === product.$id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 text-red-500" />}
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        <div className="px-4 py-3 border-t text-xs text-gray-400">Showing {filtered.length} of {products.length} products</div>
+                    </div>
+                    <div className="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+                        {filtered.map(product => (
+                            <div key={product.$id} className="p-4">
+                                <div className="flex gap-3">
+                                    <img src={product.imageUrl || "/images/placeholder.svg"} alt={product.title} className="w-16 h-16 rounded-lg object-cover border shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="min-w-0">
+                                                <p className="font-medium text-gray-900 dark:text-white truncate">{product.title}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{product.category}</p>
+                                            </div>
+                                            <StatusBadge status={product.status} />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
+                                            <div><p className="text-xs text-gray-400">Price</p><p className="font-semibold text-gray-900 dark:text-white">₦{Number(product.price).toLocaleString()}</p></div>
+                                            <div><p className="text-xs text-gray-400">Stock</p><p className={`font-medium ${Number(product.stock) <= 5 ? "text-red-500" : "text-gray-700 dark:text-gray-300"}`}>{product.stock}</p></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-2 mt-3">
+                                    <Button size="sm" variant="outline" onClick={() => openEdit(product)}><Edit className="w-4 h-4 mr-1" />Edit</Button>
+                                    <Button size="sm" variant="outline" disabled={deletingId === product.$id} onClick={() => handleDelete(product)}>
+                                        {deletingId === product.$id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1 text-red-500" />Delete</>}
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                        <div className="px-4 py-3 border-t text-xs text-gray-400">Showing {filtered.length} of {products.length} products</div>
+                    </div>
+                </>
+            )}
+        </div>
 
         <Dialog open={showDialog} onOpenChange={open => { if (!open && !saving) resetDialog(); }}><DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle></DialogHeader><div className="space-y-5 py-2">
             {formError && <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300"><AlertCircle className="w-4 h-4" />{formError}</div>}
