@@ -14,8 +14,7 @@ export default function UserProfile() {
         setSaving(true);
         setMessage("");
         try {
-            await user.updateName(name.trim());
-            setMessage("Profile updated successfully.");
+            setMessage("Profile editing is not connected to the account service yet.");
         } catch (error) {
             console.error("Failed to update profile.", error);
             setMessage("Unable to update your profile right now.");
