@@ -1,4 +1,2 @@
-import ComingSoon from "@/components/ui/ComingSoon";
-export default function SettingsPage() {
-  return <ComingSoon title="Settings" backTo="/" backLabel="Back" />;
-}
+import { Navigate } from "react-router-dom";
+export default function SettingsPage() { return <Navigate to="/dashboard/user/settings" replace />; }
