@@ -71,6 +71,7 @@ import CategoryPage from "@/pages/public/CategoryPage";
 
 // Guards
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import VendorTransactionRoute from "@/components/vendor/VendorTransactionRoute";
 
 // Vendor Upgrade
 import VendorSetupForm from "@/pages/vendor/VendorSetupForm";
@@ -191,8 +192,12 @@ export default function AppRoutes() {
                                 path="products"
                                 element={<SellerProducts />}
                             />
-                            <Route path="orders" element={<SellerOrders />} />
-                            <Route path="bookings" element={<SellerBookings />} />
+                            <Route element={<VendorTransactionRoute kind="orders" />}>
+                                <Route path="orders" element={<SellerOrders />} />
+                            </Route>
+                            <Route element={<VendorTransactionRoute kind="bookings" />}>
+                                <Route path="bookings" element={<SellerBookings />} />
+                            </Route>
                             <Route
                                 path="analytics"
                                 element={<SellerAnalytics />}
