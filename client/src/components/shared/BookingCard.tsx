@@ -1,4 +1,5 @@
 import { CalendarClock, CheckCircle, UserCircle } from "lucide-react";
+import type { ReactNode } from "react";
 import type { Booking } from "@/services/booking.service";
 
 const statusStyles: Record<string,string> = {
@@ -10,7 +11,7 @@ const statusStyles: Record<string,string> = {
  no_show:"bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
  expired:"bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
 };
-export function BookingCard({booking,provider,actions}:{booking:Booking;provider?:boolean;actions?:React.ReactNode}) {
+export function BookingCard({booking,provider,actions}:{booking:Booking;provider?:boolean;actions?:ReactNode}) {
  const label=booking.status==="no_show"?"No-show":booking.status.replace("_"," ");
  return <div className="p-5 space-y-4 bg-white dark:bg-gray-800 rounded-lg border shadow-sm">
   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
