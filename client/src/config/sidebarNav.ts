@@ -14,13 +14,18 @@ export const sidebarNavConfig = {
 
 export function getSidebarNav(role: UserRole, vendorType?: string | null) {
     if (role !== "seller") return sidebarNavConfig[role] ?? [];
-    const transaction = isServiceProvider(vendorType)
-        ? { label:"Bookings", to:"/dashboard/seller/bookings", icon:HiOutlineClipboardList }
-        : { label:"Orders", to:"/dashboard/seller/orders", icon:HiOutlineClipboardList };
+    if (isServiceProvider(vendorType)) {
+        return [
+            sidebarNavConfig.seller[0],
+            { label:"Bookings", to:"/dashboard/seller/bookings", icon:HiOutlineClipboardList },
+            ...sidebarNavConfig.seller.slice(2)
+        ];
+    }
+
     return [
         sidebarNavConfig.seller[0],
         sidebarNavConfig.seller[1],
-        transaction,
+        { label:"Orders", to:"/dashboard/seller/orders", icon:HiOutlineClipboardList },
         ...sidebarNavConfig.seller.slice(2)
     ];
 }
