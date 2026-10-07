@@ -178,7 +178,7 @@ export default function SellerDashboard() {
                     className="flex items-center gap-2 w-full sm:w-auto"
                 >
                     <Plus className="w-4 h-4" />
-                    Add Product
+                    {provider ? "Add Service" : "Add Product"}
                 </Button>
             </div>
 
