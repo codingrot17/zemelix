@@ -37,6 +37,7 @@ import AdminSettings from "@/pages/dashboard/admin/AdminSettings";
 
 // ── Seller sub-pages ──────────────────────────────────────────────────────────
 import SellerProducts from "@/pages/dashboard/seller/Products";
+import SellerServices from "@/pages/dashboard/seller/Services";
 import SellerOrders from "@/pages/dashboard/seller/SellerOrders";
 import SellerBookings from "@/pages/dashboard/seller/SellerBookings";
 import SellerAnalytics from "@/pages/dashboard/seller/SellerAnalytics";
@@ -191,6 +192,10 @@ export default function AppRoutes() {
                             <Route
                                 path="products"
                                 element={<SellerProducts />}
+                            />
+                            <Route
+                                path="services"
+                                element={<SellerServices />}
                             />
                             <Route element={<VendorTransactionRoute kind="orders" />}>
                                 <Route path="orders" element={<SellerOrders />} />
