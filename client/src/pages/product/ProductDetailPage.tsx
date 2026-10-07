@@ -233,16 +233,16 @@ export default function ProductDetailPage() {
     const openBooking = async () => {
         setBookingError(null);
         setBookingSuccess(false);
+        setBookingOpen(true);
         try {
             const account = await getCurrentAccount();
-            if (!account?.$id) throw new Error("Please sign in before requesting a booking.");
+            if (!account?.$id) return;
             const profile = await getUserProfile(account.$id);
             const savedPhone = profile?.phoneNumber?.trim() || account.phone?.trim() || "";
             setBookingPhone(savedPhone);
             setBookingPhoneLocked(Boolean(savedPhone));
-            setBookingOpen(true);
         } catch (err) {
-            setBookingError(err instanceof Error ? err.message : "Unable to open the booking form.");
+            console.error("Failed to prefill booking contact.", err);
         }
     };
 
