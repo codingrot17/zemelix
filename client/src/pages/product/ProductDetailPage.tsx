@@ -584,7 +584,8 @@ export default function ProductDetailPage() {
                     </div>
                 </div>
             </div>
-                    <Dialog open={bookingOpen} onOpenChange={open => { if (!bookingSubmitting) setBookingOpen(open); }}>
+            </div>
+            <Dialog open={bookingOpen} onOpenChange={open => { if (!bookingSubmitting) setBookingOpen(open); }}>
                 <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>Request a booking</DialogTitle><DialogDescription>Choose a preferred time. The provider will confirm the request.</DialogDescription></DialogHeader>
                     <form onSubmit={handleBookingSubmit} className="space-y-4">
@@ -608,6 +609,6 @@ export default function ProductDetailPage() {
                     </form>
                 </DialogContent>
             </Dialog>
-</div>
+        </div>
     );
 }
