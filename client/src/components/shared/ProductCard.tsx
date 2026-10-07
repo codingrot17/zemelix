@@ -27,7 +27,7 @@ export default function ProductCard({
         sellerBrandColor && /^#[0-9A-Fa-f]{6}$/.test(sellerBrandColor)
             ? sellerBrandColor
             : null;
-    const outOfStock = product.stock === 0;
+    const outOfStock = !isService && product.stock === 0;
 
     const handleAction = (e: React.MouseEvent) => {
         e.stopPropagation();
