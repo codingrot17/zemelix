@@ -204,8 +204,7 @@ export default function SellerDashboard() {
                             Account pending approval
                         </p>
                         <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-0.5">
-                            Your seller account is awaiting approval. You can
-                            prepare your products while the account is pending.
+                            {provider ? "Your provider account is awaiting approval. You can prepare your services while the account is pending." : "Your seller account is awaiting approval. You can prepare your products while the account is pending."}
                         </p>
                     </div>
                 </div>
@@ -219,24 +218,9 @@ export default function SellerDashboard() {
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                    icon={<Package className="w-6 h-6" />}
-                    label="Total Products"
-                    value={loading ? "…" : products.length.toString()}
-                    color="indigo"
-                />
-                <StatCard
-                    icon={<CheckCircle className="w-6 h-6" />}
-                    label="Active Listings"
-                    value={loading ? "…" : activeProducts.length.toString()}
-                    color="green"
-                />
-                <StatCard
-                    icon={<Clock className="w-6 h-6" />}
-                    label="Draft Products"
-                    value={loading ? "…" : draftProducts.length.toString()}
-                    color="yellow"
-                />
+                <StatCard icon={<Package className="w-6 h-6" />} label={provider ? "Total Services" : "Total Products"} value={loading ? "…" : products.length.toString()} color="indigo" />
+                <StatCard icon={<CheckCircle className="w-6 h-6" />} label={provider ? "Active Services" : "Active Listings"} value={loading ? "…" : activeProducts.length.toString()} color="green" />
+                <StatCard icon={<Clock className="w-6 h-6" />} label={provider ? "Draft Services" : "Draft Products"} value={loading ? "…" : draftProducts.length.toString()} color="yellow" />
                 {!provider && <StatCard icon={<TrendingUp className="w-6 h-6" />} label="Inventory Value" value={loading ? "…" : `₦${inventoryValue.toLocaleString()}`} color="purple" />}
             </div>
 
@@ -291,7 +275,7 @@ export default function SellerDashboard() {
                         {loading ? (
                             <div className="flex items-center justify-center py-10 text-gray-400">
                                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                                Loading products…
+                                {provider ? "Loading services…" : "Loading products…"}
                             </div>
                         ) : recentProducts.length === 0 ? (
                             <div className="p-8 text-center">
@@ -328,8 +312,7 @@ export default function SellerDashboard() {
                                             {product.title}
                                         </p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            ₦{Number(product.price).toLocaleString()} ·{" "}
-                                            {product.stock} in stock
+                                            ₦{Number(product.price).toLocaleString()}{!provider && <> · {product.stock} in stock</>}
                                         </p>
                                     </div>
                                     <StatusBadge status={product.status} />
@@ -362,7 +345,7 @@ export default function SellerDashboard() {
                         {loading ? (
                             <div className="flex items-center justify-center py-10 text-gray-400">
                                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                                Loading products…
+                                {provider ? "Loading services…" : "Loading products…"}
                             </div>
                         ) : lowStockProducts.length === 0 ? (
                             <div className="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
