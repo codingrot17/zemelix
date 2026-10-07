@@ -558,7 +558,6 @@ export default function ProductDetailPage() {
                                     </button>
                                     {whatsappError && <p className="mt-2 text-sm text-red-500" role="alert">{whatsappError}</p>}
                                 </>
-                            )
                         )}
 
                     <div className="flex gap-3 mt-2">
