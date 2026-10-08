@@ -169,6 +169,7 @@ export default function AppRoutes() {
                                 element={<AdminAnalytics />}
                             />
                             <Route path="reports" element={<AdminReports />} />
+                            <Route path="feedback" element={<AdminFeedback />} />
                             <Route
                                 path="marketing"
                                 element={<AdminMarketing />}
