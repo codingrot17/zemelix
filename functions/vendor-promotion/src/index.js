@@ -103,6 +103,9 @@ export default async ({ req, res, error }) => {
         if (current.role !== "customer" || current.vendorStatus === "active") {
             return res.json({ ok: false, error: "Only customer accounts can submit a new vendor application." }, 409);
         }
+        if (current.vendorStatus === "draft" && current.onboardingStep === 99) {
+            return res.json({ ok: false, error: "Your vendor application has already been submitted." }, 409);
+        }
 
         const document = await databases.updateDocument(
             databaseId,
@@ -111,7 +114,7 @@ export default async ({ req, res, error }) => {
             {
                 ...application,
                 vendorStatus: "draft",
-                onboardingStep: 1,
+                onboardingStep: 99,
                 storeStatus: "closed"
             }
         );
