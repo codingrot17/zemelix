@@ -1,8 +1,9 @@
-import { Permission, Role } from "appwrite";
+
 import type { UserProfile } from "@/types/user";
 import {
     account,
     databases,
+    functions,
     DB_ID,
     USERS_COLLECTION_ID,
 } from "./client";
@@ -139,8 +140,6 @@ export async function createUserProfile(
                             },
             [
                 Permission.read(Role.user(userId)),
-                Permission.update(Role.user(userId)),
-                Permission.delete(Role.user(userId)),
             ]
         );
 
@@ -205,10 +204,28 @@ export async function updateUserProfile(
         throw new Error("You can only update your own profile.");
     }
 
-    return await databases.updateDocument(
-        DB_ID,
-        USERS_COLLECTION_ID,
-        userId,
-        data
+    const allowedFields = ["fullName", "phoneNumber", "country"];
+    const keys = Object.keys(data);
+    if (!keys.length || keys.some((key) => !allowedFields.includes(key))) {
+        throw new Error("Profile update contains unsupported fields.");
+    }
+
+    const execution = await functions.createExecution(
+        "public-seller-profile",
+        JSON.stringify({ operation: "updateOwnProfile", data }),
+        false
     );
+    if (execution.responseStatusCode < 200 || execution.responseStatusCode >= 300) {
+        let message = "Profile update failed.";
+        try {
+            const body = JSON.parse(execution.responseBody || "{}");
+            if (typeof body.error === "string" && body.error) message = body.error;
+        } catch {
+            // Keep a safe generic error for non-JSON responses.
+        }
+        throw new Error(message);
+    }
+    const body = JSON.parse(execution.responseBody || "{}");
+    if (!body.ok) throw new Error(body.error || "Profile update failed.");
+    return body.profile;
 }
