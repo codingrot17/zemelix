@@ -1,7 +1,5 @@
 import { Client, Databases } from "node-appwrite";
 
-const ALLOWED_VENDOR_TYPES = new Set(["product-seller", "service-provider", "digital-creator", "wholesaler", "other"]);
-
 const EDITABLE_FIELDS = [
     "vendorType",
     "businessCategory",
@@ -21,10 +19,6 @@ function isOptionalString(value) {
 function validateInput(input) {
     if (!input || typeof input !== "object" || Array.isArray(input)) {
         return "Invalid vendor application payload.";
-    }
-
-    if (!ALLOWED_VENDOR_TYPES.has(input.vendorType)) {
-        return "Invalid vendor type.";
     }
 
     for (const field of [
@@ -96,35 +90,28 @@ export default async ({ req, res, error }) => {
     );
 
     try {
-        const current = await databases.getDocument(databaseId, collectionId, userId);
-        if (current.accountStatus !== "active") {
-            return res.json({ ok: false, error: "This account cannot submit vendor onboarding." }, 403);
-        }
-        if (current.role !== "customer" || current.vendorStatus === "active") {
-            return res.json({ ok: false, error: "Only customer accounts can submit a new vendor application." }, 409);
-        }
-        if (current.vendorStatus === "draft" && current.onboardingStep === 99) {
-            return res.json({ ok: false, error: "Your vendor application has already been submitted." }, 409);
-        }
-
         const document = await databases.updateDocument(
             databaseId,
             collectionId,
             userId,
             {
                 ...application,
-                vendorStatus: "draft",
+                role: "seller",
+                vendorStatus: "active",
+                storeStatus: "closed",
                 onboardingStep: 99,
-                storeStatus: "closed"
+                currency: "NGN",
+                subscriptionPlan: "free",
+                accountStatus: "active"
             }
         );
 
-        return res.json({ ok: true, userId: document.$id, status: "draft" });
+        return res.json({
+            ok: true,
+            userId: document.$id
+        });
     } catch (err) {
-        if (err?.code === 404) {
-            return res.json({ ok: false, error: "User profile not found." }, 404);
-        }
-        error(err?.message ?? "Vendor application submission failed.");
-        return res.json({ ok: false, error: "Vendor application submission failed." }, 500);
+        error(err?.message ?? "Vendor promotion failed.");
+        return res.json({ ok: false, error: "Vendor promotion failed." }, 500);
     }
 };
