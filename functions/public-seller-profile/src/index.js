@@ -401,109 +401,131 @@ async function createSellerOrder({ req, res, error, databases, databaseId, userC
         return jsonError(res, "Seller order creation failed.", 500);
     }
 }
-async function markSellerOrderPurchased({ req, res, error, databases, databaseId }) {
+function orderMutationError(message, status) {
+    return Object.assign(new Error(message), { httpStatus: status });
+}
+
+async function mutateSellerOrderInventory({ req, res, error, databases, databaseId, undo }) {
     const sellerId = req.headers["x-appwrite-user-id"];
     const orderId = req.bodyJson?.orderId;
-    if (!sellerId) return jsonError(res, "You must be signed in to mark an order as purchased.", 401);
+    if (!sellerId) return jsonError(res, "You must be signed in to update orders.", 401);
     if (!isNonEmptyString(orderId, 128)) return jsonError(res, "A valid orderId is required.", 400);
 
+    let transactionId = null;
+    let committed = false;
     try {
-        const order = await databases.getDocument(databaseId, ORDERS_COLLECTION_ID, orderId);
-        if (order.sellerId !== sellerId) return jsonError(res, "You can only update your own orders.", 403);
-        if (order.status !== "contacted") return jsonError(res, "Only contacted orders can be marked as purchased.", 409);
+        const transaction = await databases.createTransaction({ ttl: 60 });
+        transactionId = transaction.$id;
 
-        const itemResponse = await databases.listDocuments(databaseId, ORDER_ITEMS_COLLECTION_ID, [Query.equal("orderId", orderId), Query.limit(100)]);
-        if (itemResponse.documents.length === 0) return jsonError(res, "Order has no items to purchase.", 400);
+        const order = await databases.getDocument({
+            databaseId,
+            collectionId: ORDERS_COLLECTION_ID,
+            documentId: orderId,
+            transactionId,
+        });
+        if (order.sellerId !== sellerId) throw orderMutationError("You can only update your own orders.", 403);
+        const expectedStatus = undo ? "purchased" : "contacted";
+        if (order.status !== expectedStatus) {
+            throw orderMutationError(
+                undo ? "Only purchased orders can be reverted." : "Only contacted orders can be marked as purchased.",
+                409
+            );
+        }
 
-        const updates = [];
+        const itemResponse = await databases.listDocuments({
+            databaseId,
+            collectionId: ORDER_ITEMS_COLLECTION_ID,
+            queries: [Query.equal("orderId", orderId), Query.limit(100)],
+            transactionId,
+        });
+        if (itemResponse.documents.length === 0) {
+            throw orderMutationError(undo ? "Order has no items to restore." : "Order has no items to purchase.", 400);
+        }
+
+        // Aggregate duplicate product lines before calculating inventory changes.
+        const quantities = new Map();
         for (const item of itemResponse.documents) {
             const quantity = toNumber(item.quantity);
-            if (!Number.isInteger(quantity) || quantity < 1) return jsonError(res, "Order contains an invalid item quantity.", 400);
-
-            const product = await databases.getDocument(databaseId, PRODUCTS_COLLECTION_ID, item.productId);
-            if (product.sellerId !== sellerId) return jsonError(res, "Order contains a product owned by another seller.", 403);
-
-            const currentStock = toNumber(product.stock);
-            if (currentStock < quantity) {
-                return jsonError(res, `Insufficient stock for "${product.title ?? item.productTitle}". Available: ${currentStock}.`, 409);
+            if (!Number.isInteger(quantity) || quantity < 1) {
+                throw orderMutationError("Order contains an invalid item quantity.", 400);
             }
-            updates.push({ productId: product.$id, previousStock: currentStock, nextStock: currentStock - quantity });
+            quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + quantity);
         }
 
-        const appliedUpdates = [];
-        try {
-            for (const update of updates) {
-                await databases.updateDocument(databaseId, PRODUCTS_COLLECTION_ID, update.productId, { stock: update.nextStock });
-                appliedUpdates.push(update);
-            }
-            const updatedOrder = await databases.updateDocument(databaseId, ORDERS_COLLECTION_ID, orderId, {
-                status: "purchased",
-                purchasedAt: new Date().toISOString(),
+        const updates = [];
+        for (const [productId, quantity] of quantities.entries()) {
+            const product = await databases.getDocument({
+                databaseId,
+                collectionId: PRODUCTS_COLLECTION_ID,
+                documentId: productId,
+                transactionId,
             });
-            return res.json({ ok: true, order: updatedOrder });
-        } catch (purchaseError) {
-            for (const update of appliedUpdates.reverse()) {
-                try { await databases.updateDocument(databaseId, PRODUCTS_COLLECTION_ID, update.productId, { stock: update.previousStock }); }
-                catch (rollbackError) { error(rollbackError?.message ?? `Failed to restore stock for product ${update.productId}.`); }
+            if (product.sellerId !== sellerId) {
+                throw orderMutationError("Order contains a product owned by another seller.", 403);
             }
-            throw purchaseError;
+            const currentStock = toNumber(product.stock);
+            if (!Number.isFinite(currentStock) || currentStock < 0) {
+                throw orderMutationError("A product has invalid inventory data.", 409);
+            }
+            if (!undo && currentStock < quantity) {
+                throw orderMutationError(
+                    `Insufficient stock for "${product.title ?? productId}". Available: ${currentStock}.`,
+                    409
+                );
+            }
+            updates.push({
+                productId,
+                nextStock: undo ? currentStock + quantity : currentStock - quantity,
+            });
         }
+
+        for (const update of updates) {
+            await databases.updateDocument({
+                databaseId,
+                collectionId: PRODUCTS_COLLECTION_ID,
+                documentId: update.productId,
+                data: { stock: update.nextStock },
+                transactionId,
+            });
+        }
+
+        const updatedOrder = await databases.updateDocument({
+            databaseId,
+            collectionId: ORDERS_COLLECTION_ID,
+            documentId: orderId,
+            data: undo
+                ? { status: "contacted", purchasedAt: null }
+                : { status: "purchased", purchasedAt: new Date().toISOString() },
+            transactionId,
+        });
+
+        await databases.updateTransaction({ transactionId, commit: true });
+        committed = true;
+        return res.json({ ok: true, order: updatedOrder });
     } catch (err) {
+        if (transactionId && !committed) {
+            try {
+                await databases.updateTransaction({ transactionId, rollback: true });
+            } catch (rollbackError) {
+                error(rollbackError?.message ?? "Failed to roll back the inventory transaction.");
+            }
+        }
+        if (err?.httpStatus) return jsonError(res, err.message, err.httpStatus);
         if (err?.code === 404) return jsonError(res, "Order or product not found.", 404);
-        error(err?.message ?? "Seller order purchase confirmation failed.");
-        return jsonError(res, "Seller order purchase confirmation failed.", 500);
+        if (err?.code === 409 || err?.type === "transaction_conflict") {
+            return jsonError(res, "Inventory changed while this order was being processed. Refresh and try again.", 409);
+        }
+        error(err?.message ?? (undo ? "Seller purchase undo failed." : "Seller purchase confirmation failed."));
+        return jsonError(res, undo ? "Seller purchase undo failed." : "Seller purchase confirmation failed.", 500);
     }
 }
 
-async function undoSellerOrderPurchase({ req, res, error, databases, databaseId }) {
-    const sellerId = req.headers["x-appwrite-user-id"];
-    const orderId = req.bodyJson?.orderId;
-    if (!sellerId) return jsonError(res, "You must be signed in to undo a purchase.", 401);
-    if (!isNonEmptyString(orderId, 128)) return jsonError(res, "A valid orderId is required.", 400);
+async function markSellerOrderPurchased(args) {
+    return mutateSellerOrderInventory({ ...args, undo: false });
+}
 
-    try {
-        const order = await databases.getDocument(databaseId, ORDERS_COLLECTION_ID, orderId);
-        if (order.sellerId !== sellerId) return jsonError(res, "You can only update your own orders.", 403);
-        if (order.status !== "purchased") return jsonError(res, "Only purchased orders can be reverted.", 409);
-
-        const itemResponse = await databases.listDocuments(databaseId, ORDER_ITEMS_COLLECTION_ID, [Query.equal("orderId", orderId), Query.limit(100)]);
-        if (itemResponse.documents.length === 0) return jsonError(res, "Order has no items to restore.", 400);
-
-        const updates = [];
-        for (const item of itemResponse.documents) {
-            const quantity = toNumber(item.quantity);
-            if (!Number.isInteger(quantity) || quantity < 1) return jsonError(res, "Order contains an invalid item quantity.", 400);
-
-            const product = await databases.getDocument(databaseId, PRODUCTS_COLLECTION_ID, item.productId);
-            if (product.sellerId !== sellerId) return jsonError(res, "Order contains a product owned by another seller.", 403);
-
-            const currentStock = toNumber(product.stock);
-            updates.push({ productId: product.$id, previousStock: currentStock, nextStock: currentStock + quantity });
-        }
-
-        const appliedUpdates = [];
-        try {
-            for (const update of updates) {
-                await databases.updateDocument(databaseId, PRODUCTS_COLLECTION_ID, update.productId, { stock: update.nextStock });
-                appliedUpdates.push(update);
-            }
-            const updatedOrder = await databases.updateDocument(databaseId, ORDERS_COLLECTION_ID, orderId, {
-                status: "contacted",
-                purchasedAt: null,
-            });
-            return res.json({ ok: true, order: updatedOrder });
-        } catch (undoError) {
-            for (const update of appliedUpdates.reverse()) {
-                try { await databases.updateDocument(databaseId, PRODUCTS_COLLECTION_ID, update.productId, { stock: update.previousStock }); }
-                catch (rollbackError) { error(rollbackError?.message ?? `Failed to restore stock for product ${update.productId}.`); }
-            }
-            throw undoError;
-        }
-    } catch (err) {
-        if (err?.code === 404) return jsonError(res, "Order or product not found.", 404);
-        error(err?.message ?? "Seller purchase undo failed.");
-        return jsonError(res, "Seller purchase undo failed.", 500);
-    }
+async function undoSellerOrderPurchase(args) {
+    return mutateSellerOrderInventory({ ...args, undo: true });
 }
 
 async function setSellerOrderArchived({ req, res, error, databases, databaseId, archived }) {
