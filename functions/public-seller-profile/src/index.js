@@ -223,6 +223,48 @@ function jsonError(res, message, status) {
     return res.json({ ok: false, error: message }, status);
 }
 
+async function updateOwnProfile({ req, res, error, databases, databaseId, userCollectionId }) {
+    const actorId = req.headers["x-appwrite-user-id"];
+    const input = req.bodyJson?.data;
+    if (!actorId) return jsonError(res, "You must be signed in to update your profile.", 401);
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+        return jsonError(res, "A valid profile update is required.", 400);
+    }
+
+    const allowedFields = ["fullName", "phoneNumber", "country"];
+    const keys = Object.keys(input);
+    if (!keys.length || keys.some((key) => !allowedFields.includes(key))) {
+        return jsonError(res, "Profile update contains unsupported fields.", 400);
+    }
+    if ("fullName" in input && (typeof input.fullName !== "string" || !input.fullName.trim() || input.fullName.trim().length > 200)) {
+        return jsonError(res, "Full name must be between 1 and 200 characters.", 400);
+    }
+    if ("phoneNumber" in input && (typeof input.phoneNumber !== "string" || input.phoneNumber.length > 50)) {
+        return jsonError(res, "Phone number must be 50 characters or fewer.", 400);
+    }
+    if ("country" in input && (typeof input.country !== "string" || !input.country.trim() || input.country.trim().length > 100)) {
+        return jsonError(res, "Country must be between 1 and 100 characters.", 400);
+    }
+
+    const update = {};
+    if ("fullName" in input) update.fullName = input.fullName.trim();
+    if ("phoneNumber" in input) update.phoneNumber = input.phoneNumber.trim();
+    if ("country" in input) update.country = input.country.trim();
+
+    try {
+        const current = await databases.getDocument(databaseId, userCollectionId, actorId);
+        if (current.accountStatus !== "active") {
+            return jsonError(res, "This account cannot update its profile.", 403);
+        }
+        const updated = await databases.updateDocument(databaseId, userCollectionId, actorId, update);
+        return res.json({ ok: true, profile: updated });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "User profile not found.", 404);
+        error(err?.message ?? "Profile update failed.");
+        return jsonError(res, "Profile update failed.", 500);
+    }
+}
+
 function getServerClient(apiKey) {
     const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT;
     const projectId = process.env.APPWRITE_FUNCTION_PROJECT_ID;
@@ -510,6 +552,9 @@ export default async ({ req, res, error }) => {
     const databases = new Databases(client);
     const body = req.bodyJson ?? {};
 
+    if (body.operation === "updateOwnProfile") {
+        return updateOwnProfile({ req, res, error, databases, databaseId, userCollectionId: collectionId });
+    }
     if (body.operation === "listFeedback") {
         return listFeedback({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     }
