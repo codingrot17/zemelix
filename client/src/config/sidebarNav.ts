@@ -26,6 +26,7 @@ export const sidebarNavConfig = {
         { label: "Dashboard", to: "/dashboard", icon: HiOutlineHome },
         { label: "My Products", to: "/dashboard/seller/products", icon: HiOutlineCollection },
         { label: "Store Profile", to: "/dashboard/seller/profile", icon: HiOutlineUsers },
+        { label: "Feedback & Complaints", to: "/dashboard/seller/feedback", icon: HiOutlineDocumentReport },
         { label: "Analytics", to: "/dashboard/seller/analytics", icon: HiOutlineChartPie },
         { label: "Notifications", to: "/dashboard/seller/notifications", icon: HiOutlineBell },
         { label: "Settings", to: "/dashboard/seller/settings", icon: HiOutlineCog }
