@@ -45,6 +45,7 @@ import SellerAnalytics from "@/pages/dashboard/seller/SellerAnalytics";
 import SellerProfile from "@/pages/dashboard/seller/SellerProfile";
 import SellerNotifications from "@/pages/dashboard/seller/SellerNotifications";
 import SellerSettings from "@/pages/dashboard/seller/SellerSettings";
+import UserFeedback from "@/pages/dashboard/user/UserFeedback";
 
 // ── Customer/User sub-pages ───────────────────────────────────────────────────
 import UserOrdersPage from "@/pages/dashboard/user/UserOrdersPage";
@@ -211,6 +212,7 @@ export default function AppRoutes() {
                                 element={<SellerAnalytics />}
                             />
                             <Route path="profile" element={<SellerProfile />} />
+                            <Route path="feedback" element={<UserFeedback />} />
                             <Route
                                 path="notifications"
                                 element={<SellerNotifications />}
