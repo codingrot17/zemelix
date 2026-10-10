@@ -55,7 +55,7 @@ import UserProfile from "@/pages/dashboard/user/UserProfile";
 import UserNotifications from "@/pages/dashboard/user/UserNotifications";
 import UserWallet from "@/pages/dashboard/user/UserWallet";
 import UserSettings from "@/pages/dashboard/user/UserSettings";
-import UserFeedback from "@/pages/dashboard/user/UserFeedback";
+
 
 // ── Public stub pages ─────────────────────────────────────────────────────────
 import SellersPage from "@/pages/public/SellersPage";
