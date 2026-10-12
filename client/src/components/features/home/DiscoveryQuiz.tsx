@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { Progress } from "@/components/ui/progress";\nimport type { QuizAnswers } from "@/utils/recommendations";
 
 type QuizAnswers = {
   purpose?: string;
