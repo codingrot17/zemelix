@@ -184,6 +184,174 @@ async function updateFeedbackStatus({ req, res, error, databases, databaseId, us
     }
 }
 
+
+const SUPPORT_CONVERSATIONS_TABLE_ID = "support_conversations";
+const SUPPORT_MESSAGES_TABLE_ID = "support_messages";
+
+async function supportActor({ req, res, databases, databaseId, userCollectionId }) {
+    const actorId = req.headers["x-appwrite-user-id"];
+    if (!actorId) {
+        jsonError(res, "Sign in to use support chat.", 401);
+        return null;
+    }
+    try {
+        const profile = await databases.getDocument(databaseId, userCollectionId, actorId);
+        if (profile.accountStatus !== "active" || !["customer", "seller", "admin"].includes(profile.role)) {
+            jsonError(res, "This account cannot use support chat.", 403);
+            return null;
+        }
+        return { id: actorId, role: profile.role === "seller" ? "vendor" : profile.role, profile };
+    } catch {
+        jsonError(res, "Unable to verify your account.", 403);
+        return null;
+    }
+}
+
+async function createSupportConversation({ req, res, error, databases, databaseId, userCollectionId }) {
+    const actor = await supportActor({ req, res, databases, databaseId, userCollectionId });
+    if (!actor) return;
+    if (actor.role === "admin") return jsonError(res, "Admins should reply from the support inbox.", 400);
+    const subject = req.bodyJson?.subject;
+    const message = req.bodyJson?.message;
+    if (!isNonEmptyString(subject, 180) || !isNonEmptyString(message, 4000)) {
+        return jsonError(res, "A subject and message are required.", 400);
+    }
+    try {
+        const now = new Date().toISOString();
+        const conversation = await databases.createDocument(
+            databaseId, SUPPORT_CONVERSATIONS_TABLE_ID, ID.unique(),
+            {
+                ownerId: actor.id,
+                ownerRole: actor.role,
+                ownerName: String(actor.profile.fullName || ""),
+                ownerEmail: String(actor.profile.email || ""),
+                subject: subject.trim(),
+                status: "open",
+                lastMessage: message.trim(),
+                lastMessageAt: now,
+                assignedAdminId: null,
+                closedAt: null
+            },
+            [Permission.read(Role.user(actor.id))]
+        );
+        const firstMessage = await databases.createDocument(
+            databaseId, SUPPORT_MESSAGES_TABLE_ID, ID.unique(),
+            { conversationId: conversation.$id, senderId: actor.id, senderRole: actor.role, message: message.trim(), messageType: "text", isRead: false },
+            [Permission.read(Role.user(actor.id))]
+        );
+        return res.json({ ok: true, conversation, messages: [firstMessage] });
+    } catch (err) {
+        error(err?.message ?? "Support conversation creation failed.");
+        return jsonError(res, "Could not start your support conversation. Please try again.", 500);
+    }
+}
+
+async function listMySupportConversations({ req, res, error, databases, databaseId, userCollectionId }) {
+    const actor = await supportActor({ req, res, databases, databaseId, userCollectionId });
+    if (!actor) return;
+    try {
+        const result = await databases.listDocuments(databaseId, SUPPORT_CONVERSATIONS_TABLE_ID, [
+            Query.equal("ownerId", actor.id), Query.orderDesc("$updatedAt"), Query.limit(50)
+        ]);
+        return res.json({ ok: true, conversations: result.documents });
+    } catch (err) {
+        error(err?.message ?? "Support conversation lookup failed.");
+        return jsonError(res, "Could not load your support conversations.", 500);
+    }
+}
+
+async function listSupportConversations({ req, res, error, databases, databaseId, userCollectionId }) {
+    const auth = await requireAdmin({ req: { ...req, res }, databases, databaseId, userCollectionId });
+    if (auth.error) return auth.error;
+    try {
+        const status = req.bodyJson?.status;
+        const queries = [Query.orderDesc("$updatedAt"), Query.limit(100)];
+        if (["open", "in-progress", "closed"].includes(status)) queries.unshift(Query.equal("status", status));
+        const result = await databases.listDocuments(databaseId, SUPPORT_CONVERSATIONS_TABLE_ID, queries);
+        return res.json({ ok: true, conversations: result.documents });
+    } catch (err) {
+        error(err?.message ?? "Support inbox lookup failed.");
+        return jsonError(res, "Could not load the support inbox.", 500);
+    }
+}
+
+async function listSupportMessages({ req, res, error, databases, databaseId, userCollectionId }) {
+    const actor = await supportActor({ req, res, databases, databaseId, userCollectionId });
+    if (!actor) return;
+    const conversationId = req.bodyJson?.conversationId;
+    if (!isNonEmptyString(conversationId, 128)) return jsonError(res, "A valid conversation is required.", 400);
+    try {
+        const conversation = await databases.getDocument(databaseId, SUPPORT_CONVERSATIONS_TABLE_ID, conversationId);
+        const isAdmin = actor.role === "admin";
+        if (!isAdmin && conversation.ownerId !== actor.id) return jsonError(res, "You cannot access this conversation.", 403);
+        const result = await databases.listDocuments(databaseId, SUPPORT_MESSAGES_TABLE_ID, [
+            Query.equal("conversationId", conversationId), Query.orderAsc("$createdAt"), Query.limit(200)
+        ]);
+        if (isAdmin) {
+            const unread = result.documents.filter(item => item.senderRole !== "admin" && item.isRead !== true);
+            await Promise.all(unread.map(item => databases.updateDocument(databaseId, SUPPORT_MESSAGES_TABLE_ID, item.$id, { isRead: true })));
+        }
+        return res.json({ ok: true, conversation, messages: result.documents });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Conversation not found.", 404);
+        error(err?.message ?? "Support messages lookup failed.");
+        return jsonError(res, "Could not load messages.", 500);
+    }
+}
+
+async function sendSupportMessage({ req, res, error, databases, databaseId, userCollectionId }) {
+    const actor = await supportActor({ req, res, databases, databaseId, userCollectionId });
+    if (!actor) return;
+    const conversationId = req.bodyJson?.conversationId;
+    const message = req.bodyJson?.message;
+    if (!isNonEmptyString(conversationId, 128) || !isNonEmptyString(message, 4000)) {
+        return jsonError(res, "A conversation and message are required.", 400);
+    }
+    try {
+        const conversation = await databases.getDocument(databaseId, SUPPORT_CONVERSATIONS_TABLE_ID, conversationId);
+        const isAdmin = actor.role === "admin";
+        if (!isAdmin && conversation.ownerId !== actor.id) return jsonError(res, "You cannot reply to this conversation.", 403);
+        if (!isAdmin && conversation.status === "closed") return jsonError(res, "This conversation is closed. Start a new chat for further help.", 409);
+        const senderRole = isAdmin ? "admin" : actor.role;
+        const now = new Date().toISOString();
+        const created = await databases.createDocument(
+            databaseId, SUPPORT_MESSAGES_TABLE_ID, ID.unique(),
+            { conversationId, senderId: actor.id, senderRole, message: message.trim(), messageType: "text", isRead: false },
+            [Permission.read(Role.user(conversation.ownerId))]
+        );
+        const updated = await databases.updateDocument(databaseId, SUPPORT_CONVERSATIONS_TABLE_ID, conversationId, {
+            lastMessage: message.trim(), lastMessageAt: now,
+            status: isAdmin ? "in-progress" : "open",
+            closedAt: null
+        });
+        return res.json({ ok: true, message: created, conversation: updated });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Conversation not found.", 404);
+        error(err?.message ?? "Support reply failed.");
+        return jsonError(res, "Could not send your message.", 500);
+    }
+}
+
+async function updateSupportConversation({ req, res, error, databases, databaseId, userCollectionId }) {
+    const auth = await requireAdmin({ req: { ...req, res }, databases, databaseId, userCollectionId });
+    if (auth.error) return auth.error;
+    const conversationId = req.bodyJson?.conversationId;
+    const status = req.bodyJson?.status;
+    if (!isNonEmptyString(conversationId, 128) || !["open", "in-progress", "closed"].includes(status)) {
+        return jsonError(res, "A valid conversation and status are required.", 400);
+    }
+    try {
+        const updated = await databases.updateDocument(databaseId, SUPPORT_CONVERSATIONS_TABLE_ID, conversationId, {
+            status, closedAt: status === "closed" ? new Date().toISOString() : null
+        });
+        return res.json({ ok: true, conversation: updated });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Conversation not found.", 404);
+        error(err?.message ?? "Support status update failed.");
+        return jsonError(res, "Could not update conversation status.", 500);
+    }
+}
+
 const ORDER_ITEMS_COLLECTION_ID = "order_items";
 const PRODUCTS_COLLECTION_ID = "products";
 const PUBLIC_FIELDS = [
@@ -574,6 +742,13 @@ export default async ({ req, res, error }) => {
     const databases = new Databases(client);
     const body = req.bodyJson ?? {};
 
+
+    if (body.operation === "createSupportConversation") return createSupportConversation({ req, res, error, databases, databaseId, userCollectionId: collectionId });
+    if (body.operation === "listMySupportConversations") return listMySupportConversations({ req, res, error, databases, databaseId, userCollectionId: collectionId });
+    if (body.operation === "listSupportConversations") return listSupportConversations({ req, res, error, databases, databaseId, userCollectionId: collectionId });
+    if (body.operation === "listSupportMessages") return listSupportMessages({ req, res, error, databases, databaseId, userCollectionId: collectionId });
+    if (body.operation === "sendSupportMessage") return sendSupportMessage({ req, res, error, databases, databaseId, userCollectionId: collectionId });
+    if (body.operation === "updateSupportConversation") return updateSupportConversation({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     if (body.operation === "updateOwnProfile") {
         return updateOwnProfile({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     }
