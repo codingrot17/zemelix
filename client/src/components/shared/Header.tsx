@@ -1,5 +1,6 @@
 // components/Header.tsx
 import * as React from "react";
+import type { FormEvent } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ import {
   Heart,
   Settings,
   LogOut,
+  Search as SearchIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import ThemeToggle from "../ui/ThemeToggle";
@@ -36,11 +38,19 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
   const [searchTerm, setSearchTerm] = React.useState("");
   const submitSearch = (event: React.FormEvent) => { event.preventDefault(); const q = searchTerm.trim(); navigate(q ? `/collections?view=products&q=${encodeURIComponent(q)}` : "/collections"); setMobileNavOpen(false); };
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { count } = useCart();
+
+  const submitSearch = (event: FormEvent) => {
+    event.preventDefault();
+    const query = search.trim();
+    navigate(query ? `/collections?search=${encodeURIComponent(query)}&view=products` : "/collections");
+    setMobileNavOpen(false);
+  };
 
   const handleLogout = () => {
     logout();
@@ -112,13 +122,17 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
         </nav>
 
         {/* Search Bar */}
-        <div className="hidden md:flex items-center ml-6">
+        <form onSubmit={submitSearch} className="hidden md:flex items-center ml-6 gap-2">
           <Input
             type="search"
-            placeholder="Search products…"
-            className="w-64 bg-[var(--color-card)] text-[var(--color-card-foreground)]"
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            placeholder="Search listings…"
+            aria-label="Search marketplace listings"
+            className="w-52 lg:w-64 bg-[var(--color-card)] text-[var(--color-card-foreground)]"
           />
-        </div>
+          <Button type="submit" variant="outline" size="sm">Search</Button>
+        </form>
 
         {/* Actions */}
         <div className="flex items-center gap-2 ml-4">
