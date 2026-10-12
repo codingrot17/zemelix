@@ -1,13 +1,5 @@
-import React from "react";
 import { Link } from "react-router-dom";
-import {
-  Facebook,
-  Twitter,
-  Instagram,
-  Linkedin,
-  Youtube,
-  Mail,
-} from "lucide-react";
+import { Mail } from "lucide-react";
 
 const categories = [
   "Electronics",
@@ -32,44 +24,11 @@ const Footer = () => (
           <span className="font-bold text-xl text-white">Zemelix</span>
         </Link>
         <p className="text-gray-400 mb-4">
-          Discover, buy, and sell unique products and services from trusted sellers worldwide.
+          Discover products, connect with independent sellers and request services from professionals on one marketplace.
         </p>
-        <form
-          onSubmit={e => {
-            e.preventDefault();
-            alert("Thank you for subscribing!");
-          }}
-          className="flex flex-col sm:flex-row items-center gap-2 w-full"
-        >
-          <input
-            type="email"
-            required
-            placeholder="Your email"
-            className="w-full px-3 py-2 rounded bg-gray-800 dark:bg-gray-900 text-gray-200 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <button
-            type="submit"
-            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-semibold"
-          >
-            Subscribe
-          </button>
-        </form>
-        <div className="flex gap-3 mt-5">
-          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-            <Facebook className="w-5 h-5 hover:text-indigo-400" />
-          </a>
-          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
-            <Twitter className="w-5 h-5 hover:text-indigo-400" />
-          </a>
-          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-            <Instagram className="w-5 h-5 hover:text-indigo-400" />
-          </a>
-          <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
-            <Linkedin className="w-5 h-5 hover:text-indigo-400" />
-          </a>
-          <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
-            <Youtube className="w-5 h-5 hover:text-indigo-400" />
-          </a>
+        <div className="rounded-xl border border-gray-700 bg-gray-800/60 p-4">
+          <p className="mb-3 text-sm text-gray-300">Have a question or need help getting started?</p>
+          <Link to="/support" className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Visit support <Mail className="h-4 w-4" /></Link>
         </div>
       </div>
 
