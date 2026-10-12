@@ -12,7 +12,7 @@ const PageLayout: React.FC = () => {
     useEffect(() => {
         const onScroll = () => setShowTop(window.scrollY > 200);
         window.addEventListener("scroll", onScroll);
-        return () => window.removeEventListener("scroll", onScroll);
+        return () => { window.removeEventListener("scroll", onScroll); window.removeEventListener("zemelix:open-support", openSupport); };
     }, []);
 
     return (
