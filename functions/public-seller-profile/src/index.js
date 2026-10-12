@@ -209,7 +209,7 @@ async function supportActor({ req, res, databases, databaseId, userCollectionId 
 
 async function createSupportConversation({ req, res, error, databases, databaseId, userCollectionId }) {
     const actor = await supportActor({ req, res, databases, databaseId, userCollectionId });
-    if (!actor) return;
+    if (!actor) return jsonError(res, "Sign in to use support chat.", 401);
     if (actor.role === "admin") return jsonError(res, "Admins should reply from the support inbox.", 400);
     const subject = req.bodyJson?.subject;
     const message = req.bodyJson?.message;
