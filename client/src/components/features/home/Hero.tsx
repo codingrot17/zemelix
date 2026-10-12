@@ -12,7 +12,7 @@ const categories = [
 
 const promotions = [
   { title: "Discover something new", desc: "Explore products and services from marketplace listings.", color: "bg-gradient-to-r from-green-100 to-green-300 text-green-900 dark:from-green-900 dark:to-green-700 dark:text-green-100", to: "/collections" },
-  { title: "Looking for a service?", desc: "Browse service providers and send a booking request.", color: "bg-gradient-to-r from-blue-100 to-blue-300 text-blue-900 dark:from-blue-900 dark:to-blue-700 dark:text-blue-100", to: "/collections?search=service&view=products" },
+  { title: "Looking for a service?", desc: "Browse service providers and send a booking request.", color: "bg-gradient-to-r from-blue-100 to-blue-300 text-blue-900 dark:from-blue-900 dark:to-blue-700 dark:text-blue-100", to: "/collections?view=products&type=service" },
   { title: "Have something to offer?", desc: "Set up your vendor profile and publish your first listing.", color: "bg-gradient-to-r from-yellow-100 to-yellow-300 text-yellow-900 dark:from-yellow-900 dark:to-yellow-700 dark:text-yellow-100", to: "/vendor/upgrade" },
 ];
 
