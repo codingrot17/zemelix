@@ -39,8 +39,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const submitSearch = (event: React.FormEvent) => { event.preventDefault(); const q = searchTerm.trim(); navigate(q ? `/collections?view=products&q=${encodeURIComponent(q)}` : "/collections"); setMobileNavOpen(false); };
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { count } = useCart();
@@ -244,7 +242,7 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
                 <Link className="p-2 hover:bg-muted hover:text-primary" to="/about" onClick={() => setMobileNavOpen(false)}>About</Link>
                 <hr />
                 <Link className="p-2 hover:bg-muted hover:text-primary" to="/contact" onClick={() => setMobileNavOpen(false)}>Contact</Link>
-                <form onSubmit={submitSearch} className="mt-4 flex gap-2"><Input type="search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search listings…" aria-label="Search marketplace" className="bg-[var(--color-card)] text-[var(--color-card-foreground)]" /><Button type="submit">Search</Button></form>
+                <form onSubmit={submitSearch} className="mt-4 flex gap-2"><Input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search listings…" aria-label="Search marketplace" className="bg-[var(--color-card)] text-[var(--color-card-foreground)]" /><Button type="submit">Search</Button></form>
               </nav>
             </SheetContent>
           </Sheet>
