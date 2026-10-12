@@ -190,19 +190,14 @@ const SUPPORT_MESSAGES_TABLE_ID = "support_messages";
 
 async function supportActor({ req, res, databases, databaseId, userCollectionId }) {
     const actorId = req.headers["x-appwrite-user-id"];
-    if (!actorId) {
-        jsonError(res, "Sign in to use support chat.", 401);
-        return null;
-    }
+    if (!actorId) return null;
     try {
         const profile = await databases.getDocument(databaseId, userCollectionId, actorId);
         if (profile.accountStatus !== "active" || !["customer", "seller", "admin"].includes(profile.role)) {
-            jsonError(res, "This account cannot use support chat.", 403);
             return null;
         }
         return { id: actorId, role: profile.role === "seller" ? "vendor" : profile.role, profile };
     } catch {
-        jsonError(res, "Unable to verify your account.", 403);
         return null;
     }
 }
