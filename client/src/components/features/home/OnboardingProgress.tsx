@@ -1,97 +1,17 @@
-import { CheckCircle, User, FileText, Shield, UploadCloud } from "lucide-react";
+import { CheckCircle, Store, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
-const onboardingSteps = [
-  {
-    label: "Add profile photo",
-    icon: <User className="w-4 h-4" />,
-  },
-  {
-    label: "Describe your service",
-    icon: <FileText className="w-4 h-4" />,
-  },
-  {
-    label: "Verify identity",
-    icon: <Shield className="w-4 h-4" />,
-  },
-  {
-    label: "First listing/service",
-    icon: <UploadCloud className="w-4 h-4" />,
-  },
-];
-
-export function OnboardingProgress({ completed = 2, onNextStep }) {
-  const percent = ((completed / onboardingSteps.length) * 100).toFixed(0);
-  const nextStep = onboardingSteps[completed];
-
-  return (
-    <div className="my-8 bg-card dark:bg-gray-900 rounded-xl shadow-lg p-6 transition-colors">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-primary dark:text-primary-light">
-          Seller Onboarding Progress
-        </h3>
-        <span className="text-sm font-medium text-indigo-600 dark:text-indigo-300">
-          {percent}% Complete
-        </span>
-      </div>
-      {/* Progress Bar */}
-      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-6 overflow-hidden">
-        <div
-          className="bg-gradient-to-r from-indigo-500 to-emerald-500 h-3 transition-all"
-          style={{ width: `${percent}%` }}
-        ></div>
-      </div>
-      {/* Steps */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 items-center justify-between mb-4">
-        {onboardingSteps.map((step, idx) => (
-          <div
-            key={step.label}
-            className={`flex flex-col items-center text-center flex-1 ${
-              idx < completed
-                ? "text-emerald-600 dark:text-emerald-400"
-                : idx === completed
-                ? "text-indigo-600 dark:text-indigo-300"
-                : "text-gray-400 dark:text-gray-500"
-            }`}
-          >
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center mb-1 border-2 ${
-                idx < completed
-                  ? "bg-emerald-100 dark:bg-emerald-900 border-emerald-400"
-                  : idx === completed
-                  ? "bg-indigo-100 dark:bg-indigo-900 border-indigo-400"
-                  : "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700"
-              }`}
-            >
-              {idx < completed ? (
-                <CheckCircle className="w-5 h-5" />
-              ) : (
-                step.icon
-              )}
-            </div>
-            <span className="text-xs font-semibold">{step.label}</span>
-          </div>
-        ))}
-      </div>
-      {/* Next Step or Completion */}
-      {completed < onboardingSteps.length ? (
-        <div className="flex flex-col sm:flex-row items-center gap-2">
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Next: <span className="font-semibold">{nextStep.label}</span>
-          </span>
-          <Button
-            className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-400 dark:hover:bg-indigo-500 ml-0 sm:ml-4"
-            onClick={onNextStep}
-          >
-            Complete Step
-          </Button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-base mt-2">
-          <CheckCircle className="w-5 h-5" />
-          All steps complete! You’re ready to sell 🎉
-        </div>
-      )}
+export function OnboardingProgress({ completed = 0, isVendor = false }: { completed?: number; isVendor?: boolean }) {
+  if (isVendor) return null;
+  const steps = ["Choose your vendor type", "Complete your business profile", "Add your first listing or service"];
+  const current = Math.max(0, Math.min(steps.length, completed));
+  const percent = Math.round(current / steps.length * 100);
+  return <section className="my-8 rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3"><div className="rounded-xl bg-indigo-100 p-3 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"><Store className="h-5 w-5"/></div><div><h3 className="text-lg font-bold text-primary">Build your presence on Zemelix</h3><p className="mt-1 max-w-xl text-sm text-muted-foreground">Start onboarding to set up a seller storefront or service-provider profile. Your progress is saved in your account.</p></div></div>
+      <Button asChild className="shrink-0"><Link to="/vendor/upgrade">Continue onboarding <ArrowRight className="ml-2 h-4 w-4"/></Link></Button>
     </div>
-  );
+    <div className="mt-5"><div className="mb-2 flex items-center justify-between text-xs"><span className="font-medium text-muted-foreground">Setup progress</span><span className="font-semibold text-indigo-600 dark:text-indigo-300">{percent}%</span></div><div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all" style={{width:`${percent}%`}}/></div><div className="mt-4 grid gap-3 sm:grid-cols-3">{steps.map((step,index)=><div key={step} className="flex items-center gap-2 text-xs text-muted-foreground">{index<current?<CheckCircle className="h-4 w-4 text-emerald-500"/>:<span className="flex h-4 w-4 items-center justify-center rounded-full border text-[10px]">{index+1}</span>}{step}</div>)}</div></div>
+  </section>;
 }
