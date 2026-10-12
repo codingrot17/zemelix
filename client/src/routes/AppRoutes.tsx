@@ -35,6 +35,7 @@ import AdminNotifications from "@/pages/dashboard/admin/AdminNotifications";
 import AdminFinance from "@/pages/dashboard/admin/AdminFinance";
 import AdminSettings from "@/pages/dashboard/admin/AdminSettings";
 import AdminFeedback from "@/pages/dashboard/admin/AdminFeedback";
+import AdminSupport from "@/pages/dashboard/admin/AdminSupport";
 
 // ── Seller sub-pages ──────────────────────────────────────────────────────────
 import SellerProducts from "@/pages/dashboard/seller/Products";
@@ -171,6 +172,7 @@ export default function AppRoutes() {
                             />
                             <Route path="reports" element={<AdminReports />} />
                             <Route path="feedback" element={<AdminFeedback />} />
+                            <Route path="support" element={<AdminSupport />} />
                             <Route
                                 path="marketing"
                                 element={<AdminMarketing />}
