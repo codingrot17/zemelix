@@ -46,8 +46,9 @@ export default function SupportChat({ onClose }: { onClose: () => void }) {
     finally { setLoading(false); }
   }
 
-  function showFaq(answer: string) {
-    setMessages(prev => [...prev, { id: `faq-${Date.now()}`, role: "user", message: "Quick question" }, { id: `answer-${Date.now()}`, role: "bot", message: answer }]);
+  function showFaq(question: string, answer: string) {
+    const stamp = Date.now();
+    setMessages(prev => [...prev, { id: `faq-${stamp}`, role: "user", message: question }, { id: `answer-${stamp}`, role: "bot", message: answer }]);
   }
 
   async function startConversation(event: FormEvent) {
