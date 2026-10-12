@@ -161,6 +161,16 @@ export function CollectionsPage() {
                 )}
             </div>
 
+            {activeView === "products" && (
+                <div className="mb-6 flex flex-wrap gap-2">
+                    {([{ label: "All listings", value: null }, { label: "Products", value: "seller" }, { label: "Services", value: "service" }] as const).map(option => (
+                        <button key={option.label} onClick={() => setSelectedType(option.value)} className={`rounded-full border px-3 py-2 text-xs font-medium transition ${selectedType === option.value ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white text-gray-600 hover:border-indigo-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"}`}>
+                            {option.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {activeView === "collections" && showFilters && tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                     <button
