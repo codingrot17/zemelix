@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { CollectionCard } from "@/components/features/collection/CollectionCard";
 import ProductCard from "@/components/shared/ProductCard";
 import { useProducts } from "@/hooks/useProducts";
@@ -18,15 +18,21 @@ function getAllTags(collections: Collection[]) {
 
 export function CollectionsPage() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [collections, setCollections] = useState<Collection[]>([]);
     const [colLoading, setColLoading] = useState(true);
     const [colError, setColError] = useState<string | null>(null);
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
-    const [activeView, setActiveView] = useState<View>("collections");
+    const [activeView, setActiveView] = useState<View>(() => searchParams.get("view") === "products" ? "products" : "collections");
     const [showFilters, setShowFilters] = useState(false);
 
     const { products, loading: prodLoading, isFallback } = useProducts({ limit: 50 });
+
+    useEffect(() => {
+        setSearch(searchParams.get("q") ?? "");
+        if (searchParams.get("view") === "products") setActiveView("products");
+    }, [searchParams]);
 
     useEffect(() => {
         let cancelled = false;
