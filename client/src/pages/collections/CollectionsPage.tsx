@@ -32,7 +32,7 @@ export function CollectionsPage() {
 
     useEffect(() => {
         setSearch(searchParams.get("search") ?? searchParams.get("q") ?? "");
-        if (searchParams.get("view") === "products") setActiveView("products");
+        setActiveView(searchParams.get("view") === "products" ? "products" : "collections");
         setSelectedType(searchParams.get("type") === "service" ? "service" : searchParams.get("type") === "seller" ? "seller" : null);
     }, [searchParams]);
 
