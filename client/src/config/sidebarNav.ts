@@ -17,11 +17,8 @@ import { isServiceProvider } from "@/lib/vendorAccess";
 
 export const sidebarNavConfig = {
     admin: [
-        { label: "Dashboard", to: "/dashboard", icon: HiOutlineHome },
-        // Only show admin areas with implemented workflows. Other routes remain
-        // registered for compatibility, but should not be advertised as ready.
-        { label: "Feedback & Complaints", to: "/dashboard/admin/feedback", icon: HiOutlineBell },
-        { label: "Support Inbox", to: "/dashboard/admin/support", icon: HiOutlineClipboardList }
+        { label: "Agent Dashboard", to: "/dashboard/admin", icon: HiOutlineHome },
+        { label: "Feedback & Complaints", to: "/dashboard/admin/feedback", icon: HiOutlineBell }
     ],
     seller: [
         { label: "Dashboard", to: "/dashboard", icon: HiOutlineHome },
