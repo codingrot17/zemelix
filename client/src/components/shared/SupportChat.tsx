@@ -90,7 +90,7 @@ export default function SupportChat({ onClose }: { onClose: () => void }) {
       {view === "home" && <>
         <div className="max-w-[90%] rounded-2xl rounded-tl-sm bg-white p-3 text-sm shadow-sm dark:bg-gray-800">Hi{user?.name ? `, ${user.name.split(" ")[0]}` : ""}! How can we help today?</div>
         <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Quick answers</p>
-        {faqs.map(f => <button key={f.q} onClick={() => showFaq(f.a)} className="block w-full rounded-xl border border-gray-200 bg-white p-3 text-left text-sm hover:border-indigo-400 hover:text-indigo-700 dark:border-gray-700 dark:bg-gray-900 dark:hover:text-indigo-300">{f.q}</button>)}
+        {faqs.map(f => <button key={f.q} onClick={() => showFaq(f.q, f.a)} className="block w-full rounded-xl border border-gray-200 bg-white p-3 text-left text-sm hover:border-indigo-400 hover:text-indigo-700 dark:border-gray-700 dark:bg-gray-900 dark:hover:text-indigo-300">{f.q}</button>)}
         {user && user.role !== "admin" && <div className="pt-2">
           <Button className="w-full" onClick={() => { setView("new"); setError(""); }}>Message the support team</Button>
           {conversations.length > 0 && <div className="mt-3 space-y-2"><p className="text-xs font-semibold text-gray-500">Your recent conversations</p>{conversations.slice(0,5).map(c=><button key={c.$id} onClick={() => void openConversation(c)} className="w-full rounded-lg border bg-white p-3 text-left text-sm dark:bg-gray-900"><span className="block font-medium">{c.subject}</span><span className="text-xs text-gray-500">{c.status.replace("-", " ")} · {c.lastMessage || "No messages"}</span></button>)}</div>}
