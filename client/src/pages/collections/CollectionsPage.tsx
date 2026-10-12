@@ -22,8 +22,8 @@ export function CollectionsPage() {
     const [collections, setCollections] = useState<Collection[]>([]);
     const [colLoading, setColLoading] = useState(true);
     const [colError, setColError] = useState<string | null>(null);
-    const [search, setSearch] = useState(() => searchParams.get("search") ?? searchParams.get("q") ?? "");
-    const [selectedTag, setSelectedTag] = useState<string | null>(null);
+    const [search, setSearch] = useState(() => searchParams.get("search") ?? searchParams.get("q") ?? searchParams.get("search") ?? "");
+    const [selectedTag, setSelectedTag] = useState<string | null>(null);\n    const [selectedType, setSelectedType] = useState<"seller" | "service" | null>(null);
     const [selectedType, setSelectedType] = useState<"seller" | "service" | null>(() => searchParams.get("type") === "service" ? "service" : searchParams.get("type") === "seller" ? "seller" : null);
     const [activeView, setActiveView] = useState<View>(() => searchParams.get("view") === "products" ? "products" : "collections");
     const [showFilters, setShowFilters] = useState(false);
