@@ -1,11 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";\nimport type { QuizAnswers } from "@/utils/recommendations";
-
-type QuizAnswers = {
-  purpose?: string;
-  category?: string;
-};
+import { Progress } from "@/components/ui/progress";
+import type { QuizAnswers } from "@/utils/recommendations";
 
 type DiscoveryQuizProps = {
   onResult: (answers: QuizAnswers) => void;
