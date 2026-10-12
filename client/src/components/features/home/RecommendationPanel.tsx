@@ -80,7 +80,7 @@ export const RecommendationPanel: React.FC<RecommendationPanelProps> = ({
                                     key={item.id}
                                     className="flex items-center gap-4 px-4 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer group"
                                     onClick={() =>
-                                        navigate(`/product/${item.id}`)
+                                        navigate(item.id === "onboard" ? "/vendor/upgrade" : `/product/${item.id}`)
                                     }
                                 >
                                     {/* Thumbnail */}
