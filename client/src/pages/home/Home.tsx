@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import BragBar from "@/components/features/home/BragBar";
 import HeroSection from "@/components/features/home/Hero";
 import DiscoveryQuiz from "@/components/features/home/DiscoveryQuiz";
@@ -19,7 +18,6 @@ const HomePage = () => {
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswers | null>(null);
   const { user } = useAuth();
   const { products } = useProducts({ limit: 50, activeOnly: true });
-  const navigate = useNavigate();
 
   const liveItems: RecommendationItem[] = products.map(product => ({
     id: product.id,
