@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import BragBar from "@/components/features/home/BragBar";
 import HeroSection from "@/components/features/home/Hero";
 import DiscoveryQuiz from "@/components/features/home/DiscoveryQuiz";
@@ -7,100 +8,40 @@ import { CuratedCollectionsCarousel } from "@/components/features/home/CuratedCo
 import { FeaturedListingsCarousel } from "@/components/features/home/FeaturedListingsSection";
 import { TestimonialsSection } from "@/components/features/home/TestimonialsSection";
 import { RecommendationPanel } from "@/components/features/home/RecommendationPanel";
-import { getRecommendations, QuizAnswers, RecommendationItem } from "@/utils/recommendations";
+import { getRecommendations, type QuizAnswers, type RecommendationItem } from "@/utils/recommendations";
 import { CallToActionSection } from "@/components/features/home/CallToActionSection";
 import { FAQSection } from "@/components/features/home/FAQSection";
-
-
-// Dummy featuredItems for demonstration
-const featuredItems: RecommendationItem[] = [
-  {
-    id: 1,
-    title: "Handmade Wooden Chair",
-    description: "Comfortable and stylish wooden chair for your living room.",
-    price: "$120",
-    imageUrl: "/images/placeholder.svg",
-    type: "product",
-    category: "Furniture",
-  },
-  {
-    id: 2,
-    title: "Web Design Service",
-    description: "Professional website design tailored for your business.",
-    price: "$500",
-    imageUrl: "/images/placeholder.svg",
-    type: "service",
-    category: "Design",
-  },
-];
-
-const onboardingSteps = [
-  "Complete profile",
-  "Add first listing",
-  "Verify payment method",
-  "Start selling",
-];
+import { useProducts } from "@/hooks/useProducts";
 
 const HomePage = () => {
+  const { user } = useAuth();
   const [quizDone, setQuizDone] = useState(false);
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswers | null>(null);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(2);
-
-  function handleNextOnboardingStep() {
-    setOnboardingCompleted((prev) =>
-      prev < onboardingSteps.length ? prev + 1 : prev
-    );
-  }
-
-  function handleQuizComplete(answers: QuizAnswers) {
-    setQuizDone(true);
-    setQuizAnswers(answers);
-  }
-
+  const { products } = useProducts({ limit: 50, activeOnly: true });
+  const featuredItems: RecommendationItem[] = products.map(p => ({
+    id: p.id,
+    title: p.title,
+    description: p.shortDescription || p.longDescription || "",
+    price: new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(p.price),
+    imageUrl: p.imageUrl || "/images/placeholder.svg",
+    type: p.vendorType === "service" ? "service" : "product",
+    category: p.category,
+  }));
+  const isVendor = user?.role === "seller" || user?.role === "vendor" || user?.profile?.vendorStatus === "active";
+  const onboardingStep = typeof user?.profile?.onboardingStep === "number" ? user.profile.onboardingStep : 0;
   const recommendations = getRecommendations(quizAnswers, featuredItems);
 
-  return (
-    <div className="min-h-screen bg-background dark:bg-background overflow-hidden">
-      <BragBar />
-      <HeroSection />
-
-      {/* Discovery Quiz */}
-      {!quizDone && (
-        <section className="max-w-2xl mx-auto px-4 py-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-center mb-2 text-primary dark:text-primary-light">
-            Not Sure Where to Start?
-          </h2>
-          <p className="text-center text-gray-600 dark:text-gray-300 mb-4">
-            Take our quick quiz to get personalized recommendations!
-          </p>
-          <DiscoveryQuiz onResult={handleQuizComplete} />
-        </section>
-      )}
-
-      {/* Recommendations */}
-      {quizDone && (
-        <RecommendationPanel recommendations={recommendations} />
-      )}
-
-      {/* Gamified Onboarding for Sellers/Providers */}
-      <div className="max-w-7xl mx-auto px-6">
-        <h2 className="text-xl font-bold mb-2 text-primary dark:text-primary-light">
-          New Seller? Get Started!
-        </h2>
-        <OnboardingProgress
-          completed={onboardingCompleted}
-          onNextStep={handleNextOnboardingStep}
-        />
-      </div>
-
-      <CuratedCollectionsCarousel />
-      <FeaturedListingsCarousel />
-      <TestimonialsSection />
-      
-      <FAQSection />
-      <CallToActionSection />
-    </div>
-  );
+  return <div className="min-h-screen overflow-hidden bg-background">
+    <BragBar />
+    <HeroSection />
+    {!quizDone && <section className="mx-auto max-w-2xl px-4 py-6"><h2 className="mb-2 text-center text-xl font-bold text-primary sm:text-2xl">Find your starting point</h2><p className="mb-4 text-center text-gray-600 dark:text-gray-300">Answer two quick questions to see relevant marketplace listings.</p><DiscoveryQuiz onResult={answers=>{setQuizDone(true);setQuizAnswers(answers);}}/></section>}
+    {quizDone && <div><RecommendationPanel recommendations={recommendations}/><div className="text-center"><button className="text-sm font-medium text-indigo-600 underline dark:text-indigo-300" onClick={()=>{setQuizDone(false);setQuizAnswers(null);}}>Retake the quiz</button></div></div>}
+    <div className="mx-auto max-w-7xl px-4 sm:px-6"><OnboardingProgress completed={onboardingStep} isVendor={Boolean(isVendor)}/></div>
+    <CuratedCollectionsCarousel />
+    <FeaturedListingsCarousel />
+    <TestimonialsSection />
+    <FAQSection />
+    <CallToActionSection />
+  </div>;
 };
-
 export default HomePage;
