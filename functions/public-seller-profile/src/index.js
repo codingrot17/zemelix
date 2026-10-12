@@ -243,7 +243,7 @@ async function createSupportConversation({ req, res, error, databases, databaseI
 
 async function listMySupportConversations({ req, res, error, databases, databaseId, userCollectionId }) {
     const actor = await supportActor({ req, res, databases, databaseId, userCollectionId });
-    if (!actor) return;
+    if (!actor) return jsonError(res, "Sign in to use support chat.", 401);
     try {
         const result = await databases.listDocuments(databaseId, SUPPORT_CONVERSATIONS_TABLE_ID, [
             Query.equal("ownerId", actor.id), Query.orderDesc("$updatedAt"), Query.limit(50)
@@ -272,7 +272,7 @@ async function listSupportConversations({ req, res, error, databases, databaseId
 
 async function listSupportMessages({ req, res, error, databases, databaseId, userCollectionId }) {
     const actor = await supportActor({ req, res, databases, databaseId, userCollectionId });
-    if (!actor) return;
+    if (!actor) return jsonError(res, "Sign in to use support chat.", 401);
     const conversationId = req.bodyJson?.conversationId;
     if (!isNonEmptyString(conversationId, 128)) return jsonError(res, "A valid conversation is required.", 400);
     try {
@@ -296,7 +296,7 @@ async function listSupportMessages({ req, res, error, databases, databaseId, use
 
 async function sendSupportMessage({ req, res, error, databases, databaseId, userCollectionId }) {
     const actor = await supportActor({ req, res, databases, databaseId, userCollectionId });
-    if (!actor) return;
+    if (!actor) return jsonError(res, "Sign in to use support chat.", 401);
     const conversationId = req.bodyJson?.conversationId;
     const message = req.bodyJson?.message;
     if (!isNonEmptyString(conversationId, 128) || !isNonEmptyString(message, 4000)) {
