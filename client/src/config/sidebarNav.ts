@@ -20,7 +20,8 @@ export const sidebarNavConfig = {
         { label: "Dashboard", to: "/dashboard", icon: HiOutlineHome },
         // Only show admin areas with implemented workflows. Other routes remain
         // registered for compatibility, but should not be advertised as ready.
-        { label: "Feedback & Complaints", to: "/dashboard/admin/feedback", icon: HiOutlineBell }
+        { label: "Feedback & Complaints", to: "/dashboard/admin/feedback", icon: HiOutlineBell },
+        { label: "Support Inbox", to: "/dashboard/admin/support", icon: HiOutlineClipboardList }
     ],
     seller: [
         { label: "Dashboard", to: "/dashboard", icon: HiOutlineHome },
