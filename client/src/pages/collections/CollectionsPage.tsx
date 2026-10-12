@@ -77,11 +77,10 @@ export function CollectionsPage() {
         const q = search.toLowerCase();
         return products.filter(
             p =>
-                !q ||
-                p.title.toLowerCase().includes(q) ||
-                p.category.toLowerCase().includes(q)
+                (!selectedType || p.vendorType === selectedType) &&
+                (!q || p.title.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || p.sellerName.toLowerCase().includes(q))
         );
-    }, [products, search]);
+    }, [products, search, selectedType]);
 
     const featured = collections.find(c => c.badge === "Featured") ?? collections[0];
     const isLoading = activeView === "collections" ? colLoading : prodLoading;
