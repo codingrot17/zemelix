@@ -30,7 +30,7 @@ export default function DiscoveryQuiz({ onResult }: DiscoveryQuizProps) {
 
   function handleAnswer(option: string) {
     const key = questions[step].key as keyof QuizAnswers;
-    const newAnswers = { ...answers, [key]: option };
+    const newAnswers = { ...answers, [key]: option } as QuizAnswers;
     setAnswers(newAnswers);
     if (step < questions.length - 1) {
       setStep(step + 1);
