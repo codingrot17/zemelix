@@ -14,7 +14,7 @@ const faqs = [
 ];
 
 export function FAQSection() {
-  return <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+  return <section id="faq" className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
     <h2 className="mb-3 text-center text-2xl font-bold text-primary sm:text-3xl">Frequently Asked Questions</h2>
     <p className="mb-7 text-center text-sm text-muted-foreground">Quick answers about buying, bookings, and setting up your business.</p>
     <Accordion type="single" collapsible className="w-full">
