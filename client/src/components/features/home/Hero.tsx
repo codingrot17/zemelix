@@ -32,10 +32,10 @@ function SpinToDiscover({ onPick }: { onPick: (category: string) => void }) {
     setSpinning(true);
     window.setTimeout(() => {
       const picked = discoveryCategories[Math.floor(Math.random() * discoveryCategories.length)];
-      setResult(picked);
+      setResult(picked.label);
       setSpun(true);
       setSpinning(false);
-      onPick(picked);
+      onPick(picked.id);
     }, 650);
   }
   return <div className="mt-4 flex w-full flex-col items-center rounded-xl border border-muted bg-card px-5 py-4 shadow-sm">
