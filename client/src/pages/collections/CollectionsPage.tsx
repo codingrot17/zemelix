@@ -143,7 +143,9 @@ export function CollectionsPage() {
                         {group.categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
                     </optgroup>)}
                 </select>
-            </div>\n\n            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
                 <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-shrink-0">
                     {(["collections", "products"] as View[]).map(v => (
                         <button
