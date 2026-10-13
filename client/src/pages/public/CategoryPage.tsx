@@ -1,4 +1,6 @@
-import ComingSoon from "@/components/ui/ComingSoon";
+import { Navigate, useParams } from "react-router-dom";
+
 export default function CategoryPage() {
-  return <ComingSoon title="Category" backTo="/" backLabel="Back" />;
+    const { id = "" } = useParams();
+    return <Navigate to={`/collections?view=products&category=${encodeURIComponent(id)}`} replace />;
 }
