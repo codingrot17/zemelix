@@ -16,7 +16,7 @@ const promotions = [
   { title: "Have something to offer?", desc: "Set up your vendor profile and publish your first listing.", color: "bg-gradient-to-r from-yellow-100 to-yellow-300 text-yellow-900 dark:from-yellow-900 dark:to-yellow-700 dark:text-yellow-100", to: "/vendor/upgrade" },
 ];
 
-const discoveryCategories = ["Home & Living", "Beauty & Personal Care", "Digital Services", "Fashion"];
+const discoveryCategories = ["home-furniture", "beauty-skincare", "digital-software", "fashion-clothing"];
 
 function SpinToDiscover({ onPick }: { onPick: (category: string) => void }) {
   const [spun, setSpun] = useState(false);
@@ -35,7 +35,7 @@ function SpinToDiscover({ onPick }: { onPick: (category: string) => void }) {
   }
   return <div className="mt-4 flex w-full flex-col items-center rounded-xl border border-muted bg-card px-5 py-4 shadow-sm">
     <span className="mb-2 font-bold text-primary">🎉 Spin to Discover</span>
-    {!spun ? <Button type="button" onClick={spin} disabled={spinning} className="bg-indigo-600 text-white hover:bg-indigo-700">{spinning ? "Spinning…" : "Spin Now"}</Button> : <div className="text-center"><p className="font-semibold text-indigo-700 dark:text-indigo-300">Your pick: {result}</p><Button type="button" variant="link" onClick={() => { setSpun(false); setResult(""); }}>Spin again</Button></div>}
+    {!spun ? <Button type="button" onClick={spin} disabled={spinning} className="bg-indigo-600 text-white hover:bg-indigo-700">{spinning ? "Spinning…" : "Spin Now"}</Button> : <div className="text-center"><p className="font-semibold text-indigo-700 dark:text-indigo-300">Your pick: {result.replace(/[-_]+/g, " ")}</p><Button type="button" variant="link" onClick={() => { setSpun(false); setResult(""); }}>Spin again</Button></div>}
     <span className="mt-1 text-center text-xs text-muted-foreground">A fun way to find a category. No discount or cash prize is implied.</span>
   </div>;
 }
@@ -70,7 +70,7 @@ export default function HeroSection() {
       <h1 className="mb-3 text-3xl font-bold leading-tight text-primary sm:text-4xl md:text-5xl">Find products. Book services. Grow your business.</h1>
       <p className="mb-5 max-w-xl text-base text-muted-foreground sm:text-lg">Discover useful products and connect with service providers—or set up your own vendor profile on Zemelix.</p>
       <div className="mb-4 grid w-full grid-cols-2 gap-2 sm:gap-3">
-        {categories.map(cat => <Button key={cat.name} type="button" variant="outline" onClick={() => browseCategory(cat.name)} className={`min-w-0 rounded-full border-0 bg-gradient-to-r px-3 py-2 text-sm font-medium text-white shadow transition-transform hover:scale-[1.02] sm:text-base ${cat.color}`}><span className="mr-2">{cat.icon}</span>{cat.name}</Button>)}
+        {categories.map(cat => <Button key={cat.name} type="button" variant="outline" onClick={() => browseCategory(cat.category)} className={`min-w-0 rounded-full border-0 bg-gradient-to-r px-3 py-2 text-sm font-medium text-white shadow transition-transform hover:scale-[1.02] sm:text-base ${cat.color}`}><span className="mr-2">{cat.icon}</span>{cat.name}</Button>)}
       </div>
       <form onSubmit={searchListings} className="mb-5 flex w-full flex-col gap-2 sm:flex-row">
         <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products or services…" aria-label="Search products or services" className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:border-gray-700 dark:bg-gray-900" />
