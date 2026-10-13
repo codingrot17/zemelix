@@ -1,14 +1,7 @@
 import { Link } from "react-router-dom";
 import { Mail } from "lucide-react";
 
-const categories = [
-  "Electronics",
-  "Fashion",
-  "Home & Garden",
-  "Toys",
-  "Sports",
-  "Books",
-];
+const categories = ["Hairdressing", "Web Development", "Home & Living"];
 
 const Footer = () => (
   <footer className="bg-gray-900 dark:bg-black text-gray-200 dark:text-gray-300 pt-12 pb-6 px-4">
@@ -27,8 +20,8 @@ const Footer = () => (
           Discover products, connect with independent sellers and request services from professionals on one marketplace.
         </p>
         <div className="rounded-xl border border-gray-700 bg-gray-800/60 p-4">
-          <p className="mb-3 text-sm text-gray-300">Have a question or need help getting started?</p>
-          <Link to="/support" className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Visit support <Mail className="h-4 w-4" /></Link>
+          <p className="mb-3 text-sm text-gray-300">Have a question about buying, bookings, or getting started?</p>
+          <Link to="/#faq" className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Read FAQs <Mail className="h-4 w-4" /></Link>
         </div>
       </div>
 
@@ -43,16 +36,10 @@ const Footer = () => (
             <Link to="/collections" className="hover:text-indigo-400">Collections</Link>
           </li>
           <li>
-            <Link to="/sellers" className="hover:text-indigo-400">Sellers</Link>
+            <Link to="/vendor/upgrade" className="hover:text-indigo-400">Sell on Zemelix</Link>
           </li>
           <li>
-            <Link to="/blog" className="hover:text-indigo-400">Blog</Link>
-          </li>
-          <li>
-            <Link to="/about" className="hover:text-indigo-400">About Us</Link>
-          </li>
-          <li>
-            <Link to="/faq" className="hover:text-indigo-400">FAQ</Link>
+            <Link to="/#faq" className="hover:text-indigo-400">FAQ</Link>
           </li>
         </ul>
       </div>
@@ -64,7 +51,7 @@ const Footer = () => (
           {categories.map((cat) => (
             <li key={cat}>
               <Link
-                to={`/category/${cat.toLowerCase().replace(/\s+/g, "-")}`}
+                to={`/collections?search=${encodeURIComponent(cat)}&view=products`}
                 className="hover:text-indigo-400"
               >
                 {cat}
@@ -88,15 +75,7 @@ const Footer = () => (
             <Link to="/wishlist" className="hover:text-indigo-400">Wishlist</Link>
           </li>
           <li>
-            <Link to="/contact" className="hover:text-indigo-400">Contact Us</Link>
-          </li>
-          <li>
-            <Link to="/support" className="hover:text-indigo-400">Support</Link>
-          </li>
-          <li>
-            <a href="mailto:support@zemelix.com" className="hover:text-indigo-400 flex items-center gap-1">
-              <Mail className="w-4 h-4" /> Email Support
-            </a>
+            <Link to="/#faq" className="hover:text-indigo-400">Help & FAQs</Link>
           </li>
         </ul>
       </div>
@@ -110,11 +89,7 @@ const Footer = () => (
       <div className="text-center sm:text-left">
         &copy; {new Date().getFullYear()} Zemelix. All rights reserved.
       </div>
-      <div className="space-x-4 text-center sm:text-right">
-        <Link to="/terms" className="hover:text-indigo-400">Terms</Link>
-        <Link to="/privacy" className="hover:text-indigo-400">Privacy</Link>
-        <Link to="/cookies" className="hover:text-indigo-400">Cookies</Link>
-      </div>
+      <p className="text-center sm:text-right">Policy pages are coming soon.</p>
     </div>
   </footer>
 );
