@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CollectionCard } from "@/components/features/collection/CollectionCard";
 import ProductCard from "@/components/shared/ProductCard";
-import { useProducts } from "@/hooks/useProducts";
+import { listProducts } from "@/services/product.service";
+import type { Product } from "@/types/product";
 import { getCollectionErrorMessage, listCollections } from "@/services/collection.service";
 import type { Collection } from "@/types/collection";
 import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
@@ -11,6 +12,7 @@ import { categoryDatabase } from "@/data/businessCategories";
 import { categoryLabel, listingMatchesCategory } from "@/services/category.service";
 
 type View = "collections" | "products";
+const PRODUCT_PAGE_SIZE = 50;
 
 function getAllTags(collections: Collection[]) {
     const tags = new Set<string>();
@@ -30,8 +32,64 @@ export function CollectionsPage() {
     const [selectedType, setSelectedType] = useState<"seller" | "service" | null>(() => searchParams.get("type") === "service" ? "service" : searchParams.get("type") === "seller" ? "seller" : null);
     const [activeView, setActiveView] = useState<View>(() => (searchParams.get("view") === "products" || searchParams.has("category") || searchParams.has("search") || searchParams.has("q") || searchParams.has("type")) ? "products" : "collections");
     const [showFilters, setShowFilters] = useState(false);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [prodLoading, setProdLoading] = useState(true);
+    const [prodError, setProdError] = useState<string | null>(null);
+    const [productOffset, setProductOffset] = useState(0);
+    const [hasMoreProducts, setHasMoreProducts] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [productReload, setProductReload] = useState(0);
 
-    const { products, loading: prodLoading, error: prodError, refetch: refetchProducts } = useProducts({ limit: 50 });
+    const refetchProducts = () => setProductReload(value => value + 1);
+
+    useEffect(() => {
+        let cancelled = false;
+        setProdLoading(true);
+        setProdError(null);
+        setProducts([]);
+        setProductOffset(0);
+        setHasMoreProducts(true);
+
+        listProducts({ limit: PRODUCT_PAGE_SIZE, offset: 0, activeOnly: true })
+            .then(data => {
+                if (cancelled) return;
+                setProducts(data);
+                setProductOffset(data.length);
+                setHasMoreProducts(data.length === PRODUCT_PAGE_SIZE);
+            })
+            .catch(error => {
+                if (cancelled) return;
+                console.error("CollectionsPage listings:", error);
+                setProdError(error instanceof Error ? error.message : "Failed to load marketplace listings.");
+                setProducts([]);
+                setHasMoreProducts(false);
+            })
+            .finally(() => {
+                if (!cancelled) setProdLoading(false);
+            });
+
+        return () => { cancelled = true; };
+    }, [productReload]);
+
+    async function loadMoreProducts() {
+        if (loadingMore || !hasMoreProducts) return;
+        setLoadingMore(true);
+        setProdError(null);
+        try {
+            const data = await listProducts({ limit: PRODUCT_PAGE_SIZE, offset: productOffset, activeOnly: true });
+            setProducts(current => {
+                const seen = new Set(current.map(product => product.id));
+                return [...current, ...data.filter(product => !seen.has(product.id))];
+            });
+            setProductOffset(current => current + data.length);
+            setHasMoreProducts(data.length === PRODUCT_PAGE_SIZE);
+        } catch (error) {
+            console.error("CollectionsPage load more listings:", error);
+            setProdError(error instanceof Error ? error.message : "Failed to load more listings.");
+        } finally {
+            setLoadingMore(false);
+        }
+    }
 
     useEffect(() => {
         setSearch(searchParams.get("search") ?? searchParams.get("q") ?? "");
@@ -267,6 +325,13 @@ export function CollectionsPage() {
                     <p className="text-center text-xs text-gray-400 mt-8">
                         {filteredProducts.length} listing{filteredProducts.length !== 1 ? "s" : ""} shown
                     </p>
+                    {hasMoreProducts && (
+                        <div className="mt-6 flex justify-center">
+                            <Button type="button" variant="outline" onClick={loadMoreProducts} disabled={loadingMore}>
+                                {loadingMore ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading more…</> : "Load more listings"}
+                            </Button>
+                        </div>
+                    )}
                 </>
             )}
         </div>
