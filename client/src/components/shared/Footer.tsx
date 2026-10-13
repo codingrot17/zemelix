@@ -53,12 +53,12 @@ const Footer = () => (
         <h3 className="font-semibold text-white mb-3">Popular Categories</h3>
         <ul className="space-y-2 text-gray-400">
           {categories.map((cat) => (
-            <li key={cat}>
+            <li key={cat.id}>
               <Link
                 to={`/collections?category=${encodeURIComponent(cat.id)}&view=products`}
                 className="hover:text-indigo-400"
               >
-                {cat}
+                {cat.name}
               </Link>
             </li>
           ))}
