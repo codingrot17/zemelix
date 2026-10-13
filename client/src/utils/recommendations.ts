@@ -13,28 +13,41 @@ export interface RecommendationItem {
   category?: string;
 }
 
+const categoryTerms: Record<string, string[]> = {
+  "hairdressing": ["hair", "hairdressing", "salon", "stylist", "beauty-hair-service"],
+  "web development": ["web", "website", "development", "tech-web", "programming"],
+  "home & living": ["home", "living", "furniture", "decor", "kitchen", "home-furniture", "home-decor"],
+  "beauty & personal care": ["beauty", "skincare", "makeup", "hair", "personal care"],
+  "digital products": ["digital", "software", "course", "ebook", "template"],
+};
+
 export function getRecommendations(answers: QuizAnswers | null, items: RecommendationItem[]): RecommendationItem[] {
   if (!answers) return [];
   const { purpose, category } = answers;
+
   if (purpose === "Sell or Offer a Service") {
     return [{
       id: "onboard",
       title: "Set up your vendor profile",
-      description: "Choose your vendor type and complete the guided onboarding steps to start listing products or services.",
+      description: "Choose the vendor type that fits your business and follow the guided steps to publish your first listing.",
       imageUrl: "/images/placeholder.svg",
     }];
   }
 
   const type = purpose === "Find a Service" ? "service" : "product";
+  const available = items.filter(item => item.type === type);
+  if (!available.length) return [];
+
   const categoryQuery = category && category !== "Other" ? category.toLowerCase().trim() : "";
-  const matches = items.filter(item => {
-    if (item.type !== type) return false;
-    if (!categoryQuery) return true;
+  if (!categoryQuery) return available.slice(0, 8);
+
+  const terms = categoryTerms[categoryQuery] ?? [categoryQuery];
+  const matches = available.filter(item => {
     const searchable = `${item.category ?? ""} ${item.title} ${item.description}`.toLowerCase();
-    const words = categoryQuery.split(/\s+/).filter(word => word.length > 2);
-    return searchable.includes(categoryQuery) || words.some(word => searchable.includes(word));
+    return terms.some(term => searchable.includes(term));
   });
-  // Prefer relevant category matches but still offer real listings of the selected type
-  // when current listing categories don't exactly match the quiz labels.
-  return matches.length ? matches : items.filter(item => item.type === type).slice(0, 8);
+
+  // Never return fabricated listings: show real listings of the chosen type if
+  // a category has no exact matches, and explain the fallback in the panel.
+  return matches.length ? matches.slice(0, 8) : available.slice(0, 8);
 }
