@@ -1,349 +1,255 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CollectionCard } from "@/components/features/collection/CollectionCard";
 import ProductCard from "@/components/shared/ProductCard";
 import { listProducts } from "@/services/product.service";
 import type { Product } from "@/types/product";
-import { getCollectionErrorMessage, listCollections } from "@/services/collection.service";
+import { listCollections, getCollectionErrorMessage } from "@/services/collection.service";
 import type { Collection } from "@/types/collection";
-import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
+import { Search, X, Loader2, SlidersHorizontal, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { categoryDatabase } from "@/data/businessCategories";
 import { categoryLabel, listingMatchesCategory } from "@/services/category.service";
 
-type View = "collections" | "products";
-const PRODUCT_PAGE_SIZE = 50;
+const PAGE_SIZE = 50;
+type SortOrder = "newest" | "price-asc" | "price-desc" | "title";
+type VendorFilter = "all" | "product-seller" | "service" | "digital-creator" | "wholesaler" | "other";
 
-function getAllTags(collections: Collection[]) {
-    const tags = new Set<string>();
-    collections.forEach(col => col.tags?.forEach(tag => tags.add(tag)));
-    return Array.from(tags);
+const vendorOptions: { value: VendorFilter; label: string }[] = [
+  { value: "all", label: "All vendor types" },
+  { value: "product-seller", label: "Product sellers" },
+  { value: "service", label: "Service providers" },
+  { value: "digital-creator", label: "Digital creators" },
+  { value: "wholesaler", label: "Wholesalers" },
+  { value: "other", label: "Other vendors" },
+];
+
+function normaliseType(type: string | undefined): VendorFilter {
+  if (type === "service-provider" || type === "service") return "service";
+  if (type === "product-seller" || type === "digital-creator" || type === "wholesaler" || type === "other") return type;
+  return "all";
+}
+
+function CategoryTile({ id, name, count, onClick }: { id: string; name: string; count: number; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="group flex min-h-28 flex-col justify-between rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-indigo-400 hover:shadow-md dark:border-gray-700 dark:bg-gray-900">
+      <span className="font-semibold text-gray-900 group-hover:text-indigo-600 dark:text-gray-100">{name}</span>
+      <span className="mt-3 text-xs text-gray-500 dark:text-gray-400">{count} {count === 1 ? "listing" : "listings"} <span aria-hidden="true">→</span></span>
+    </button>
+  );
 }
 
 export function CollectionsPage() {
-    const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const [collections, setCollections] = useState<Collection[]>([]);
-    const [colLoading, setColLoading] = useState(true);
-    const [colError, setColError] = useState<string | null>(null);
-    const [search, setSearch] = useState(() => searchParams.get("q") ?? searchParams.get("search") ?? "");
-    const [selectedTag, setSelectedTag] = useState<string | null>(null);
-    const [selectedCategory, setSelectedCategory] = useState(() => searchParams.get("category") ?? "");
-    const [selectedType, setSelectedType] = useState<"seller" | "service" | null>(() => searchParams.get("type") === "service" ? "service" : searchParams.get("type") === "seller" ? "seller" : null);
-    const [activeView, setActiveView] = useState<View>(() => (searchParams.get("view") === "products" || searchParams.has("category") || searchParams.has("search") || searchParams.has("q") || searchParams.has("type")) ? "products" : "collections");
-    const [showFilters, setShowFilters] = useState(false);
-    const [products, setProducts] = useState<Product[]>([]);
-    const [prodLoading, setProdLoading] = useState(true);
-    const [prodError, setProdError] = useState<string | null>(null);
-    const [productOffset, setProductOffset] = useState(0);
-    const [hasMoreProducts, setHasMoreProducts] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-    const [productReload, setProductReload] = useState(0);
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [collectionLoading, setCollectionLoading] = useState(true);
+  const [collectionError, setCollectionError] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [reload, setReload] = useState(0);
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? searchParams.get("q") ?? "");
+  const [category, setCategory] = useState(() => searchParams.get("category") ?? "");
+  const [vendorType, setVendorType] = useState<VendorFilter>(() => normaliseType(searchParams.get("type") ?? undefined));
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [sort, setSort] = useState<SortOrder>("newest");
+  const [showFilters, setShowFilters] = useState(false);
 
-    const refetchProducts = () => setProductReload(value => value + 1);
-
-    useEffect(() => {
-        let cancelled = false;
-        setProdLoading(true);
-        setProdError(null);
-        setProducts([]);
-        setProductOffset(0);
-        setHasMoreProducts(true);
-
-        listProducts({ limit: PRODUCT_PAGE_SIZE, offset: 0, activeOnly: true })
-            .then(data => {
-                if (cancelled) return;
-                setProducts(data);
-                setProductOffset(data.length);
-                setHasMoreProducts(data.length === PRODUCT_PAGE_SIZE);
-            })
-            .catch(error => {
-                if (cancelled) return;
-                console.error("CollectionsPage listings:", error);
-                setProdError(error instanceof Error ? error.message : "Failed to load marketplace listings.");
-                setProducts([]);
-                setHasMoreProducts(false);
-            })
-            .finally(() => {
-                if (!cancelled) setProdLoading(false);
-            });
-
-        return () => { cancelled = true; };
-    }, [productReload]);
-
-    async function loadMoreProducts() {
-        if (loadingMore || !hasMoreProducts) return;
-        setLoadingMore(true);
-        setProdError(null);
-        try {
-            const data = await listProducts({ limit: PRODUCT_PAGE_SIZE, offset: productOffset, activeOnly: true });
-            setProducts(current => {
-                const seen = new Set(current.map(product => product.id));
-                return [...current, ...data.filter(product => !seen.has(product.id))];
-            });
-            setProductOffset(current => current + data.length);
-            setHasMoreProducts(data.length === PRODUCT_PAGE_SIZE);
-        } catch (error) {
-            console.error("CollectionsPage load more listings:", error);
-            setProdError(error instanceof Error ? error.message : "Failed to load more listings.");
-        } finally {
-            setLoadingMore(false);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setProducts([]);
+    setOffset(0);
+    listProducts({ limit: PAGE_SIZE, offset: 0, activeOnly: true })
+      .then(rows => {
+        if (cancelled) return;
+        setProducts(rows);
+        setOffset(rows.length);
+        setHasMore(rows.length === PAGE_SIZE);
+      })
+      .catch(err => {
+        if (!cancelled) {
+          console.error("Collections listings:", err);
+          setError("We couldn't load marketplace listings. Check your connection and try again.");
+          setProducts([]);
+          setHasMore(false);
         }
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [reload]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCollectionLoading(true);
+    setCollectionError(null);
+    listCollections()
+      .then(rows => { if (!cancelled) setCollections(rows); })
+      .catch(err => {
+        if (!cancelled) {
+          console.warn("Editorial collections unavailable; showing data-backed category collections.", err);
+          setCollectionError(getCollectionErrorMessage(err));
+          setCollections([]);
+        }
+      })
+      .finally(() => { if (!cancelled) setCollectionLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    setSearch(searchParams.get("search") ?? searchParams.get("q") ?? "");
+    setCategory(searchParams.get("category") ?? "");
+    setVendorType(normaliseType(searchParams.get("type") ?? undefined));
+  }, [searchParams]);
+
+  function updateUrl(nextSearch: string, nextCategory: string, nextType: VendorFilter) {
+    const params = new URLSearchParams(searchParams);
+    if (nextSearch.trim()) params.set("search", nextSearch.trim()); else { params.delete("search"); params.delete("q"); }
+    if (nextCategory) params.set("category", nextCategory); else params.delete("category");
+    if (nextType !== "all") params.set("type", nextType); else params.delete("type");
+    params.set("view", "products");
+    setSearchParams(params, { replace: true });
+  }
+
+  async function loadMore() {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const rows = await listProducts({ limit: PAGE_SIZE, offset, activeOnly: true });
+      setProducts(current => {
+        const ids = new Set(current.map(item => item.id));
+        return [...current, ...rows.filter(item => !ids.has(item.id))];
+      });
+      setOffset(value => value + rows.length);
+      setHasMore(rows.length === PAGE_SIZE);
+    } catch (err) {
+      console.error("Load more listings:", err);
+      setError("Couldn't load more listings. Please try again.");
+    } finally {
+      setLoadingMore(false);
     }
+  }
 
-    useEffect(() => {
-        setSearch(searchParams.get("search") ?? searchParams.get("q") ?? "");
-        setActiveView((searchParams.get("view") === "products" || searchParams.has("category") || searchParams.has("search") || searchParams.has("q") || searchParams.has("type")) ? "products" : "collections");
-        setSelectedCategory(searchParams.get("category") ?? "");
-        setSelectedType(searchParams.get("type") === "service" ? "service" : searchParams.get("type") === "seller" ? "seller" : null);
-    }, [searchParams]);
+  const filteredProducts = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase();
+    const result = products.filter(product => {
+      const type = normaliseType(product.vendorType);
+      const price = Number(product.price) || 0;
+      return (!category || listingMatchesCategory(product, category)) &&
+        (vendorType === "all" || type === vendorType) &&
+        (!minPrice || price >= Number(minPrice)) &&
+        (!maxPrice || price <= Number(maxPrice)) &&
+        (!query || [product.title, product.shortDescription, product.category, product.sellerName, ...(product.tags ?? [])].some(value => value?.toLocaleLowerCase().includes(query)));
+    });
+    return result.sort((a, b) => {
+      if (sort === "price-asc") return (Number(a.price) || 0) - (Number(b.price) || 0);
+      if (sort === "price-desc") return (Number(b.price) || 0) - (Number(a.price) || 0);
+      if (sort === "title") return a.title.localeCompare(b.title);
+      return new Date(b.createdAt ?? "").getTime() - new Date(a.createdAt ?? "").getTime();
+    });
+  }, [products, search, category, vendorType, minPrice, maxPrice, sort]);
 
-    useEffect(() => {
-        let cancelled = false;
+  const categoryTiles = useMemo(() => {
+    const allCategories = Array.from(new Map(categoryDatabase.flatMap(group => group.categories).map(item => [item.id, item])).values());
+    const query = search.trim().toLowerCase();
+    return allCategories.map(item => ({
+      ...item,
+      count: products.filter(product => listingMatchesCategory(product, item.id)).length,
+    })).filter(item => (!query || item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query) || item.keywords.some(word => word.toLowerCase().includes(query))) && item.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [products, search]);
 
-        setColLoading(true);
-        setColError(null);
+  function clearFilters() {
+    setSearch("");
+    setCategory("");
+    setVendorType("all");
+    setMinPrice("");
+    setMaxPrice("");
+    setSort("newest");
+    setSearchParams({}, { replace: true });
+  }
 
-        listCollections()
-            .then(result => {
-                if (!cancelled) setCollections(result);
-            })
-            .catch(error => {
-                if (!cancelled) {
-                    console.error("CollectionsPage:", error);
-                    setColError(getCollectionErrorMessage(error));
-                }
-            })
-            .finally(() => {
-                if (!cancelled) setColLoading(false);
-            });
+  const hasFilters = Boolean(search || category || vendorType !== "all" || minPrice || maxPrice);
 
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+  return (
+    <main className="mx-auto min-h-[60vh] max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+      <header className="mb-6">
+        <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">Discover Zemelix</p>
+        <h1 className="mt-1 text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">Collections & marketplace</h1>
+        <p className="mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-300 sm:text-base">Explore real categories and browse products and services from marketplace vendors.</p>
+      </header>
 
-    const tags = useMemo(() => getAllTags(collections), [collections]);
-
-    function updateSearch(value: string) {
-        setSearch(value);
-        const next = new URLSearchParams(searchParams);
-        if (value.trim()) next.set("search", value);
-        else next.delete("search");
-        next.delete("q");
-        if (value.trim()) next.set("view", "products");
-        setSearchParams(next, { replace: true });
-    }
-
-    const filteredCollections = useMemo(() => {
-        const q = search.toLowerCase();
-        return collections.filter(col => {
-            const matchSearch =
-                !q ||
-                col.title.toLowerCase().includes(q) ||
-                col.description.toLowerCase().includes(q);
-            const matchTag = !selectedTag || col.tags?.includes(selectedTag);
-            return matchSearch && matchTag;
-        });
-    }, [collections, search, selectedTag]);
-
-    const filteredProducts = useMemo(() => {
-        const q = search.toLowerCase();
-        return products.filter(
-            p =>
-                (!selectedType || p.vendorType === selectedType || (selectedType === "service" && (p.vendorType as string) === "service-provider")) &&
-                (!selectedCategory || listingMatchesCategory(p, selectedCategory)) &&
-                (!q || p.title.toLowerCase().includes(q) || p.shortDescription.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || p.sellerName.toLowerCase().includes(q) || (p.tags ?? []).some(tag => tag.toLowerCase().includes(q)))
-        );
-    }, [products, search, selectedType, selectedCategory]);
-
-    const featured = collections.find(c => c.badge === "Featured") ?? collections[0];
-    const isLoading = activeView === "collections" ? colLoading : prodLoading;
-
-    return (
-        <div className="max-w-7xl mx-auto px-4 py-8">
-            {featured && !colLoading && (
-                <div
-                    className="relative rounded-2xl overflow-hidden mb-10 shadow-lg cursor-pointer group"
-                    onClick={() => navigate(`/collections/${featured.slug}`)}
-                >
-                    <img
-                        src={featured.imageUrl}
-                        alt={featured.title}
-                        className="w-full h-52 sm:h-72 object-cover group-hover:scale-105 transition-transform duration-500"
-                        loading="eager"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                    <div className="absolute bottom-0 left-0 p-6 text-white">
-                        <div className="flex flex-wrap gap-2 mb-2">
-                            {featured.badge && (
-                                <span className="px-3 py-1 rounded-full bg-white/90 text-indigo-700 text-xs font-bold">
-                                    {featured.badge}
-                                </span>
-                            )}
-                            {featured.tags?.slice(0, 3).map(tag => (
-                                <span key={tag} className="px-2 py-1 rounded-full bg-white/20 text-white text-xs backdrop-blur">
-                                    #{tag}
-                                </span>
-                            ))}
-                        </div>
-                        <h1 className="text-2xl sm:text-3xl font-bold drop-shadow mb-1">{featured.title}</h1>
-                        <p className="text-white/80 text-sm line-clamp-2 max-w-xl">{featured.description}</p>
-                    </div>
-                </div>
-            )}
-
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center" aria-label="Browse categories">
-                <label htmlFor="marketplace-category" className="text-sm font-medium text-gray-700 dark:text-gray-300">Browse category</label>
-                <select id="marketplace-category" value={selectedCategory} onChange={event => { const value = event.target.value; setSelectedCategory(value); const next = new URLSearchParams(searchParams); if (value) next.set("category", value); else next.delete("category"); next.set("view", "products"); setSearchParams(next); setActiveView("products"); }} className="w-full sm:max-w-sm rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
-                    <option value="">All categories</option>
-                    {categoryDatabase.map(group => <optgroup key={group.type} label={group.label}>
-                        {group.categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
-                    </optgroup>)}
-                </select>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-shrink-0">
-                    {(["collections", "products"] as View[]).map(v => (
-                        <button
-                            key={v}
-                            onClick={() => { setActiveView(v); const next = new URLSearchParams(searchParams); if (v === "products") next.set("view", "products"); else { next.delete("view"); next.delete("category"); setSelectedCategory(""); } setSearchParams(next); }}
-                            className={`px-4 py-2 text-sm font-medium capitalize transition ${
-                                activeView === v
-                                    ? "bg-indigo-600 text-white"
-                                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50"
-                            }`}
-                        >
-                            {v}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={e => updateSearch(e.target.value)}
-                        placeholder={`Search ${activeView}…`}
-                        className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                    />
-                    {search && (
-                        <button onClick={() => updateSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                            <X className="w-4 h-4" />
-                        </button>
-                    )}
-                </div>
-
-                {activeView === "collections" && (
-                    <Button variant="outline" onClick={() => setShowFilters(f => !f)} className="flex-shrink-0">
-                        <SlidersHorizontal className="w-4 h-4 mr-2" />
-                        Filters {selectedTag && <span className="ml-1 w-2 h-2 rounded-full bg-indigo-600 inline-block" />}
-                    </Button>
-                )}
-            </div>
-
-            {activeView === "products" && (
-                <div className="mb-6 flex flex-wrap gap-2">
-                    {([{ label: "All listings", value: null }, { label: "Products", value: "seller" }, { label: "Services", value: "service" }] as const).map(option => (
-                        <button key={option.label} onClick={() => { setSelectedType(option.value); const next = new URLSearchParams(searchParams); if (option.value) next.set("type", option.value); else next.delete("type"); next.set("view", "products"); setSearchParams(next); }} className={`rounded-full border px-3 py-2 text-xs font-medium transition ${selectedType === option.value ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white text-gray-600 hover:border-indigo-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"}`}>
-                            {option.label}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {activeView === "collections" && showFilters && tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <button
-                        onClick={() => setSelectedTag(null)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
-                            !selectedTag
-                                ? "bg-indigo-600 text-white"
-                                : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
-                        }`}
-                    >
-                        All
-                    </button>
-                    {tags.map(tag => (
-                        <button
-                            key={tag}
-                            onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${
-                                selectedTag === tag
-                                    ? "bg-indigo-600 text-white"
-                                    : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
-                            }`}
-                        >
-                            #{tag}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {colError && activeView === "collections" && (
-                <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
-                    {colError}
-                </div>
-            )}
-
-            {isLoading && (
-                <div className="flex items-center justify-center py-20 text-gray-400">
-                    <Loader2 className="w-8 h-8 animate-spin mr-3" />
-                    <span className="text-sm">Loading {activeView}…</span>
-                </div>
-            )}
-
-            {!isLoading && activeView === "collections" && (
-                filteredCollections.length === 0 ? (
-                    <EmptyState
-                        message={search ? `No collections matching "${search}"` : "No collections found."}
-                        onClear={() => { updateSearch(""); setSelectedTag(null); }}
-                    />
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredCollections.map(col => <CollectionCard key={col.id} collection={col} />)}
-                    </div>
-                )
-            )}
-
-            {!isLoading && activeView === "products" && (
-                <>
-                    {filteredProducts.length === 0 ? (
-                        <EmptyState
-                            message={search ? `No products matching "${search}"` : "No active products found."}
-                            onClear={() => updateSearch("")}
-                        />
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                            {filteredProducts.map(product => (
-                                <ProductCard key={product.id} product={product} />
-                            ))}
-                        </div>
-                    )}
-                    <p className="text-center text-xs text-gray-400 mt-8">
-                        {filteredProducts.length} listing{filteredProducts.length !== 1 ? "s" : ""} shown
-                    </p>
-                    {hasMoreProducts && (
-                        <div className="mt-6 flex justify-center">
-                            <Button type="button" variant="outline" onClick={loadMoreProducts} disabled={loadingMore}>
-                                {loadingMore ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading more…</> : "Load more listings"}
-                            </Button>
-                        </div>
-                    )}
-                </>
-            )}
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          <input aria-label="Search products, services, and categories" type="search" value={search} onChange={event => { const value = event.target.value; setSearch(value); updateUrl(value, category, vendorType); }} placeholder="Search products, services, and categories…" className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-10 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+          {search && <button type="button" aria-label="Clear search" onClick={() => { setSearch(""); updateUrl("", category, vendorType); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><X className="h-4 w-4" /></button>}
         </div>
-    );
-}
+        <Button type="button" variant="outline" onClick={() => setShowFilters(value => !value)} className="w-full sm:w-auto">
+          <SlidersHorizontal className="mr-2 h-4 w-4" />{showFilters ? "Hide filters" : "Filters"}{hasFilters ? " •" : ""}
+        </Button>
+      </div>
 
-function EmptyState({ message, onClear }: { message: string; onClear: () => void }) {
-    return (
-        <div className="text-center py-20">
-            <div className="text-5xl mb-4">🔍</div>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">{message}</p>
-            <Button variant="outline" onClick={onClear}>Clear filters</Button>
-        </div>
-    );
+      {showFilters && <section aria-label="Marketplace filters" className="mb-6 grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900 sm:grid-cols-2 lg:grid-cols-5">
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Category
+          <select value={category} onChange={event => { const value = event.target.value; setCategory(value); updateUrl(search, value, vendorType); }} className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-800">
+            <option value="">All categories</option>
+            {categoryDatabase.map(group => <optgroup key={group.type} label={group.label}>{group.categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</optgroup>)}
+          </select>
+        </label>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Vendor type
+          <select value={vendorType} onChange={event => { const value = event.target.value as VendorFilter; setVendorType(value); updateUrl(search, category, value); }} className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-800">
+            {vendorOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+        </label>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Minimum price (₦)
+          <input type="number" min="0" inputMode="numeric" value={minPrice} onChange={event => setMinPrice(event.target.value)} placeholder="No minimum" className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-800" />
+        </label>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Maximum price (₦)
+          <input type="number" min="0" inputMode="numeric" value={maxPrice} onChange={event => setMaxPrice(event.target.value)} placeholder="No maximum" className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-800" />
+        </label>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Sort by
+          <select value={sort} onChange={event => setSort(event.target.value as SortOrder)} className="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-2.5 dark:border-gray-600 dark:bg-gray-800">
+            <option value="newest">Newest</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option><option value="title">Name: A–Z</option>
+          </select>
+        </label>
+        <div className="flex items-end"><Button type="button" variant="outline" onClick={clearFilters} className="w-full">Clear filters</Button></div>
+      </section>}
+
+      {loading ? <div role="status" className="flex items-center justify-center py-16 text-gray-500"><Loader2 className="mr-3 h-6 w-6 animate-spin" />Loading marketplace…</div> :
+        error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"><p>{error}</p><Button type="button" variant="outline" className="mt-3" onClick={() => setReload(value => value + 1)}>Retry</Button></div> :
+        <>
+          {!category && !search && <section className="mb-9">
+            <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Browse categories</h2><p className="mt-1 text-sm text-gray-500">Categories with current listings appear first.</p></div><span className="text-xs text-gray-500">{categoryTiles.length} categories</span></div>
+            {categoryTiles.length > 0 ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {categoryTiles.slice(0, 20).map(item => <CategoryTile key={item.id} id={item.id} name={item.name} count={item.count} onClick={() => { setCategory(item.id); updateUrl(search, item.id, vendorType); }} />)}
+            </div> : <p className="rounded-xl border border-dashed border-gray-300 p-6 text-sm text-gray-500">No categories have matching active listings yet. Try browsing all listings below.</p>}
+          </section>}
+
+          <section>
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">{category ? categoryLabel(category) : "Marketplace listings"}</h2><p className="mt-1 text-sm text-gray-500">{filteredProducts.length} matching {filteredProducts.length === 1 ? "listing" : "listings"}</p></div><div className="flex items-center gap-2 text-xs text-gray-500"><ArrowUpDown className="h-4 w-4" />{sort === "newest" ? "Newest first" : sort === "price-asc" ? "Lowest price first" : sort === "price-desc" ? "Highest price first" : "Name A–Z"}</div></div>
+            {filteredProducts.length === 0 ? <div className="py-14 text-center"><div className="mb-3 text-4xl" aria-hidden="true">🔎</div><h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">No matching listings</h3><p className="mx-auto mt-2 max-w-md text-sm text-gray-500">Try changing your search or removing one or more filters.</p><Button type="button" variant="outline" className="mt-4" onClick={clearFilters}>Clear filters</Button></div> :
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{filteredProducts.map(product => <ProductCard key={product.id} product={product} />)}</div>}
+            {hasMore && <div className="mt-7 flex justify-center"><Button type="button" variant="outline" onClick={loadMore} disabled={loadingMore}>{loadingMore && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{loadingMore ? "Loading more…" : "Load more listings"}</Button></div>}
+          </section>
+        </>
+      }
+
+      {!collectionLoading && collections.length > 0 && <section className="mt-10 border-t border-gray-200 pt-8 dark:border-gray-700">
+        <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">Curated collections</h2>
+        {collectionError && <p className="mb-3 text-sm text-amber-700 dark:text-amber-300">Showing available marketplace categories because curated collections could not be loaded.</p>}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">{collections.map(collection => (
+          <button key={collection.id} type="button" onClick={() => navigate(`/collections/${collection.slug}`)} className="rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-indigo-400 hover:shadow-md dark:border-gray-700 dark:bg-gray-900">
+            <h3 className="font-semibold text-gray-900 dark:text-white">{collection.title}</h3><p className="mt-2 line-clamp-2 text-sm text-gray-500">{collection.description}</p><span className="mt-3 inline-block text-sm font-semibold text-indigo-600">Explore collection →</span>
+          </button>
+        ))}</div>
+      </section>}
+    </main>
+  );
 }
