@@ -1,7 +1,11 @@
 import { Link } from "react-router-dom";
 import { Mail } from "lucide-react";
 
-const categories = [\n  { name: "Hairdressing", id: "beauty-hair-service" },\n  { name: "Web Development", id: "tech-web" },\n  { name: "Home & Living", id: "home-furniture" },\n];
+const categories = [
+  { name: "Hairdressing", id: "beauty-hair-service" },
+  { name: "Web Development", id: "tech-web" },
+  { name: "Home & Living", id: "home-furniture" },
+];
 
 const Footer = () => (
   <footer className="bg-gray-900 dark:bg-black text-gray-200 dark:text-gray-300 pt-12 pb-6 px-4">
