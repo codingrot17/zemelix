@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { QuizAnswers } from "@/utils/recommendations";
 
 type DiscoveryQuizProps = {
   onResult: (answers: QuizAnswers) => void;
+  onSkip?: () => void;
 };
 
 const questions = [
@@ -20,7 +21,7 @@ const questions = [
   },
 ];
 
-export default function DiscoveryQuiz({ onResult }: DiscoveryQuizProps) {
+export default function DiscoveryQuiz({ onResult, onSkip }: DiscoveryQuizProps) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswers>({});
 
@@ -37,33 +38,21 @@ export default function DiscoveryQuiz({ onResult }: DiscoveryQuizProps) {
 
   if (step >= questions.length) return null;
 
-  // Progress value in percent
   const progressValue = ((step + 1) / questions.length) * 100;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-full max-w-md mx-auto my-8 flex flex-col items-center">
-      {/* Progress Bar */}
-      <Progress value={progressValue} className="w-full mb-6" />
-      {/* Step Indicator */}
-      <div className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-        Step {step + 1} of {questions.length}
-      </div>
-      {/* Question */}
-      <h3 className="text-lg font-bold mb-4 text-primary dark:text-primary-light text-center">
-        {questions[step].q}
-      </h3>
-      {/* Options */}
-      <div className="flex flex-col gap-2 w-full">
-        {questions[step].options.map((option) => (
-          <Button
-            key={option}
-            onClick={() => handleAnswer(option)}
-            className="w-full"
-          >
+    <div className="my-5 flex w-full max-w-md flex-col items-center rounded-lg border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+      <Progress value={progressValue} className="mb-4 w-full" />
+      <div className="mb-2 text-sm text-gray-500 dark:text-gray-400">Step {step + 1} of {questions.length}</div>
+      <h3 className="mb-4 text-center text-lg font-bold text-primary">{questions[step].q}</h3>
+      <div className="flex w-full flex-col gap-2">
+        {questions[step].options.map(option => (
+          <Button key={option} type="button" variant="outline" onClick={() => handleAnswer(option)} className="w-full justify-start">
             {option}
           </Button>
         ))}
       </div>
+      {onSkip && <Button type="button" variant="link" onClick={onSkip} className="mt-2 text-muted-foreground">Skip for now</Button>}
     </div>
   );
 }
