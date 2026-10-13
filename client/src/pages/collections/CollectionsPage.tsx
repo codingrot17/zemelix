@@ -230,12 +230,6 @@ export function CollectionsPage() {
                 </div>
             )}
 
-            {isFallback && activeView === "products" && (
-                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-xs text-yellow-700 dark:text-yellow-300">
-                    Showing demo products — set <code>VITE_APPWRITE_PRODUCTS_COLLECTION_ID</code> in .env to load live data.
-                </div>
-            )}
-
             {isLoading && (
                 <div className="flex items-center justify-center py-20 text-gray-400">
                     <Loader2 className="w-8 h-8 animate-spin mr-3" />
