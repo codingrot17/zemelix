@@ -29,7 +29,7 @@ function normaliseType(type: string | undefined): VendorFilter {
   return "all";
 }
 
-function CategoryTile({ id, name, count, onClick }: { id: string; name: string; count: number; onClick: () => void }) {
+function CategoryTile({ name, count, onClick }: { name: string; count: number; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className="group flex min-h-28 flex-col justify-between rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-indigo-400 hover:shadow-md dark:border-gray-700 dark:bg-gray-900">
       <span className="font-semibold text-gray-900 group-hover:text-indigo-600 dark:text-gray-100">{name}</span>
@@ -151,7 +151,7 @@ export function CollectionsPage() {
       if (sort === "price-asc") return (Number(a.price) || 0) - (Number(b.price) || 0);
       if (sort === "price-desc") return (Number(b.price) || 0) - (Number(a.price) || 0);
       if (sort === "title") return a.title.localeCompare(b.title);
-      return new Date(b.createdAt ?? "").getTime() - new Date(a.createdAt ?? "").getTime();
+      return 0; // Appwrite already returns each page newest-first.
     });
   }, [products, search, category, vendorType, minPrice, maxPrice, sort]);
 
@@ -228,7 +228,7 @@ export function CollectionsPage() {
           {!category && !search && <section className="mb-9">
             <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Browse categories</h2><p className="mt-1 text-sm text-gray-500">Categories with current listings appear first.</p></div><span className="text-xs text-gray-500">{categoryTiles.length} categories</span></div>
             {categoryTiles.length > 0 ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {categoryTiles.slice(0, 20).map(item => <CategoryTile key={item.id} id={item.id} name={item.name} count={item.count} onClick={() => { setCategory(item.id); updateUrl(search, item.id, vendorType); }} />)}
+              {categoryTiles.slice(0, 20).map(item => <CategoryTile key={item.id} name={item.name} count={item.count} onClick={() => { setCategory(item.id); updateUrl(search, item.id, vendorType); }} />)}
             </div> : <p className="rounded-xl border border-dashed border-gray-300 p-6 text-sm text-gray-500">No categories have matching active listings yet. Try browsing all listings below.</p>}
           </section>}
 
