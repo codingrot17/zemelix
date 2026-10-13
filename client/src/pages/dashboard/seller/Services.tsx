@@ -17,7 +17,7 @@ import {
     uploadProductImage
 } from "@/services/product.service";
 
-const CATEGORIES = Array.from(new Set([...getCategoriesForType("service-provider").map(category => category.name), "Beauty & Wellness", "Photography", "Graphic Design", "Tech Services", "Home Services", "Events & Entertainment", "Consulting", "Automobile", "Other"]));
+const CATEGORIES = Array.from(new Set([...getCategoriesForType("service-provider").map(category => category.name), "Beauty & Wellness", "Photography", "Graphic Design", "Tech Services", "Home Services", "Events & Entertainment", "Consulting", "Education & Training", "Automobile", "Other"]));
 
 interface ServiceForm {
     title: string;
