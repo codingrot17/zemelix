@@ -7,6 +7,8 @@ import { getCollectionErrorMessage, listCollections } from "@/services/collectio
 import type { Collection } from "@/types/collection";
 import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { categoryDatabase } from "@/data/businessCategories";
+import { categoryLabel, listingMatchesCategory } from "@/services/category.service";
 
 type View = "collections" | "products";
 
@@ -24,15 +26,17 @@ export function CollectionsPage() {
     const [colError, setColError] = useState<string | null>(null);
     const [search, setSearch] = useState(() => searchParams.get("q") ?? searchParams.get("search") ?? "");
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState(() => searchParams.get("category") ?? "");
     const [selectedType, setSelectedType] = useState<"seller" | "service" | null>(() => searchParams.get("type") === "service" ? "service" : searchParams.get("type") === "seller" ? "seller" : null);
-    const [activeView, setActiveView] = useState<View>(() => searchParams.get("view") === "products" ? "products" : "collections");
+    const [activeView, setActiveView] = useState<View>(() => (searchParams.get("view") === "products" || searchParams.has("category") || searchParams.has("search") || searchParams.has("q") || searchParams.has("type")) ? "products" : "collections");
     const [showFilters, setShowFilters] = useState(false);
 
-    const { products, loading: prodLoading, isFallback } = useProducts({ limit: 50 });
+    const { products, loading: prodLoading, error: prodError, refetch: refetchProducts } = useProducts({ limit: 50 });
 
     useEffect(() => {
         setSearch(searchParams.get("search") ?? searchParams.get("q") ?? "");
-        setActiveView(searchParams.get("view") === "products" ? "products" : "collections");
+        setActiveView((searchParams.get("view") === "products" || searchParams.has("category") || searchParams.has("search") || searchParams.has("q") || searchParams.has("type")) ? "products" : "collections");
+        setSelectedCategory(searchParams.get("category") ?? "");
         setSelectedType(searchParams.get("type") === "service" ? "service" : searchParams.get("type") === "seller" ? "seller" : null);
     }, [searchParams]);
 
@@ -69,6 +73,7 @@ export function CollectionsPage() {
         if (value.trim()) next.set("search", value);
         else next.delete("search");
         next.delete("q");
+        if (value.trim()) next.set("view", "products");
         setSearchParams(next, { replace: true });
     }
 
@@ -88,10 +93,11 @@ export function CollectionsPage() {
         const q = search.toLowerCase();
         return products.filter(
             p =>
-                (!selectedType || p.vendorType === selectedType) &&
-                (!q || p.title.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || p.sellerName.toLowerCase().includes(q))
+                (!selectedType || p.vendorType === selectedType || (selectedType === "service" && (p.vendorType as string) === "service-provider")) &&
+                (!selectedCategory || listingMatchesCategory(p, selectedCategory)) &&
+                (!q || p.title.toLowerCase().includes(q) || p.shortDescription.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || p.sellerName.toLowerCase().includes(q) || (p.tags ?? []).some(tag => tag.toLowerCase().includes(q)))
         );
-    }, [products, search, selectedType]);
+    }, [products, search, selectedType, selectedCategory]);
 
     const featured = collections.find(c => c.badge === "Featured") ?? collections[0];
     const isLoading = activeView === "collections" ? colLoading : prodLoading;
@@ -129,7 +135,7 @@ export function CollectionsPage() {
                 </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="mb-4 flex flex-wrap gap-2" aria-label="Browse categories">\n                <button type="button" onClick={() => { setSelectedCategory(""); const next = new URLSearchParams(searchParams); next.delete("category"); next.set("view", "products"); setSearchParams(next); setActiveView("products"); }} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${!selectedCategory ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"}`}>All categories</button>\n                {Array.from(new Map(categoryDatabase.flatMap(group => group.categories).map(category => [category.id, category])).values()).map(category => <button key={category.id} type="button" onClick={() => { setSelectedCategory(category.id); const next = new URLSearchParams(searchParams); next.set("category", category.id); next.set("view", "products"); setSearchParams(next); setActiveView("products"); }} aria-pressed={selectedCategory === category.id} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${selectedCategory === category.id ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"}`}>{category.name}</button>)}\n            </div>\n\n            <div className="flex flex-col sm:flex-row gap-3 mb-6">
                 <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-shrink-0">
                     {(["collections", "products"] as View[]).map(v => (
                         <button
