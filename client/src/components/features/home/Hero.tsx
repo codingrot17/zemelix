@@ -6,7 +6,7 @@ import { useProducts } from "@/hooks/useProducts";
 const categories = [
   { name: "Hairdressing", category: "beauty-hair-service", icon: "💇‍♀️", color: "from-pink-400 to-pink-600" },
   { name: "Web Development", category: "tech-web", icon: "💻", color: "from-blue-400 to-blue-600" },
-  { name: "Home & Living", category: "home-furniture", icon: "🏠", color: "from-emerald-400 to-emerald-600" },
+  { name: "Home & Living", category: "home-living", icon: "🏠", color: "from-emerald-400 to-emerald-600" },
   { name: "See All", category: "", icon: "🔎", color: "from-gray-400 to-gray-600" },
 ];
 
@@ -17,7 +17,7 @@ const promotions = [
 ];
 
 const discoveryCategories = [
-  { label: "Home & Living", id: "home-furniture" },
+  { label: "Home & Living", id: "home-living" },
   { label: "Beauty & Personal Care", id: "beauty-skincare" },
   { label: "Digital Products", id: "digital-software" },
   { label: "Fashion", id: "fashion-clothing" },
