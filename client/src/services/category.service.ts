@@ -8,6 +8,10 @@ import type { Product } from "@/types/product";
 
 export type { BusinessCategory };
 
+const VIRTUAL_CATEGORY_TERMS: Record<string, string[]> = {
+    "home-living": ["home", "furniture", "decor", "kitchen", "bedding", "lighting", "storage"],
+};
+
 export function listCategories(vendorType?: string): BusinessCategory[] {
     return vendorType ? getCategoriesForType(vendorType) : [];
 }
@@ -22,19 +26,20 @@ function normalize(value: string): string {
         .replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-const VIRTUAL_CATEGORY_TERMS: Record<string, string[]> = {\n    "home-living": ["home", "furniture", "decor", "kitchen", "bedding", "lighting", "storage"],\n};\n\nexport function getCategoryByIdOrName(value: string): BusinessCategory | undefined {
+export function getCategoryByIdOrName(value: string): BusinessCategory | undefined {
     const needle = normalize(value);
     return categoryDatabase.flatMap(group => group.categories)
         .find(category => category.id === value || normalize(category.name) === needle);
 }
 
 export function categoryLabel(value: string): string {
+    if (value === "home-living") return "Home & Living";
     return getCategoryByIdOrName(value)?.name ??
         value.replace(/[-_]+/g, " ").replace(/\b\w/g, char => char.toUpperCase());
 }
 
-/** Legacy listings store category as a free-form string, so match IDs, labels,
- * common keywords and tags without requiring a risky data migration.
+/** Existing listings use free-form category strings. Match taxonomy IDs against
+ * legacy category labels, listing text and tags without requiring a data migration.
  */
 export function listingMatchesCategory(product: Product, value: string): boolean {
     const category = getCategoryByIdOrName(value);
@@ -51,6 +56,9 @@ export function listingMatchesCategory(product: Product, value: string): boolean
         product.category,
         ...(product.tags ?? [])
     ].join(" "));
+
+    const virtualTerms = VIRTUAL_CATEGORY_TERMS[value];
+    if (virtualTerms) return virtualTerms.some(term => searchable.includes(normalize(term)));
 
     if (category) {
         return [category.name, ...category.keywords]
