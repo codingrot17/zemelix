@@ -18,7 +18,7 @@ export function findCategories(query: string, vendorType?: string): BusinessCate
 
 function normalize(value: string): string {
     return value.toLocaleLowerCase().normalize("NFKD")
-        .replace(/[\\u0300-\\u036f]/g, "")
+        .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, " ").trim();
 }
 
@@ -30,7 +30,7 @@ export function getCategoryByIdOrName(value: string): BusinessCategory | undefin
 
 export function categoryLabel(value: string): string {
     return getCategoryByIdOrName(value)?.name ??
-        value.replace(/[-_]+/g, " ").replace(/\\b\\w/g, char => char.toUpperCase());
+        value.replace(/[-_]+/g, " ").replace(/\b\w/g, char => char.toUpperCase());
 }
 
 /** Legacy listings store category as a free-form string, so match IDs, labels,
