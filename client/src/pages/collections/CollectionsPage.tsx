@@ -29,15 +29,6 @@ function normaliseType(type: string | undefined): VendorFilter {
   return "all";
 }
 
-function CategoryTile({ name, count, onClick }: { name: string; count: number; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className="group flex min-h-28 flex-col justify-between rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-indigo-400 hover:shadow-md dark:border-gray-700 dark:bg-gray-900">
-      <span className="font-semibold text-gray-900 group-hover:text-indigo-600 dark:text-gray-100">{name}</span>
-      <span className="mt-3 text-xs text-gray-500 dark:text-gray-400">{count} {count === 1 ? "listing" : "listings"} <span aria-hidden="true">→</span></span>
-    </button>
-  );
-}
-
 export function CollectionsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -225,12 +216,16 @@ export function CollectionsPage() {
       {loading ? <div role="status" className="flex items-center justify-center py-16 text-gray-500"><Loader2 className="mr-3 h-6 w-6 animate-spin" />Loading marketplace…</div> :
         error ? <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"><p>{error}</p><Button type="button" variant="outline" className="mt-3" onClick={() => setReload(value => value + 1)}>Retry</Button></div> :
         <>
-          {!category && !search && <section className="mb-9">
-            <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">Browse categories</h2><p className="mt-1 text-sm text-gray-500">Categories with current listings appear first.</p></div><span className="text-xs text-gray-500">{categoryTiles.length} categories</span></div>
-            {categoryTiles.length > 0 ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {categoryTiles.slice(0, 20).map(item => <CategoryTile key={item.id} name={item.name} count={item.count} onClick={() => { setCategory(item.id); updateUrl(search, item.id, vendorType); }} />)}
-            </div> : <p className="rounded-xl border border-dashed border-gray-300 p-6 text-sm text-gray-500">No categories have matching active listings yet. Try browsing all listings below.</p>}
-          </section>}
+          <section aria-label="Browse categories" className="mb-5">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Browse by category</h2>
+              {category && <button type="button" onClick={() => { setCategory(""); updateUrl(search, "", vendorType); }} className="text-xs font-medium text-indigo-600 hover:underline">Show all</button>}
+            </div>
+            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0" role="group" aria-label="Category filters">
+              <button type="button" aria-pressed={!category} onClick={() => { setCategory(""); updateUrl(search, "", vendorType); }} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition ${!category ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white text-gray-700 hover:border-indigo-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"}`}>All listings</button>
+              {categoryTiles.map(item => <button key={item.id} type="button" aria-pressed={category === item.id} onClick={() => { setCategory(item.id); updateUrl(search, item.id, vendorType); }} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition ${category === item.id ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white text-gray-700 hover:border-indigo-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"}`}>{item.name}<span className={`ml-2 text-xs ${category === item.id ? "text-indigo-100" : "text-gray-500"}`}>{item.count}</span></button>)}
+            </div>
+          </section>
 
           <section>
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">{category ? categoryLabel(category) : "Marketplace listings"}</h2><p className="mt-1 text-sm text-gray-500">{filteredProducts.length} matching {filteredProducts.length === 1 ? "listing" : "listings"}</p></div><div className="flex items-center gap-2 text-xs text-gray-500"><ArrowUpDown className="h-4 w-4" />{sort === "newest" ? "Newest first" : sort === "price-asc" ? "Lowest price first" : sort === "price-desc" ? "Highest price first" : "Name A–Z"}</div></div>
