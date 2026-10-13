@@ -3,13 +3,13 @@ import { Badge } from "@/components/ui/badge";
 const BragBar = () => (
   <nav
     aria-label="Marketplace highlights"
-    className="w-full bg-muted py-3 flex justify-center items-center border-b border-muted-foreground/10"
+    className="flex w-full flex-col items-center justify-center gap-3 border-b border-muted-foreground/10 bg-muted px-4 py-4 text-center sm:flex-row sm:gap-4 sm:py-3"
   >
-    <span className="text-xs text-muted-foreground mr-3 font-medium tracking-wide uppercase">
+    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:mr-0">
       Zemelix marketplace
     </span>
-    <div className="flex flex-wrap justify-center gap-2 items-center">
-      <Badge variant="secondary" className="px-3 py-1.5 text-sm font-semibold">
+    <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto">
+      <Badge variant="secondary" className="max-w-full whitespace-normal px-3 py-1.5 text-xs font-semibold sm:text-sm">
         Discover products
       </Badge>
       <Badge variant="secondary" className="px-3 py-1.5 text-sm font-semibold">
