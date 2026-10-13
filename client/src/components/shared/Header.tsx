@@ -94,28 +94,10 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
             Shop
           </Link>
           <Link
-            to="/sellers"
+            to="/vendor/upgrade"
             className="hover:text-[var(--color-primary)] transition-colors font-medium"
           >
-            Sellers
-          </Link>
-          <Link
-            to="/blog"
-            className="hover:text-[var(--color-primary)] transition-colors font-medium"
-          >
-            Blog
-          </Link>
-          <Link
-            to="/about"
-            className="hover:text-[var(--color-primary)] transition-colors font-medium"
-          >
-            About
-          </Link>
-          <Link
-            to="/contact"
-            className="hover:text-[var(--color-primary)] transition-colors font-medium"
-          >
-            Contact
+            Sell on Zemelix
           </Link>
         </nav>
 
@@ -235,13 +217,7 @@ export const Header: React.FC<HeaderProps> = ({ cartCount = 0 }) => {
               <nav className="flex flex-col mt-8">
                 <Link className="p-2 hover:bg-muted hover:text-primary" to="/collections" onClick={() => setMobileNavOpen(false)}>Shop</Link>
                 <hr />
-                <Link className="p-2 hover:bg-muted hover:text-primary" to="/sellers" onClick={() => setMobileNavOpen(false)}>Sellers</Link>
-                <hr />
-                <Link className="p-2 hover:bg-muted hover:text-primary" to="/blog" onClick={() => setMobileNavOpen(false)}>Blog</Link>
-                <hr />
-                <Link className="p-2 hover:bg-muted hover:text-primary" to="/about" onClick={() => setMobileNavOpen(false)}>About</Link>
-                <hr />
-                <Link className="p-2 hover:bg-muted hover:text-primary" to="/contact" onClick={() => setMobileNavOpen(false)}>Contact</Link>
+                <Link className="p-2 hover:bg-muted hover:text-primary" to="/vendor/upgrade" onClick={() => setMobileNavOpen(false)}>Sell on Zemelix</Link>
                 <form onSubmit={submitSearch} className="mt-4 flex gap-2"><Input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search listings…" aria-label="Search marketplace" className="bg-[var(--color-card)] text-[var(--color-card-foreground)]" /><Button type="submit">Search</Button></form>
               </nav>
             </SheetContent>
