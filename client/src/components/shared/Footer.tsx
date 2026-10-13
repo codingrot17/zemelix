@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Mail } from "lucide-react";
 
-const categories = ["Hairdressing", "Web Development", "Home & Living"];
+const categories = [\n  { name: "Hairdressing", id: "beauty-hair-service" },\n  { name: "Web Development", id: "tech-web" },\n  { name: "Home & Living", id: "home-furniture" },\n];
 
 const Footer = () => (
   <footer className="bg-gray-900 dark:bg-black text-gray-200 dark:text-gray-300 pt-12 pb-6 px-4">
@@ -51,7 +51,7 @@ const Footer = () => (
           {categories.map((cat) => (
             <li key={cat}>
               <Link
-                to={`/collections?search=${encodeURIComponent(cat)}&view=products`}
+                to={`/collections?category=${encodeURIComponent(cat.id)}&view=products`}
                 className="hover:text-indigo-400"
               >
                 {cat}
