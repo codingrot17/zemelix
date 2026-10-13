@@ -4,7 +4,7 @@ import { Mail } from "lucide-react";
 const categories = [
   { name: "Hairdressing", id: "beauty-hair-service" },
   { name: "Web Development", id: "tech-web" },
-  { name: "Home & Living", id: "home-furniture" },
+  { name: "Home & Living", id: "home-living" },
 ];
 
 const Footer = () => (
