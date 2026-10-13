@@ -21,6 +21,7 @@ export interface ListProductsOptions {
     featuredOnly?: boolean;
     category?: string;
     limit?: number;
+    offset?: number;
     activeOnly?: boolean;
     sellerId?: string;
 }
@@ -174,12 +175,14 @@ export async function listProducts(
         featuredOnly = false,
         category,
         limit = 25,
+        offset = 0,
         activeOnly = true,
         sellerId
     } = options;
 
     const queries: string[] = [
         Query.limit(limit),
+        Query.offset(offset),
         Query.orderDesc("$createdAt")
     ];
 
