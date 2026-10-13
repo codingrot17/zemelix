@@ -11,7 +11,7 @@ import { getCategoriesForType } from "@/data/businessCategories";
 import { isServiceProvider } from "@/lib/vendorAccess";
 import { createSellerProduct, deleteSellerProduct, listSellerProducts, type SellerProduct, updateSellerProduct, uploadProductImage } from "@/services/product.service";
 
-const CATEGORIES = Array.from(new Set([...getCategoriesForType("product-seller").map(category => category.name), "Gadgets", "Food & Drinks", "Graphic Design", "Digital Services", "Automobile", "Photography", "Tech Services", "Other"]));
+const CATEGORIES = Array.from(new Set([...getCategoriesForType("product-seller").map(category => category.name), "Fashion", "Beauty", "Electronics", "Gadgets", "Home & Living", "Food & Drinks", "Graphic Design", "Digital Services", "Furniture", "Automobile", "Photography", "Tech Services", "Other"]));
 const BADGES = ["", "Hot", "New", "Trending"] as const;
 
 
