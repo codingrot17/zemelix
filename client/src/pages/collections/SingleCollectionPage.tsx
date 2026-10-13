@@ -127,6 +127,17 @@ export function SingleCollectionPage() {
                             <div className="mt-1 font-bold text-indigo-700 dark:text-indigo-200">{collection.exampleService.price}</div>
                         </div>
                     )}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            const query = collection.tags?.[0] || collection.title;
+                            const typeFilter = collection.type === "services" ? "&type=service" : "";
+                            navigate(`/collections?search=${encodeURIComponent(query)}&view=products${typeFilter}`);
+                        }}
+                        className="mt-6 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                    >
+                        Browse matching listings
+                    </button>
                 </div>
             </div>
         </div>
