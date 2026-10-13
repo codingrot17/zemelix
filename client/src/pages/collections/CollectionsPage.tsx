@@ -18,7 +18,7 @@ function getAllTags(collections: Collection[]) {
 
 export function CollectionsPage() {
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [collections, setCollections] = useState<Collection[]>([]);
     const [colLoading, setColLoading] = useState(true);
     const [colError, setColError] = useState<string | null>(null);
@@ -62,6 +62,15 @@ export function CollectionsPage() {
     }, []);
 
     const tags = useMemo(() => getAllTags(collections), [collections]);
+
+    function updateSearch(value: string) {
+        setSearch(value);
+        const next = new URLSearchParams(searchParams);
+        if (value.trim()) next.set("search", value);
+        else next.delete("search");
+        next.delete("q");
+        setSearchParams(next, { replace: true });
+    }
 
     const filteredCollections = useMemo(() => {
         const q = search.toLowerCase();
@@ -142,12 +151,12 @@ export function CollectionsPage() {
                     <input
                         type="text"
                         value={search}
-                        onChange={e => setSearch(e.target.value)}
+                        onChange={e => updateSearch(e.target.value)}
                         placeholder={`Search ${activeView}…`}
                         className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                     />
                     {search && (
-                        <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <button onClick={() => updateSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                             <X className="w-4 h-4" />
                         </button>
                     )}
@@ -222,7 +231,7 @@ export function CollectionsPage() {
                 filteredCollections.length === 0 ? (
                     <EmptyState
                         message={search ? `No collections matching "${search}"` : "No collections found."}
-                        onClear={() => { setSearch(""); setSelectedTag(null); }}
+                        onClear={() => { updateSearch(""); setSelectedTag(null); }}
                     />
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -236,7 +245,7 @@ export function CollectionsPage() {
                     {filteredProducts.length === 0 ? (
                         <EmptyState
                             message={search ? `No products matching "${search}"` : "No active products found."}
-                            onClear={() => setSearch("")}
+                            onClear={() => updateSearch("")}
                         />
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
