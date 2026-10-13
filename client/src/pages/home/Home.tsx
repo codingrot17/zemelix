@@ -28,7 +28,7 @@ const HomePage = () => {
     description: product.shortDescription || product.longDescription || "",
     price: new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(product.price),
     imageUrl: product.imageUrl || "/images/placeholder.svg",
-    type: product.vendorType === "service" || product.vendorType === "service-provider" ? "service" : "product",
+    type: product.vendorType === "service" ? "service" : "product",
     category: product.category,
   }));
 
