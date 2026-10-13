@@ -125,7 +125,7 @@ export default function HeroSection() {
               <img src={latestListing.imageUrl || "/images/placeholder.svg"} alt="" className="h-14 w-14 rounded-lg object-cover" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{latestListing.title}</span>
-                <span className="mt-1 block text-xs text-muted-foreground">{latestListing.vendorType === "service" || latestListing.vendorType === "service-provider" ? "Service listing" : "Product listing"} · View details</span>
+                <span className="mt-1 block text-xs text-muted-foreground">{latestListing.vendorType === "service" ? "Service listing" : "Product listing"} · View details</span>
               </span>
             </button>
           ) : error ? (
