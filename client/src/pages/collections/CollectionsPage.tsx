@@ -135,12 +135,20 @@ export function CollectionsPage() {
                 </div>
             )}
 
-            <div className="mb-4 flex flex-wrap gap-2" aria-label="Browse categories">\n                <button type="button" onClick={() => { setSelectedCategory(""); const next = new URLSearchParams(searchParams); next.delete("category"); next.set("view", "products"); setSearchParams(next); setActiveView("products"); }} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${!selectedCategory ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"}`}>All categories</button>\n                {Array.from(new Map(categoryDatabase.flatMap(group => group.categories).map(category => [category.id, category])).values()).map(category => <button key={category.id} type="button" onClick={() => { setSelectedCategory(category.id); const next = new URLSearchParams(searchParams); next.set("category", category.id); next.set("view", "products"); setSearchParams(next); setActiveView("products"); }} aria-pressed={selectedCategory === category.id} className={`rounded-full border px-3 py-1.5 text-xs font-medium ${selectedCategory === category.id ? "border-indigo-600 bg-indigo-600 text-white" : "border-gray-300 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"}`}>{category.name}</button>)}\n            </div>\n\n            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center" aria-label="Browse categories">
+                <label htmlFor="marketplace-category" className="text-sm font-medium text-gray-700 dark:text-gray-300">Browse category</label>
+                <select id="marketplace-category" value={selectedCategory} onChange={event => { const value = event.target.value; setSelectedCategory(value); const next = new URLSearchParams(searchParams); if (value) next.set("category", value); else next.delete("category"); next.set("view", "products"); setSearchParams(next); setActiveView("products"); }} className="w-full sm:max-w-sm rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100">
+                    <option value="">All categories</option>
+                    {categoryDatabase.map(group => <optgroup key={group.type} label={group.label}>
+                        {group.categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+                    </optgroup>)}
+                </select>
+            </div>\n\n            <div className="flex flex-col sm:flex-row gap-3 mb-6">
                 <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-shrink-0">
                     {(["collections", "products"] as View[]).map(v => (
                         <button
                             key={v}
-                            onClick={() => setActiveView(v)}
+                            onClick={() => { setActiveView(v); const next = new URLSearchParams(searchParams); if (v === "products") next.set("view", "products"); else { next.delete("view"); next.delete("category"); setSelectedCategory(""); } setSearchParams(next); }}
                             className={`px-4 py-2 text-sm font-medium capitalize transition ${
                                 activeView === v
                                     ? "bg-indigo-600 text-white"
