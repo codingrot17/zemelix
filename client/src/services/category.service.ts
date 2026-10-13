@@ -13,7 +13,9 @@ const VIRTUAL_CATEGORY_TERMS: Record<string, string[]> = {
 };
 
 export function listCategories(vendorType?: string): BusinessCategory[] {
-    return vendorType\n        ? getCategoriesForType(vendorType)\n        : Array.from(new Map(categoryDatabase.flatMap(group => group.categories).map(category => [category.id, category])).values());
+    return vendorType
+        ? getCategoriesForType(vendorType)
+        : Array.from(new Map(categoryDatabase.flatMap(group => group.categories).map(category => [category.id, category])).values());
 }
 
 export function findCategories(query: string, vendorType?: string): BusinessCategory[] {
