@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Edit, Eye, ImagePlus, Loader2, MessageCircle, Plus, Search, Trash2, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { getCategoriesForType } from "@/data/businessCategories";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
