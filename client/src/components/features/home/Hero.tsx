@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { useProducts } from "@/hooks/useProducts";
 
 const categories = [
-  { name: "Hairdressing", icon: "💇‍♀️", color: "from-pink-400 to-pink-600" },
-  { name: "Web Development", icon: "💻", color: "from-blue-400 to-blue-600" },
-  { name: "Home & Living", icon: "🏠", color: "from-emerald-400 to-emerald-600" },
-  { name: "See All", icon: "🔎", color: "from-gray-400 to-gray-600" },
+  { name: "Hairdressing", category: "beauty-hair-service", icon: "💇‍♀️", color: "from-pink-400 to-pink-600" },
+  { name: "Web Development", category: "tech-web", icon: "💻", color: "from-blue-400 to-blue-600" },
+  { name: "Home & Living", category: "home-furniture", icon: "🏠", color: "from-emerald-400 to-emerald-600" },
+  { name: "See All", category: "", icon: "🔎", color: "from-gray-400 to-gray-600" },
 ];
 
 const promotions = [
@@ -16,7 +16,78 @@ const promotions = [
   { title: "Have something to offer?", desc: "Set up your vendor profile and publish your first listing.", color: "bg-gradient-to-r from-yellow-100 to-yellow-300 text-yellow-900 dark:from-yellow-900 dark:to-yellow-700 dark:text-yellow-100", to: "/vendor/upgrade" },
 ];
 
-const discoveryCategories = ["home-furniture", "beauty-skincare", "digital-software", "fashion-clothing"];
+const discoveryCategories = [
+  { label: "Home & Living", id: "home-furniture" },
+  { label: "Beauty & Personal Care", id: "beauty-skincare" },
+  { label: "Digital Products", id: "digital-software" },
+  { label: "Fashion", id: "fashion-clothing" },
+];
+
+function SpinToDiscover({ onPick }: { onPick: (category: string) => void }) {
+  const [spun, setSpun] = useState(false);
+  const [result, setResult] = useState("");
+  const [spinning, setSpinning] = useState(false);
+  function spin() {
+    if (spinning) return;
+    setSpinning(true);
+    window.setTimeout(() => {
+      const picked = discoveryCategories[Math.floor(Math.random() * discoveryCategories.length)];
+      setResult(picked);
+      setSpun(true);
+      setSpinning(false);
+      onPick(picked);
+    }, 650);
+  }
+  return <div className="mt-4 flex w-full flex-col items-center rounded-xl border border-muted bg-card px-5 py-4 shadow-sm">
+    <span className="mb-2 font-bold text-primary">🎉 Spin to Discover</span>
+    {!spun ? <Button type="button" onClick={spin} disabled={spinning} className="bg-indigo-600 text-white hover:bg-indigo-700">{spinning ? "Spinning…" : "Spin Now"}</Button> : <div className="text-center"><p className="font-semibold text-indigo-700 dark:text-indigo-300">Your pick: {result.replace(/[-_]+/g, " ")}</p><Button type="button" variant="link" onClick={() => { setSpun(false); setResult(""); }}>Spin again</Button></div>}
+    <span className="mt-1 text-center text-xs text-muted-foreground">A fun way to find a category. No discount or cash prize is implied.</span>
+  </div>;
+}
+
+export default function HeroSection() {
+  const navigate = useNavigate();
+  const [promoIdx, setPromoIdx] = useState(0);
+  const [search, setSearch] = useState("");
+  const { products, loading } = useProducts({ limit: 50, activeOnly: true });
+
+  useEffect(() => {
+    if (promotions.length < 2) return;
+    const timer = window.setInterval(() => setPromoIdx(i => (i + 1) % promotions.length), 7000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  function searchListings(event: FormEvent) {
+    event.preventDefault();
+    const query = search.trim();
+    navigate(query ? `/collections?search=${encodeURIComponent(query)}&view=products` : "/collections");
+  }
+  function browseCategory(category: string) {
+    navigate(category === "See All" || !category ? "/collections?view=products" : `/collections?category=${encodeURIComponent(category)}&view=products`);
+  }ort { FormEvent, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { useProducts } from "@/hooks/useProducts";
+
+const categories = [
+  { name: "Hairdressing", category: "beauty-hair-service", icon: "💇‍♀️", color: "from-pink-400 to-pink-600" },
+  { name: "Web Development", category: "tech-web", icon: "💻", color: "from-blue-400 to-blue-600" },
+  { name: "Home & Living", category: "home-furniture", icon: "🏠", color: "from-emerald-400 to-emerald-600" },
+  { name: "See All", category: "", icon: "🔎", color: "from-gray-400 to-gray-600" },
+];
+
+const promotions = [
+  { title: "Discover something new", desc: "Explore products and services from marketplace listings.", color: "bg-gradient-to-r from-green-100 to-green-300 text-green-900 dark:from-green-900 dark:to-green-700 dark:text-green-100", to: "/collections" },
+  { title: "Looking for a service?", desc: "Browse service providers and send a booking request.", color: "bg-gradient-to-r from-blue-100 to-blue-300 text-blue-900 dark:from-blue-900 dark:to-blue-700 dark:text-blue-100", to: "/collections?view=products&type=service" },
+  { title: "Have something to offer?", desc: "Set up your vendor profile and publish your first listing.", color: "bg-gradient-to-r from-yellow-100 to-yellow-300 text-yellow-900 dark:from-yellow-900 dark:to-yellow-700 dark:text-yellow-100", to: "/vendor/upgrade" },
+];
+
+const discoveryCategories = [
+  { label: "Home & Living", id: "home-furniture" },
+  { label: "Beauty & Personal Care", id: "beauty-skincare" },
+  { label: "Digital Products", id: "digital-software" },
+  { label: "Fashion", id: "fashion-clothing" },
+];
 
 function SpinToDiscover({ onPick }: { onPick: (category: string) => void }) {
   const [spun, setSpun] = useState(false);
