@@ -22,7 +22,7 @@ function normalize(value: string): string {
         .replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-export function getCategoryByIdOrName(value: string): BusinessCategory | undefined {
+const VIRTUAL_CATEGORY_TERMS: Record<string, string[]> = {\n    "home-living": ["home", "furniture", "decor", "kitchen", "bedding", "lighting", "storage"],\n};\n\nexport function getCategoryByIdOrName(value: string): BusinessCategory | undefined {
     const needle = normalize(value);
     return categoryDatabase.flatMap(group => group.categories)
         .find(category => category.id === value || normalize(category.name) === needle);
