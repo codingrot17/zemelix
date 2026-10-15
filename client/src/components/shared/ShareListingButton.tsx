@@ -12,7 +12,7 @@ export interface ShareListingDetails {
 }
 
 function getShareUrl(item: ShareListingDetails) {
-  return `${window.location.origin}/product/${encodeURIComponent(item.id)}`;
+  return `${window.location.origin}/api/share/${item.listingType === "service" ? "service" : "product"}/${encodeURIComponent(item.id)}`;
 }
 
 function getShareText(item: ShareListingDetails, url: string) {
