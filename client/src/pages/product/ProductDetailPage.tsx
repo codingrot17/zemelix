@@ -14,12 +14,12 @@ import type { Product } from "@/types/product";
 import {
     ArrowLeft,
     Star,
-    Heart,
     MessageCircle,
     Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ShareListingButton from "@/components/shared/ShareListingButton";
+import FavoriteButton from "@/components/shared/FavoriteButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
     BadgeChip,
@@ -69,7 +69,6 @@ export default function ProductDetailPage() {
     const [sellerBrandColor, setSellerBrandColor] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [wishlisted, setWishlisted] = useState(false);
     const [added, setAdded] = useState(false);
     const [whatsappLoading, setWhatsappLoading] = useState(false);
     const [whatsappError, setWhatsappError] = useState<string | null>(null);
@@ -393,19 +392,7 @@ export default function ProductDetailPage() {
                         </div>
                     )}
 
-                    <button
-                        onClick={() => setWishlisted(w => !w)}
-                        className="absolute top-4 right-4 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-full p-2 shadow hover:scale-110 transition"
-                        aria-label="Wishlist"
-                    >
-                        <Heart
-                            className={`w-5 h-5 ${
-                                wishlisted
-                                    ? "fill-pink-500 text-pink-500"
-                                    : "text-gray-400"
-                            }`}
-                        />
-                    </button>
+                    <FavoriteButton id={product.id} className="absolute top-4 right-4 bg-white/90 dark:bg-zinc-800/90" />
 
                     {outOfStock && (
                         <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
