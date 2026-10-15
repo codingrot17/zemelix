@@ -79,3 +79,9 @@ export async function listReviewsForVendor(): Promise<Review[]> {
   if (!Array.isArray(body.reviews)) throw new Error("Unexpected reviews response.");
   return body.reviews as Review[];
 }
+
+export async function listPublishedReviewsForVendor(vendorId: string): Promise<Review[]> {
+  const body = await execute("listPublishedReviewsForVendor", { vendorId });
+  if (!Array.isArray(body.reviews)) throw new Error("Unexpected reviews response.");
+  return body.reviews as Review[];
+}
