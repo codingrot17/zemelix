@@ -23,6 +23,7 @@ export interface Feedback {
     status: FeedbackStatus;
     adminNote: string | null;
     resolvedAt: string | null;
+    rating: number | null;
 }
 
 export interface CreateFeedbackInput {
@@ -31,6 +32,7 @@ export interface CreateFeedbackInput {
     message: string;
     orderId?: string | null;
     bookingId?: string | null;
+    rating?: number | null;
 }
 
 const TABLE = "feedback";
@@ -70,6 +72,7 @@ const map = (document: Record<string, unknown>): Feedback => ({
     status: status(document.status),
     adminNote: typeof document.adminNote === "string" && document.adminNote ? document.adminNote : null,
     resolvedAt: typeof document.resolvedAt === "string" && document.resolvedAt ? document.resolvedAt : null,
+    rating: typeof document.rating === "number" && document.rating >= 1 && document.rating <= 5 ? document.rating : null,
 });
 
 export async function createFeedback(input: CreateFeedbackInput) {
@@ -98,6 +101,7 @@ export async function createFeedback(input: CreateFeedbackInput) {
             status: "open",
             adminNote: null,
             resolvedAt: null,
+            rating: input.rating ?? null,
         },
         [Permission.read(Role.user(account.$id))]
     );
