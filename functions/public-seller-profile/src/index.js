@@ -721,6 +721,92 @@ async function setSellerOrderArchived({ req, res, error, databases, databaseId, 
     }
 }
 
+
+const TESTIMONIALS_TABLE_ID = "testimonials";
+
+async function listApprovedTestimonials({ req, res, error, databases, databaseId }) {
+    try {
+        const result = await databases.listDocuments(databaseId, TESTIMONIALS_TABLE_ID, [
+            Query.equal("status", "approved"), Query.orderDesc("$createdAt"), Query.limit(50)
+        ]);
+        const testimonials = result.documents.map(({ $id, $createdAt, name, quote, type, videoUrl, rating }) => ({
+            $id, $createdAt, name, quote, type, videoUrl: videoUrl || null, rating
+        }));
+        return res.json({ ok: true, testimonials });
+    } catch (err) {
+        error(err?.message ?? "Testimonials lookup failed.");
+        return jsonError(res, "Could not load testimonials. Please try again.", 500);
+    }
+}
+
+async function submitTestimonial({ req, res, error, databases, databaseId }) {
+    const body = req.bodyJson ?? {};
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const quote = typeof body.quote === "string" ? body.quote.trim() : "";
+    const type = body.type;
+    const videoUrl = typeof body.videoUrl === "string" ? body.videoUrl.trim() : "";
+    const rating = Number(body.rating);
+    if (!isNonEmptyString(name, 100) || !isNonEmptyString(quote, 1500)) {
+        return jsonError(res, "Name and experience are required (up to 100 and 1,500 characters).", 400);
+    }
+    if (!["text", "video"].includes(type) || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+        return jsonError(res, "Choose a valid testimonial type and a rating from 1 to 5.", 400);
+    }
+    if (type === "video") {
+        try {
+            const url = new URL(videoUrl);
+            if (url.protocol !== "https:" || !["youtube.com", "www.youtube.com", "youtu.be", "www.youtu.be", "vimeo.com", "www.vimeo.com"].includes(url.hostname)) {
+                return jsonError(res, "Use a valid HTTPS YouTube or Vimeo URL.", 400);
+            }
+        } catch {
+            return jsonError(res, "Enter a valid YouTube or Vimeo URL.", 400);
+        }
+    }
+    const submitterId = req.headers["x-appwrite-user-id"] || null;
+    try {
+        const testimonial = await databases.createDocument(
+            databaseId, TESTIMONIALS_TABLE_ID, ID.unique(),
+            { name, quote, type, videoUrl: type === "video" ? videoUrl : null, rating, submitterId, status: "pending" },
+            submitterId ? [Permission.read(Role.user(submitterId))] : []
+        );
+        return res.json({ ok: true, testimonial: { $id: testimonial.$id, status: testimonial.status } });
+    } catch (err) {
+        error(err?.message ?? "Testimonial submission failed.");
+        return jsonError(res, "Could not submit your testimonial. Please try again.", 500);
+    }
+}
+
+async function listTestimonialsForAdmin({ req, res, error, databases, databaseId, userCollectionId }) {
+    const auth = await requireAdmin({ req: { ...req, res }, databases, databaseId, userCollectionId });
+    if (auth.error) return auth.error;
+    try {
+        const result = await databases.listDocuments(databaseId, TESTIMONIALS_TABLE_ID, [
+            Query.orderDesc("$createdAt"), Query.limit(100)
+        ]);
+        return res.json({ ok: true, testimonials: result.documents });
+    } catch (err) {
+        error(err?.message ?? "Testimonial moderation lookup failed.");
+        return jsonError(res, "Could not load testimonial submissions.", 500);
+    }
+}
+
+async function moderateTestimonial({ req, res, error, databases, databaseId, userCollectionId }) {
+    const auth = await requireAdmin({ req: { ...req, res }, databases, databaseId, userCollectionId });
+    if (auth.error) return auth.error;
+    const { testimonialId, status } = req.bodyJson ?? {};
+    if (!isNonEmptyString(testimonialId, 128) || !["approved", "rejected", "pending"].includes(status)) {
+        return jsonError(res, "A valid testimonial and moderation status are required.", 400);
+    }
+    try {
+        const testimonial = await databases.updateDocument(databaseId, TESTIMONIALS_TABLE_ID, testimonialId, { status });
+        return res.json({ ok: true, testimonial });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Testimonial not found.", 404);
+        error(err?.message ?? "Testimonial moderation failed.");
+        return jsonError(res, "Could not update testimonial status.", 500);
+    }
+}
+
 export default async ({ req, res, error }) => {
     if (req.method !== "POST") return jsonError(res, "Method not allowed.", 405);
 
@@ -738,6 +824,10 @@ export default async ({ req, res, error }) => {
     const body = req.bodyJson ?? {};
 
 
+    if (body.operation === "listApprovedTestimonials") return listApprovedTestimonials({ req, res, error, databases, databaseId });
+    if (body.operation === "submitTestimonial") return submitTestimonial({ req, res, error, databases, databaseId });
+    if (body.operation === "listTestimonialsForAdmin") return listTestimonialsForAdmin({ req, res, error, databases, databaseId, userCollectionId: collectionId });
+    if (body.operation === "moderateTestimonial") return moderateTestimonial({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     if (body.operation === "createSupportConversation") return createSupportConversation({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     if (body.operation === "listMySupportConversations") return listMySupportConversations({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     if (body.operation === "listSupportConversations") return listSupportConversations({ req, res, error, databases, databaseId, userCollectionId: collectionId });
