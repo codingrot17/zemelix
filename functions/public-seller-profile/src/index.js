@@ -792,6 +792,35 @@ async function submitReview({req,res,error,databases,databaseId}) {
   return res.json({ok:true,review});
  } catch(err){if(err?.code===404)return jsonError(res,"The qualifying order, booking, or listing was not found.",404);if(err?.code===409)return jsonError(res,"A review already exists for this transaction and listing.",409);error(err?.message??"Review submission failed.");return jsonError(res,"Could not submit your review.",500);}
 }
+async function editReview({ req, res, error, databases, databaseId }) {
+    const reviewerId = req.headers["x-appwrite-user-id"];
+    if (!reviewerId) return jsonError(res, "Sign in to edit your review.", 401);
+    const { reviewId, rating, reviewText } = req.bodyJson ?? {};
+    const nextRating = Number(rating);
+    const nextText = typeof reviewText === "string" ? reviewText.trim() : "";
+    if (!isNonEmptyString(reviewId, 128)) return jsonError(res, "A valid reviewId is required.", 400);
+    if (!Number.isInteger(nextRating) || nextRating < 1 || nextRating > 5) return jsonError(res, "Rating must be a whole number from 1 to 5.", 400);
+    if (nextText.length > 3000) return jsonError(res, "Review text must be 3,000 characters or fewer.", 400);
+    try {
+        const review = await databases.getDocument(databaseId, REVIEWS_TABLE_ID, reviewId);
+        if (review.reviewerId !== reviewerId) return jsonError(res, "You can only edit your own review.", 403);
+        if (review.status !== "published") return jsonError(res, "Only published reviews can be edited.", 409);
+        if (Date.now() - new Date(review.$createdAt).getTime() > 14 * 24 * 60 * 60 * 1000) {
+            return jsonError(res, "Reviews can only be edited within 14 days of submission.", 409);
+        }
+        const updated = await databases.updateDocument(databaseId, REVIEWS_TABLE_ID, reviewId, {
+            rating: nextRating,
+            reviewText: nextText || null,
+            editedAt: new Date().toISOString()
+        });
+        return res.json({ ok: true, review: updated });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Review not found.", 404);
+        error(err?.message ?? "Review edit failed.");
+        return jsonError(res, "Could not update your review.", 500);
+    }
+}
+
 async function replyToReview({ req, res, error, databases, databaseId }) {
     const actorId = req.headers["x-appwrite-user-id"];
     if (!actorId) return jsonError(res, "Sign in to reply to reviews.", 401);
@@ -992,6 +1021,7 @@ export default async ({ req, res, error }) => {
     if (body.operation === "listReviewsForListing") return listReviewsForListing({ req, res, error, databases, databaseId });
     if (body.operation === "submitReview") return submitReview({ req, res, error, databases, databaseId });
     if (body.operation === "replyToReview") return replyToReview({ req, res, error, databases, databaseId });
+    if (body.operation === "editReview") return editReview({ req, res, error, databases, databaseId });
     if (body.operation === "listReviewsForVendor") return listReviewsForVendor({ req, res, error, databases, databaseId });
     if (body.operation === "listPublishedReviewsForVendor") return listPublishedReviewsForVendor({ req, res, error, databases, databaseId });
     if (body.operation === "listReviewsForAdmin") return listReviewsForAdmin({ req, res, error, databases, databaseId, userCollectionId: collectionId });
