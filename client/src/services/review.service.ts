@@ -73,3 +73,9 @@ export async function moderateReview(reviewId: string, status: ReviewStatus): Pr
   if (!body.review || typeof body.review !== "object") throw new Error("Unexpected review response.");
   return body.review as Review;
 }
+
+export async function listReviewsForVendor(): Promise<Review[]> {
+  const body = await execute("listReviewsForVendor");
+  if (!Array.isArray(body.reviews)) throw new Error("Unexpected reviews response.");
+  return body.reviews as Review[];
+}
