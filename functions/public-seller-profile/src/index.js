@@ -595,6 +595,11 @@ async function mutateSellerOrderInventory({ req, res, error, databases, database
             );
         }
 
+        if (undo) {
+            const priorReview = await databases.listDocuments(databaseId, REVIEWS_TABLE_ID, [Query.equal("orderId", orderId), Query.limit(1)]);
+            if (priorReview.documents.length) throw orderMutationError("This purchase cannot be reverted after a review has been submitted.", 409);
+        }
+
         const itemResponse = await databases.listDocuments({
             databaseId,
             collectionId: ORDER_ITEMS_COLLECTION_ID,
@@ -722,6 +727,77 @@ async function setSellerOrderArchived({ req, res, error, databases, databaseId, 
 }
 
 
+
+const REVIEWS_TABLE_ID = "reviews";
+const PRODUCTS_COLLECTIONS_ID_FOR_REVIEWS = "products";
+const BOOKINGS_TABLES_ID_FOR_REVIEWS = "bookings";
+
+async function listReviewsForListing({ req, res, error, databases, databaseId }) {
+ const listingId=req.bodyJson?.listingId;
+ if(!isNonEmptyString(listingId,128)) return jsonError(res,"A valid listingId is required.",400);
+ try { const result=await databases.listDocuments(databaseId,REVIEWS_TABLE_ID,[Query.equal("listingId",listingId),Query.equal("status","published"),Query.orderDesc("$createdAt"),Query.limit(100)]); return res.json({ok:true,reviews:result.documents}); }
+ catch(err){error(err?.message??"Review lookup failed.");return jsonError(res,"Could not load reviews.",500);}
+}
+async function submitReview({req,res,error,databases,databaseId}) {
+ const reviewerId=req.headers["x-appwrite-user-id"];
+ if(!reviewerId)return jsonError(res,"Sign in to leave a review.",401);
+ const body=req.bodyJson??{}; const {listingId,listingType,orderId,bookingId}=body;
+ const rating=Number(body.rating); const reviewText=typeof body.reviewText==="string"?body.reviewText.trim():"";
+ if(!isNonEmptyString(listingId,128)||!["product","service"].includes(listingType))return jsonError(res,"A valid listing and listing type are required.",400);
+ if(!Number.isInteger(rating)||rating<1||rating>5)return jsonError(res,"Rating must be a whole number from 1 to 5.",400);
+ if(reviewText.length>3000)return jsonError(res,"Review text must be 3,000 characters or fewer.",400);
+ if(listingType==="product"&&(!isNonEmptyString(orderId,128)||bookingId))return jsonError(res,"A qualifying purchased order is required for a product review.",400);
+ if(listingType==="service"&&(!isNonEmptyString(bookingId,128)||orderId))return jsonError(res,"A completed booking is required for a service review.",400);
+ try {
+  let vendorId;
+  if(listingType==="product"){
+   const order=await databases.getDocument(databaseId,ORDERS_COLLECTION_ID,orderId);
+   if(order.customerId!==reviewerId)return jsonError(res,"You can only review your own purchases.",403);
+   if(order.status!=="purchased")return jsonError(res,"Only confirmed purchases can be reviewed.",409);
+   const items=await databases.listDocuments(databaseId,ORDER_ITEMS_COLLECTION_ID,[Query.equal("orderId",orderId),Query.equal("productId",listingId),Query.limit(100)]);
+   if(!items.documents.length)return jsonError(res,"This product is not part of that order.",403);
+   const product=await databases.getDocument(databaseId,PRODUCTS_COLLECTIONS_ID_FOR_REVIEWS,listingId);
+   vendorId=product.sellerId;
+   if(vendorId===reviewerId)return jsonError(res,"You cannot review your own listing.",403);
+  } else {
+   const booking=await databases.getDocument(databaseId,BOOKINGS_TABLES_ID_FOR_REVIEWS,bookingId);
+   if(booking.buyerId!==reviewerId)return jsonError(res,"You can only review your own bookings.",403);
+   if(booking.status!=="completed")return jsonError(res,"Only completed bookings can be reviewed.",409);
+   if(booking.serviceId!==listingId)return jsonError(res,"This service is not part of that booking.",403);
+   const service=await databases.getDocument(databaseId,PRODUCTS_COLLECTIONS_ID_FOR_REVIEWS,listingId);
+   vendorId=booking.providerId;
+   if(service.sellerId!==vendorId)return jsonError(res,"Booking provider does not match the service owner.",409);
+   if(vendorId===reviewerId)return jsonError(res,"You cannot review your own service.",403);
+  }
+  const duplicateQueries=listingType==="product"?[Query.equal("orderId",orderId),Query.equal("listingId",listingId),Query.limit(1)]:[Query.equal("bookingId",bookingId),Query.equal("listingId",listingId),Query.limit(1)];
+  const existing=await databases.listDocuments(databaseId,REVIEWS_TABLE_ID,duplicateQueries);
+  if(existing.documents.length)return jsonError(res,"You have already reviewed this listing for that transaction.",409);
+  const data={listingId,listingType,vendorId,reviewerId,rating,reviewText:reviewText||null,status:"published",vendorReply:null,vendorReplyAt:null,editedAt:null};
+  if(listingType==="product")data.orderId=orderId;else data.bookingId=bookingId;
+  const review=await databases.createDocument(databaseId,REVIEWS_TABLE_ID,ID.unique(),data,[Permission.read(Role.user(reviewerId))]);
+  return res.json({ok:true,review});
+ } catch(err){if(err?.code===404)return jsonError(res,"The qualifying order, booking, or listing was not found.",404);if(err?.code===409)return jsonError(res,"A review already exists for this transaction and listing.",409);error(err?.message??"Review submission failed.");return jsonError(res,"Could not submit your review.",500);}
+}
+async function replyToReview({req,res,error,databases,databaseId}) {
+ const actorId=req.headers["x-appwrite-user-id"];if(!actorId)return jsonError(res,"Sign in to reply to reviews.",401);
+ const {reviewId,vendorReply}=req.bodyJson??{};
+ if(!isNonEmptyString(reviewId,128)||typeof vendorReply!=="string"||!vendorReply.trim()||vendorReply.trim().length>2000)return jsonError(res,"A review and reply of up to 2,000 characters are required.",400);
+ try{const review=await databases.getDocument(databaseId,REVIEWS_TABLE_ID,reviewId);if(review.vendorId!==actorId)return jsonError(res,"Only the listing owner can reply to this review.",403);if(review.status!=="published")return jsonError(res,"Only published reviews can receive a reply.",409);const updated=await databases.updateDocument(databaseId,REVIEWS_TABLE_ID,reviewId,{vendorReply:vendorReply.trim(),vendorReplyAt:new Date().toISOString()});return res.json({ok:true,review:updated});}
+ catch(err){if(err?.code===404)return jsonError(res,"Review not found.",404);error(err?.message??"Review reply failed.");return jsonError(res,"Could not save your reply.",500);}
+}
+async function listReviewsForAdmin({req,res,error,databases,databaseId,userCollectionId}) {
+ const auth=await requireAdmin({req:{...req,res},databases,databaseId,userCollectionId});if(auth.error)return auth.error;
+ try{const status=req.bodyJson?.status;const queries=[Query.orderDesc("$createdAt"),Query.limit(100)];if(["published","hidden","removed"].includes(status))queries.unshift(Query.equal("status",status));const result=await databases.listDocuments(databaseId,REVIEWS_TABLE_ID,queries);return res.json({ok:true,reviews:result.documents});}
+ catch(err){error(err?.message??"Review moderation lookup failed.");return jsonError(res,"Could not load reviews for moderation.",500);}
+}
+async function moderateReview({req,res,error,databases,databaseId,userCollectionId}) {
+ const auth=await requireAdmin({req:{...req,res},databases,databaseId,userCollectionId});if(auth.error)return auth.error;
+ const {reviewId,status}=req.bodyJson??{};if(!isNonEmptyString(reviewId,128)||!["published","hidden","removed"].includes(status))return jsonError(res,"A valid review and moderation status are required.",400);
+ try{await databases.getDocument(databaseId,REVIEWS_TABLE_ID,reviewId);const updated=await databases.updateDocument(databaseId,REVIEWS_TABLE_ID,reviewId,{status});return res.json({ok:true,review:updated});}
+ catch(err){if(err?.code===404)return jsonError(res,"Review not found.",404);error(err?.message??"Review moderation failed.");return jsonError(res,"Could not update review status.",500);}
+}
+
+
 const TESTIMONIALS_TABLE_ID = "testimonials";
 
 async function listApprovedTestimonials({ req, res, error, databases, databaseId }) {
@@ -824,6 +900,12 @@ export default async ({ req, res, error }) => {
     const body = req.bodyJson ?? {};
 
 
+
+    if (body.operation === "listReviewsForListing") return listReviewsForListing({ req, res, error, databases, databaseId });
+    if (body.operation === "submitReview") return submitReview({ req, res, error, databases, databaseId });
+    if (body.operation === "replyToReview") return replyToReview({ req, res, error, databases, databaseId });
+    if (body.operation === "listReviewsForAdmin") return listReviewsForAdmin({ req, res, error, databases, databaseId, userCollectionId: collectionId });
+    if (body.operation === "moderateReview") return moderateReview({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     if (body.operation === "listApprovedTestimonials") return listApprovedTestimonials({ req, res, error, databases, databaseId });
     if (body.operation === "submitTestimonial") return submitTestimonial({ req, res, error, databases, databaseId });
     if (body.operation === "listTestimonialsForAdmin") return listTestimonialsForAdmin({ req, res, error, databases, databaseId, userCollectionId: collectionId });
