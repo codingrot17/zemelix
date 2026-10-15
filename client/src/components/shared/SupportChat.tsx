@@ -30,7 +30,7 @@ export default function SupportChat({ onClose }: { onClose: () => void }) {
 
   const refreshConversations = async () => {
     if (!user || user.role === "admin") return;
-    try { setConversations(await listMySupportConversations()); } catch { /* FAQ remains available if history fails */ }
+    try { setConversations(await listMySupportConversations()); } catch (e) { setError(e instanceof Error ? e.message : "Could not load your support history. Please retry."); }
   };
 
   useEffect(() => { void refreshConversations(); }, [user?.id]);
@@ -94,7 +94,7 @@ export default function SupportChat({ onClose }: { onClose: () => void }) {
         {faqs.map(f => <button key={f.q} onClick={() => showFaq(f.q, f.a)} className="block w-full rounded-xl border border-gray-200 bg-white p-3 text-left text-sm hover:border-indigo-400 hover:text-indigo-700 dark:border-gray-700 dark:bg-gray-900 dark:hover:text-indigo-300">{f.q}</button>)}
         {user && user.role !== "admin" && <div className="pt-2">
           <Button className="w-full" onClick={() => { setView("new"); setError(""); }}>Message the support team</Button>
-          {conversations.length > 0 && <div className="mt-3 space-y-2"><p className="text-xs font-semibold text-gray-500">Your recent conversations</p>{conversations.slice(0,5).map(c=><button key={c.$id} onClick={() => void openConversation(c)} className="w-full rounded-lg border bg-white p-3 text-left text-sm dark:bg-gray-900"><span className="block font-medium">{c.subject}</span><span className="text-xs text-gray-500">{c.status.replace("-", " ")} · {c.lastMessage || "No messages"}</span></button>)}</div>}
+          {conversations.length > 0 && <div className="mt-3 space-y-2"><p className="text-xs font-semibold text-gray-500">Your recent conversations</p>{conversations.map(c=><button key={c.$id} onClick={() => void openConversation(c)} className="w-full rounded-lg border bg-white p-3 text-left text-sm dark:bg-gray-900"><span className="block font-medium">{c.subject}</span><span className="block text-[11px] text-gray-400">Ticket {c.$id.slice(0, 8).toUpperCase()}</span><span className="text-xs text-gray-500">{c.status.replace("-", " ")} · {c.lastMessage || "No messages"}</span></button>)}</div>}
         </div>}
         {!user && <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-sm dark:border-indigo-900 dark:bg-indigo-950/30">Sign in to send a message and keep track of replies. <Link className="font-semibold text-indigo-700 underline dark:text-indigo-300" to="/login" onClick={onClose}>Sign in</Link></div>}
         {user?.role === "admin" && <Link to="/dashboard/admin/support" onClick={onClose} className="block rounded-xl bg-indigo-50 p-3 text-sm font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">Open support agent inbox →</Link>}
@@ -106,7 +106,7 @@ export default function SupportChat({ onClose }: { onClose: () => void }) {
         <Button type="submit" disabled={sending} className="w-full">{sending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Send to support</Button>
       </form>}
       {view === "conversation" && <>
-        <div className="rounded-lg border bg-white p-3 text-sm dark:bg-gray-900"><p className="font-semibold">{active?.subject}</p><p className="mt-1 text-xs capitalize text-gray-500">Status: {active?.status.replace("-", " ")}</p></div>
+        <div className="rounded-lg border bg-white p-3 text-sm dark:bg-gray-900"><p className="font-semibold">{active?.subject}</p><p className="mt-1 text-xs text-gray-500">Ticket reference: <span className="font-mono font-semibold">{active?.$id.slice(0, 8).toUpperCase()}</span></p><p className="mt-1 text-xs capitalize text-gray-500">Status: {active?.status.replace("-", " ")}</p></div>
         {loading ? <div className="p-6 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin"/></div> : messages.map(m=><div key={m.id} className={`max-w-[90%] rounded-2xl p-3 text-sm ${m.role === "user" ? "ml-auto rounded-tr-sm bg-indigo-600 text-white" : "mr-auto rounded-tl-sm bg-white shadow-sm dark:bg-gray-800"}`}><p className="mb-1 text-[10px] font-semibold uppercase opacity-70">{m.role === "admin" ? "Support agent" : m.role === "bot" ? "Quick answer" : "You"}</p><p className="whitespace-pre-wrap">{m.message}</p>{m.createdAt && <time className="mt-1 block text-[10px] opacity-60">{new Date(m.createdAt).toLocaleString()}</time>}</div>)}
         {active?.status === "closed" && <p className="text-center text-xs text-gray-500">This conversation is closed. Start a new chat if you need more help.</p>}
         <div ref={bottomRef}/>
