@@ -816,6 +816,27 @@ async function replyToReview({ req, res, error, databases, databaseId }) {
     }
 }
 
+async function listPublishedReviewsForVendor({ req, res, error, databases, databaseId }) {
+    const vendorId = req.bodyJson?.vendorId;
+    if (!isValidSellerId(vendorId)) return jsonError(res, "A valid vendorId is required.", 400);
+    try {
+        const result = await databases.listDocuments({
+            databaseId,
+            collectionId: REVIEWS_TABLE_ID,
+            queries: [
+                Query.equal("vendorId", vendorId),
+                Query.equal("status", "published"),
+                Query.orderDesc("$createdAt"),
+                Query.limit(100)
+            ]
+        });
+        return res.json({ ok: true, reviews: result.documents });
+    } catch (err) {
+        error(err?.message ?? "Vendor public review lookup failed.");
+        return jsonError(res, "Could not load vendor reviews.", 500);
+    }
+}
+
 async function listReviewsForVendor({ req, res, error, databases, databaseId }) {
     const vendorId = req.headers["x-appwrite-user-id"];
     if (!vendorId) return jsonError(res, "Sign in to view your reviews.", 401);
@@ -972,6 +993,7 @@ export default async ({ req, res, error }) => {
     if (body.operation === "submitReview") return submitReview({ req, res, error, databases, databaseId });
     if (body.operation === "replyToReview") return replyToReview({ req, res, error, databases, databaseId });
     if (body.operation === "listReviewsForVendor") return listReviewsForVendor({ req, res, error, databases, databaseId });
+    if (body.operation === "listPublishedReviewsForVendor") return listPublishedReviewsForVendor({ req, res, error, databases, databaseId });
     if (body.operation === "listReviewsForAdmin") return listReviewsForAdmin({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     if (body.operation === "moderateReview") return moderateReview({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     if (body.operation === "listApprovedTestimonials") return listApprovedTestimonials({ req, res, error, databases, databaseId });
