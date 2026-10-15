@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { listProviderBookings,setBookingArchived,updateBookingStatus,type Booking } from "@/services/booking.service";
 import { BookingCard } from "@/components/shared/BookingCard";
 import { BookingStatusTabs,type BookingView } from "@/components/shared/BookingStatusTabs";
+import VendorReviewsPanel from "@/components/shared/VendorReviewsPanel";
 
 const activeStatuses = ["requested","accepted"];
 const historyStatuses = ["declined","cancelled","completed","no_show","expired"];
@@ -60,5 +61,6 @@ export default function SellerBookings(){
       <Button size="sm" variant="ghost" onClick={()=>void archive(b.$id,!b.isArchived)} disabled={busy===b.$id}>{b.isArchived?<><ArchiveRestore className="w-4 h-4 mr-2"/>Restore</>:<><Archive className="w-4 h-4 mr-2"/>Archive</>}</Button>
     </>}/></div>)}</div>}
   </div>
+  <VendorReviewsPanel />
  </div>;
 }
