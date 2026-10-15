@@ -4,6 +4,8 @@ import { getProduct } from "@/services/product.service";
 import { getPublicSellerProfile } from "@/services/seller.service";
 import { createSellerOrder } from "@/services/order.service";
 import { createBookingRequest } from "@/services/booking.service";
+import { listReviewsForListing } from "@/services/review.service";
+import type { Review } from "@/services/review.service";
 import { getCurrentAccount } from "@/lib/appwrite/account";
 import { getUserProfile, updateUserProfile } from "@/lib/appwrite/database";
 import { getFileViewUrl } from "@/lib/appwrite/storage";
@@ -61,6 +63,8 @@ export default function ProductDetailPage() {
     const { add } = useCart();
 
     const [product, setProduct] = useState<Product | null>(null);
+    const [reviews, setReviews] = useState<Review[]>([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
     const [sellerCoverUrl, setSellerCoverUrl] = useState("");
     const [sellerBrandColor, setSellerBrandColor] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -134,6 +138,18 @@ export default function ProductDetailPage() {
         return () => {
             cancelled = true;
         };
+    }, [id]);
+
+ 
+    useEffect(() => {
+        if (!id) return;
+        let cancelled = false;
+        setReviewsLoading(true);
+        listReviewsForListing(id)
+            .then(items => { if (!cancelled) setReviews(items); })
+            .catch(err => { console.error("Failed to load listing reviews.", err); if (!cancelled) setReviews([]); })
+            .finally(() => { if (!cancelled) setReviewsLoading(false); });
+        return () => { cancelled = true; };
     }, [id]);
 
     const handleAction = () => {
@@ -432,7 +448,8 @@ export default function ProductDetailPage() {
                         {product.title}
                     </h1>
 
-                    {product.rating >= 0 && <StarRating rating={product.rating} />}
+                    <StarRating rating={reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0} />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{reviews.length} {reviews.length === 1 ? "verified review" : "verified reviews"}</p>
 
                     <p
                         className={`text-3xl font-bold ${
@@ -581,6 +598,36 @@ export default function ProductDetailPage() {
                 </div>
             </div>
             </div>
+
+            <section className="mt-12 border-t border-gray-200 dark:border-gray-800 pt-8" aria-labelledby="reviews-heading">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                    <div>
+                        <h2 id="reviews-heading" className="text-xl font-bold text-gray-900 dark:text-white">Customer reviews</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Reviews are tied to confirmed purchases or completed bookings.</p>
+                    </div>
+                    {reviews.length > 0 && <div className="flex items-center gap-2 text-sm"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /><strong>{(reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)}</strong><span className="text-gray-500">({reviews.length})</span></div>}
+                </div>
+                {reviewsLoading ? (
+                    <p className="text-sm text-gray-500">Loading reviews…</p>
+                ) : reviews.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-sm text-gray-500">No reviews yet. Be the first eligible customer to share your experience.</div>
+                ) : (
+                    <div className="space-y-4">
+                        {reviews.map(review => (
+                            <article key={review.$id} className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+                                <div className="flex items-center gap-1 mb-2" aria-label={`${review.rating} out of 5 stars`}>
+                                    {[1,2,3,4,5].map(star => <Star key={star} className={`w-4 h-4 ${star <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />)}
+                                    <span className="ml-2 text-xs text-gray-500">Verified {review.listingType === "service" ? "booking" : "purchase"}</span>
+                                </div>
+                                {review.reviewText && <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{review.reviewText}</p>}
+                                {review.vendorReply && <div className="mt-3 ml-3 border-l-2 border-indigo-300 pl-3"><p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Vendor response</p><p className="text-sm text-gray-600 dark:text-gray-400 mt-1 whitespace-pre-wrap">{review.vendorReply}</p></div>}
+                                <p className="mt-3 text-xs text-gray-400">{review.$createdAt ? new Date(review.$createdAt).toLocaleDateString() : ""}</p>
+                            </article>
+                        ))}
+                    </div>
+                )}
+            </section>
+
             <Dialog open={bookingOpen} onOpenChange={open => { if (!bookingSubmitting) setBookingOpen(open); }}>
                 <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>Request a booking</DialogTitle><DialogDescription>Choose a preferred time. The provider will confirm the request.</DialogDescription></DialogHeader>
