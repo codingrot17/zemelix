@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Archive, ArchiveRestore, AlertCircle, CheckCircle, ChevronDown, Loader2, MessageCircle, Package, RefreshCw, Undo2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import VendorReviewsPanel from "@/components/shared/VendorReviewsPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import {
     listOrderItems,
@@ -484,6 +485,7 @@ export default function SellerOrders() {
                     </div>
                 )}
             </div>
+            <VendorReviewsPanel />
         </div>
     );
 }
