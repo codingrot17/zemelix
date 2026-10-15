@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Star, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { editReview, listReviewsForListing, submitReview, type Review, type ReviewListingType } from "@/services/review.service";
+import { editReview, getMyReview, submitReview, type Review, type ReviewListingType } from "@/services/review.service";
 
 export default function ReviewForm({ listingId, listingType, orderId, bookingId }: { listingId: string; listingType: ReviewListingType; orderId?: string; bookingId?: string }) {
  const [rating,setRating]=useState(0); const [reviewText,setReviewText]=useState(""); const [existing,setExisting]=useState<Review|null>(null); const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false); const [error,setError]=useState(""); const [done,setDone]=useState(false);
- useEffect(()=>{let active=true;listReviewsForListing(listingId).then(reviews=>{if(!active)return;const found=reviews.find(r=>listingType==="product"?r.orderId===orderId:r.bookingId===bookingId);if(found){setExisting(found);setRating(found.rating);setReviewText(found.reviewText??"");}}).catch(e=>console.error("Unable to check existing review.",e)).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[listingId,listingType,orderId,bookingId]);
+ useEffect(()=>{let active=true;getMyReview({listingId,listingType,orderId,bookingId}).then(found=>{if(!active)return;if(found){setExisting(found);setRating(found.rating);setReviewText(found.reviewText??"");}}).catch(e=>console.error("Unable to check existing review.",e)).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[listingId,listingType,orderId,bookingId]);
  const editable=existing && existing.status==="published" && Date.now()-new Date(existing.$createdAt).getTime()<=14*24*60*60*1000;
  async function save(){if(!rating){setError("Choose a star rating first.");return;}setSaving(true);setError("");try{if(existing){const updated=await editReview(existing.$id,rating,reviewText.trim());setExisting(updated)}else{const created=await submitReview({listingId,listingType,rating,reviewText:reviewText.trim(),orderId,bookingId});setExisting(created)}setDone(true);}catch(e){setError(e instanceof Error?e.message:"Unable to save review.");}finally{setSaving(false)}}
  if(loading)return <p className="mt-3 text-xs text-gray-500">Checking review status…</p>;
