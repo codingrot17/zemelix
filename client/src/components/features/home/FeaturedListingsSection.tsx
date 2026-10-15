@@ -19,6 +19,8 @@ import {
     ListingActionButton
 } from "@/components/shared/ListingPrimitives";
 import type { Product } from "@/types/product";
+import { listReviewsForListing } from "@/services/review.service";
+import type { Review } from "@/services/review.service";
 
 export function FeaturedListingsCarousel() {
     const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
@@ -208,6 +210,12 @@ function FeaturedCard({
 }) {
     const isService = product.vendorType === "service";
     const outOfStock = !isService && product.stock === 0;
+    const [reviews, setReviews] = useState<Review[]>([]);
+    useEffect(() => {
+        let active = true;
+        listReviewsForListing(product.id).then(items => { if (active) setReviews(items); }).catch(err => console.error("Failed to load featured listing reviews.", err));
+        return () => { active = false; };
+    }, [product.id]);
 
     return (
         <div
@@ -272,9 +280,9 @@ function FeaturedCard({
 
                 {/* Rating row */}
                 <div className="flex items-center gap-1 text-yellow-400">
-                    <Star className="w-3.5 h-3.5 fill-yellow-400" />
+                    {reviews.length > 0 && <Star className="w-3.5 h-3.5 fill-yellow-400" />}
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {product.rating > 0 ? product.rating.toFixed(1) : "New"}
+                        {reviews.length > 0 ? `${(reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)} · ${reviews.length} ${reviews.length === 1 ? "review" : "reviews"}` : "No reviews"}
                     </span>
                 </div>
 
