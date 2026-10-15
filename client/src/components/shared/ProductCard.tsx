@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Heart, Star } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
+import { listReviewsForListing } from "@/services/review.service";
+import type { Review } from "@/services/review.service";
 import { useCart } from "@/hooks/useCart";
 import {
     BadgeChip,
@@ -21,6 +23,15 @@ export default function ProductCard({
     const { add } = useCart();
     const [wishlisted, setWishlisted] = useState(false);
     const [added, setAdded] = useState(false);
+    const [reviews, setReviews] = useState<Review[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        listReviewsForListing(product.id)
+            .then(items => { if (active) setReviews(items); })
+            .catch(err => console.error("Failed to load card reviews.", err));
+        return () => { active = false; };
+    }, [product.id]);
 
     const isService = product.vendorType === "service";
     const validSellerBrandColor =
@@ -157,11 +168,11 @@ export default function ProductCard({
                 {/* Rating + Price row */}
                 <div className="flex items-center justify-between mt-auto">
                     <div className="flex items-center gap-1 text-yellow-400">
-                        <Star className="w-3.5 h-3.5 fill-yellow-400" />
+                        {reviews.length > 0 && <Star className="w-3.5 h-3.5 fill-yellow-400" />}
                         <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                            {product.rating > 0
-                                ? product.rating.toFixed(1)
-                                : "New"}
+                            {reviews.length > 0
+                                ? `${(reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)} · ${reviews.length} ${reviews.length === 1 ? "review" : "reviews"}`
+                                : "No reviews"}
                         </span>
                     </div>
                     <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">
