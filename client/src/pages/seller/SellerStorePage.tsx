@@ -8,6 +8,9 @@ import { getPublicSellerProfile } from "@/services/seller.service";
 import { listProducts } from "@/services/product.service";
 import type { Product } from "@/types/product";
 import type { PublicSellerProfile } from "@/types/seller";
+import { listPublishedReviewsForVendor } from "@/services/review.service";
+import type { Review } from "@/services/review.service";
+import { Star } from "lucide-react";
 
 function validBrandColor(value: string | null): string | null {
     return value && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : null;
@@ -66,6 +69,7 @@ export default function SellerStorePage() {
     const navigate = useNavigate();
     const [seller, setSeller] = useState<PublicSellerProfile | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
+    const [vendorReviews, setVendorReviews] = useState<Review[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -102,6 +106,8 @@ export default function SellerStorePage() {
                 if (!cancelled) {
                     setSeller(profile);
                     setProducts(sellerProducts);
+                    setVendorReviews([]);
+                    void listPublishedReviewsForVendor(id).then(setVendorReviews).catch(err => console.error("Failed to load vendor reviews.", err));
                 }
             } catch (err) {
                 console.error("Failed to load seller store.", err);
@@ -226,6 +232,10 @@ export default function SellerStorePage() {
                             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
                                 {displayName}
                             </h1>
+                            <div className="mt-1 flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                                {vendorReviews.length > 0 && <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />}
+                                <span>{vendorReviews.length > 0 ? `${(vendorReviews.reduce((sum, review) => sum + review.rating, 0) / vendorReviews.length).toFixed(1)} average · ${vendorReviews.length} verified ${vendorReviews.length === 1 ? "review" : "reviews"}` : "No reviews yet"}</span>
+                            </div>
                         </div>
                     </div>
 
