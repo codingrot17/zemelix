@@ -56,17 +56,42 @@ export default function ShareListingButton({
 
   useEffect(() => {
     if (!open) return;
+    const positionMenu = () => {
+      const trigger = triggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) return;
+      const triggerRect = trigger.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const margin = 12;
+      const gap = 8;
+      const fitsBelow = triggerRect.bottom + gap + menuRect.height <= window.innerHeight - margin;
+      const top = fitsBelow
+        ? triggerRect.bottom + gap
+        : Math.max(margin, triggerRect.top - menuRect.height - gap);
+      const left = Math.max(margin, Math.min(triggerRect.right - menuRect.width, window.innerWidth - menuRect.width - margin));
+      setMenuPosition({ top, left });
+    };
+    // Measure after the portal has mounted so the menu uses its actual height.
+    const frame = window.requestAnimationFrame(positionMenu);
     const onPointerDown = (event: PointerEvent) => {
       if (event.target instanceof Node && !rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", positionMenu);
+    window.addEventListener("scroll", positionMenu, true);
     return () => {
+      window.cancelAnimationFrame(frame);
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", positionMenu);
+      window.removeEventListener("scroll", positionMenu, true);
     };
   }, [open]);
 
