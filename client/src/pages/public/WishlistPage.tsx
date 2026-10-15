@@ -1,4 +1,2 @@
-import ComingSoon from "@/components/ui/ComingSoon";
-export default function WishlistPage() {
-  return <ComingSoon title="Wishlist" backTo="/" backLabel="Back" />;
-}
+import { Navigate } from "react-router-dom";
+export default function WishlistPage() { return <Navigate to="/dashboard/user/favorites" replace />; }
