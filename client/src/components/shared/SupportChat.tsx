@@ -26,6 +26,7 @@ export default function SupportChat({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [selectedFaq, setSelectedFaq] = useState<{ q: string; a: string } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const refreshConversations = async () => {
@@ -47,8 +48,8 @@ export default function SupportChat({ onClose }: { onClose: () => void }) {
   }
 
   function showFaq(question: string, answer: string) {
-    const stamp = Date.now();
-    setMessages(prev => [...prev, { id: `faq-${stamp}`, role: "user", message: question }, { id: `answer-${stamp}`, role: "bot", message: answer }]);
+    setSelectedFaq({ q: question, a: answer });
+    setError("");
   }
 
   async function startConversation(event: FormEvent) {
@@ -91,7 +92,8 @@ export default function SupportChat({ onClose }: { onClose: () => void }) {
       {view === "home" && <>
         <div className="max-w-[90%] rounded-2xl rounded-tl-sm bg-white p-3 text-sm shadow-sm dark:bg-gray-800">Hi{user?.name ? `, ${user.name.split(" ")[0]}` : ""}! How can we help today?</div>
         <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Quick answers</p>
-        {faqs.map(f => <button key={f.q} onClick={() => showFaq(f.q, f.a)} className="block w-full rounded-xl border border-gray-200 bg-white p-3 text-left text-sm hover:border-indigo-400 hover:text-indigo-700 dark:border-gray-700 dark:bg-gray-900 dark:hover:text-indigo-300">{f.q}</button>)}
+        {faqs.map(f => <button key={f.q} aria-expanded={selectedFaq?.q === f.q} onClick={() => showFaq(f.q, f.a)} className={`block w-full rounded-xl border p-3 text-left text-sm transition ${selectedFaq?.q === f.q ? "border-indigo-500 bg-indigo-50 font-medium text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200" : "border-gray-200 bg-white hover:border-indigo-400 hover:text-indigo-700 dark:border-gray-700 dark:bg-gray-900 dark:hover:text-indigo-300"}`}>{f.q}</button>)}
+        {selectedFaq && <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm dark:border-indigo-900 dark:bg-indigo-950/30" aria-live="polite"><p className="mb-2 font-semibold text-indigo-900 dark:text-indigo-100">{selectedFaq.q}</p><p className="leading-6 text-gray-700 dark:text-gray-200">{selectedFaq.a}</p><button className="mt-3 text-xs font-semibold text-indigo-700 underline dark:text-indigo-300" onClick={() => setSelectedFaq(null)}>Back to quick answers</button></div>}
         {user && user.role !== "admin" && <div className="pt-2">
           <Button className="w-full" onClick={() => { setView("new"); setError(""); }}>Message the support team</Button>
           {conversations.length > 0 && <div className="mt-3 space-y-2"><p className="text-xs font-semibold text-gray-500">Your recent conversations</p>{conversations.map(c=><button key={c.$id} onClick={() => void openConversation(c)} className="w-full rounded-lg border bg-white p-3 text-left text-sm dark:bg-gray-900"><span className="block font-medium">{c.subject}</span><span className="block text-[11px] text-gray-400">Ticket {c.$id.slice(0, 8).toUpperCase()}</span><span className="text-xs text-gray-500">{c.status.replace("-", " ")} · {c.lastMessage || "No messages"}</span></button>)}</div>}
