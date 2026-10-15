@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import FavoriteButton from "@/components/shared/FavoriteButton";
 import ShareListingButton from "@/components/shared/ShareListingButton";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,16 +19,6 @@ export const RecommendationPanel: React.FC<RecommendationPanelProps> = ({
     recommendations
 }) => {
     const navigate = useNavigate();
-    const [favorites, setFavorites] = useState<Set<string | number>>(new Set());
-
-    const toggleFavorite = (id: string | number) => {
-        setFavorites(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
-    };
-
     return (
         <AnimatePresence>
             <motion.section
@@ -122,26 +113,7 @@ export const RecommendationPanel: React.FC<RecommendationPanelProps> = ({
 
                                     {/* Actions */}
                                     <div className="flex flex-col gap-1.5 items-center flex-shrink-0">
-                                        <button
-                                            aria-label={
-                                                favorites.has(item.id)
-                                                    ? "Unsave"
-                                                    : "Save"
-                                            }
-                                            onClick={e => {
-                                                e.stopPropagation();
-                                                toggleFavorite(item.id);
-                                            }}
-                                            className="p-1.5 rounded-full hover:bg-pink-50 dark:hover:bg-pink-900/20 transition"
-                                        >
-                                            <Heart
-                                                className={`w-4 h-4 ${
-                                                    favorites.has(item.id)
-                                                        ? "fill-pink-500 text-pink-500"
-                                                        : "text-gray-400"
-                                                }`}
-                                            />
-                                        </button>
+                                        {item.id !== "onboard" && <FavoriteButton id={item.id} size="sm" className="shadow-none" />}
 <ShareListingButton item={{ id: String(item.id), title: item.title, description: item.description, price: item.price, imageUrl: item.imageUrl, listingType: item.type === "service" ? "service" : "product" }} compact variant="ghost" className="[&_button]:rounded-full [&_button]:px-1.5 [&_button]:min-h-10" />
                                     </div>
                                 </div>
