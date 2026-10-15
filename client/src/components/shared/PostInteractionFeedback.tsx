@@ -44,10 +44,11 @@ export default function PostInteractionFeedback({ orderId, bookingId, interactio
     try {
       await createFeedback({
         type: "feedback",
-        subject: `Post-interaction rating: ${rating}/5`,
+        subject: `Post-interaction feedback: ${interactionLabel.toLowerCase()}`,
         message: comment.trim() || `User rated their ${interactionLabel.toLowerCase()} experience ${rating} out of 5.`,
         orderId: orderId ?? null,
         bookingId: bookingId ?? null,
+        rating,
       });
       setSubmitted(true);
       setVisible(false);
