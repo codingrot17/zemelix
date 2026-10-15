@@ -12,6 +12,8 @@ export interface SupportConversation {
   ownerName: string;
   ownerEmail: string;
   subject: string;
+  category?: string;
+  priority?: "normal" | "urgent";
   status: SupportStatus;
   lastMessage?: string | null;
   lastMessageAt?: string | null;
@@ -42,8 +44,8 @@ async function execute<T>(operation: string, payload: Record<string, unknown> = 
   return body as T;
 }
 
-export async function createSupportConversation(subject: string, message: string) {
-  return execute<{conversation: SupportConversation; messages: SupportMessage[]}>("createSupportConversation", { subject, message });
+export async function createSupportConversation(subject: string, message: string, category = "general", priority: "normal" | "urgent" = "normal") {
+  return execute<{conversation: SupportConversation; messages: SupportMessage[]}>("createSupportConversation", { subject, message, category, priority });
 }
 export async function listMySupportConversations() {
   const result = await execute<{conversations: SupportConversation[]}>("listMySupportConversations");
