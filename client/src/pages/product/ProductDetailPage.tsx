@@ -20,6 +20,7 @@ import {
     Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ShareListingButton from "@/components/shared/ShareListingButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
     BadgeChip,
@@ -326,17 +327,7 @@ export default function ProductDetailPage() {
         }
     };
 
-    const handleShare = () => {
-        if (navigator.share) {
-            navigator.share({
-                title: product?.title,
-                url: window.location.href
-            });
-        } else {
-            navigator.clipboard.writeText(window.location.href);
-            alert("Link copied!");
-        }
-    };
+    const handleShare = () => { if (!product) return; };
 
     if (loading) {
         return (
@@ -586,14 +577,11 @@ export default function ProductDetailPage() {
                             size="default"
                             className="flex-1"
                         />
-                        <Button
-                            variant="outline"
-                            onClick={handleShare}
-                            aria-label="Share"
-                            className="px-4"
-                        >
-                            <Share2 className="w-4 h-4" />
-                        </Button>
+                        <ShareListingButton
+                            item={{ id: product.id, title: product.title, description: product.shortDescription || product.longDescription, price: product.price, imageUrl: product.imageUrl, listingType: isService ? "service" : "product" }}
+                            compact
+                            className="shrink-0"
+                        />
                     </div>
                 </div>
             </div>
