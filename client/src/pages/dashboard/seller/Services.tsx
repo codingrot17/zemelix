@@ -3,6 +3,7 @@ import { AlertCircle, Edit, Eye, ImagePlus, Loader2, MessageCircle, Plus, Search
 import { useAuth } from "@/contexts/AuthContext";
 import { getCategoriesForType } from "@/data/businessCategories";
 import { Button } from "@/components/ui/button";
+import ShareListingButton from "@/components/shared/ShareListingButton";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -293,6 +294,7 @@ export default function SellerServices() {
                                             <td className="px-5 py-4"><StatusBadge status={service.status} /></td>
                                             <td className="px-5 py-4">
                                                 <div className="flex justify-end gap-2">
+                                                    {service.status === "active" && <ShareListingButton item={{ id: service.$id, title: service.title, description: service.shortDescription, price: service.price, imageUrl: service.imageUrl, listingType: "service" }} compact variant="outline" />}
                                                     <Button size="sm" variant="outline" onClick={() => openEdit(service)}>
                                                         <Edit className="w-4 h-4 mr-1" /> Edit
                                                     </Button>
