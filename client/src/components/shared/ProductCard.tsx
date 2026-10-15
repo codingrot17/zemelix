@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Heart, Star } from "lucide-react";
+import ShareListingButton from "@/components/shared/ShareListingButton";
 import { Link, useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
 import { listReviewsForListing } from "@/services/review.service";
@@ -104,6 +105,8 @@ export default function ProductCard({
                     </div>
                 )}
 
+                <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+                <ShareListingButton item={{ id: product.id, title: product.title, description: product.shortDescription, price: product.price, imageUrl: product.imageUrl, listingType: isService ? "service" : "product" }} compact variant="secondary" className="[&_button]:rounded-full [&_button]:bg-white/90 [&_button]:shadow" />
                 {/* Wishlist */}
                 <button
                     onClick={toggleWishlist}
@@ -118,6 +121,7 @@ export default function ProductCard({
                         }`}
                     />
                 </button>
+                </div>
 
                 {/* Out of stock overlay */}
                 {outOfStock && (
