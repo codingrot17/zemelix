@@ -91,3 +91,10 @@ export async function editReview(reviewId: string, rating: number, reviewText: s
   if (!body.review || typeof body.review !== "object") throw new Error("Unexpected review response.");
   return body.review as Review;
 }
+
+export async function getMyReview(input: { listingId: string; listingType: ReviewListingType; orderId?: string; bookingId?: string }): Promise<Review | null> {
+  const body = await execute("getMyReview", input);
+  if (body.review === null) return null;
+  if (!body.review || typeof body.review !== "object") throw new Error("Unexpected review response.");
+  return body.review as Review;
+}
