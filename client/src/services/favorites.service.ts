@@ -19,10 +19,11 @@ export function getFavoriteIds(userId?: string | null): string[] {
     const key = storageKey(userId);
     let ids = readIds(key);
     if (userId) {
+        const guest = readIds(storageKey(null));
         const legacy = readIds(LEGACY_KEY);
-        if (legacy.length) {
-            ids = Array.from(new Set([...ids, ...legacy]));
-            try { localStorage.setItem(key, JSON.stringify(ids)); localStorage.removeItem(LEGACY_KEY); } catch { /* storage may be disabled */ }
+        if (guest.length || legacy.length) {
+            ids = Array.from(new Set([...ids, ...guest, ...legacy]));
+            try { localStorage.setItem(key, JSON.stringify(ids)); localStorage.removeItem(storageKey(null)); localStorage.removeItem(LEGACY_KEY); } catch { /* storage may be disabled */ }
         }
     }
     return ids;
