@@ -85,3 +85,9 @@ export async function listPublishedReviewsForVendor(vendorId: string): Promise<R
   if (!Array.isArray(body.reviews)) throw new Error("Unexpected reviews response.");
   return body.reviews as Review[];
 }
+
+export async function editReview(reviewId: string, rating: number, reviewText: string): Promise<Review> {
+  const body = await execute("editReview", { reviewId, rating, reviewText });
+  if (!body.review || typeof body.review !== "object") throw new Error("Unexpected review response.");
+  return body.review as Review;
+}
