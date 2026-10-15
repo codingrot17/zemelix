@@ -741,6 +741,20 @@ async function listReviewsForListing({ req, res, error, databases, databaseId })
         return res.json({ ok: true, reviews });
     } catch (err) { error(err?.message ?? "Review lookup failed."); return jsonError(res, "Could not load reviews.", 500); }
 }
+async function getMyReview({ req, res, error, databases, databaseId }) {
+    const reviewerId = req.headers["x-appwrite-user-id"];
+    if (!reviewerId) return jsonError(res, "Sign in to check your review.", 401);
+    const { listingId, listingType, orderId, bookingId } = req.bodyJson ?? {};
+    if (!isNonEmptyString(listingId,128) || !["product","service"].includes(listingType)) return jsonError(res,"A valid listing and type are required.",400);
+    if (listingType === "product" && !isNonEmptyString(orderId,128)) return jsonError(res,"A valid orderId is required.",400);
+    if (listingType === "service" && !isNonEmptyString(bookingId,128)) return jsonError(res,"A valid bookingId is required.",400);
+    try {
+        const queries = [Query.equal("listingId",listingId), Query.equal("reviewerId",reviewerId), Query.limit(1)];
+        queries.push(listingType === "product" ? Query.equal("orderId",orderId) : Query.equal("bookingId",bookingId));
+        const result = await databases.listDocuments({databaseId, collectionId:REVIEWS_TABLE_ID, queries});
+        return res.json({ok:true, review:result.documents[0] ?? null});
+    } catch (err) { error(err?.message ?? "Review lookup failed."); return jsonError(res,"Could not check your review.",500); }
+}
 async function submitReview({req,res,error,databases,databaseId}) {
  const reviewerId=req.headers["x-appwrite-user-id"];
  if(!reviewerId)return jsonError(res,"Sign in to leave a review.",401);
@@ -1009,6 +1023,7 @@ export default async ({ req, res, error }) => {
 
     if (body.operation === "listReviewsForListing") return listReviewsForListing({ req, res, error, databases, databaseId });
     if (body.operation === "submitReview") return submitReview({ req, res, error, databases, databaseId });
+    if (body.operation === "getMyReview") return getMyReview({ req, res, error, databases, databaseId });
     if (body.operation === "replyToReview") return replyToReview({ req, res, error, databases, databaseId });
     if (body.operation === "editReview") return editReview({ req, res, error, databases, databaseId });
     if (body.operation === "listReviewsForVendor") return listReviewsForVendor({ req, res, error, databases, databaseId });
