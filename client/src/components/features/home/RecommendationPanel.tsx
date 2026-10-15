@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Share2, ArrowRight } from "lucide-react";
+import { Heart, ArrowRight } from "lucide-react";
+import ShareListingButton from "@/components/shared/ShareListingButton";
 import { Button } from "@/components/ui/button";
 import {
     BadgeChip,
@@ -25,16 +26,6 @@ export const RecommendationPanel: React.FC<RecommendationPanelProps> = ({
             next.has(id) ? next.delete(id) : next.add(id);
             return next;
         });
-    };
-
-    const handleShare = (item: RecommendationItem) => {
-        const url = window.location.origin + `/product/${item.id}`;
-        if (navigator.share) {
-            navigator.share({ title: item.title, text: item.description, url });
-        } else {
-            navigator.clipboard.writeText(url);
-            alert("Link copied to clipboard!");
-        }
     };
 
     return (
@@ -151,16 +142,7 @@ export const RecommendationPanel: React.FC<RecommendationPanelProps> = ({
                                                 }`}
                                             />
                                         </button>
-                                        <button
-                                            aria-label="Share"
-                                            onClick={e => {
-                                                e.stopPropagation();
-                                                handleShare(item);
-                                            }}
-                                            className="p-1.5 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition"
-                                        >
-                                            <Share2 className="w-4 h-4 text-gray-400 hover:text-indigo-500" />
-                                        </button>
+<ShareListingButton item={{ id: String(item.id), title: item.title, description: item.description, price: item.price, imageUrl: item.imageUrl, listingType: item.type === "service" ? "service" : "product" }} compact variant="ghost" className="[&_button]:rounded-full [&_button]:px-1.5 [&_button]:min-h-10" />
                                     </div>
                                 </div>
                             ))
