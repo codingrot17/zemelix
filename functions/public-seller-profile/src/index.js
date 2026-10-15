@@ -792,25 +792,62 @@ async function submitReview({req,res,error,databases,databaseId}) {
   return res.json({ok:true,review});
  } catch(err){if(err?.code===404)return jsonError(res,"The qualifying order, booking, or listing was not found.",404);if(err?.code===409)return jsonError(res,"A review already exists for this transaction and listing.",409);error(err?.message??"Review submission failed.");return jsonError(res,"Could not submit your review.",500);}
 }
-async function replyToReview({req,res,error,databases,databaseId}) {
- const actorId=req.headers["x-appwrite-user-id"];if(!actorId)return jsonError(res,"Sign in to reply to reviews.",401);
- const {reviewId,vendorReply}=req.bodyJson??{};
- if(!isNonEmptyString(reviewId,128)||typeof vendorReply!=="string"||!vendorReply.trim()||vendorReply.trim().length>2000)return jsonError(res,"A review and reply of up to 2,000 characters are required.",400);
- try{const review=await databases.getDocument(databaseId,REVIEWS_TABLE_ID,reviewId);if(review.vendorId!==actorId)return jsonError(res,"Only the listing owner can reply to this review.",403);if(review.status!=="published")return jsonError(res,"Only published reviews can receive a reply.",409);const updated=await databases.updateDocument(databaseId,REVIEWS_TABLE_ID,reviewId,{vendorReply:vendorReply.trim(),vendorReplyAt:new Date().toISOString()});return res.json({ok:true,review:updated});}
- catch(err){if(err?.code===404)return jsonError(res,"Review not found.",404);error(err?.message??"Review reply failed.");return jsonError(res,"Could not save your reply.",500);}
-}
-async function listReviewsForAdmin({req,res,error,databases,databaseId,userCollectionId}) {
- const auth=await requireAdmin({req:{...req,res},databases,databaseId,userCollectionId});if(auth.error)return auth.error;
- try{const status=req.bodyJson?.status;const queries=[Query.orderDesc("$createdAt"),Query.limit(100)];if(["published","hidden","removed"].includes(status))queries.unshift(Query.equal("status",status));const result=await databases.listDocuments(databaseId,REVIEWS_TABLE_ID,queries);return res.json({ok:true,reviews:result.documents});}
- catch(err){error(err?.message??"Review moderation lookup failed.");return jsonError(res,"Could not load reviews for moderation.",500);}
-}
-async function moderateReview({req,res,error,databases,databaseId,userCollectionId}) {
- const auth=await requireAdmin({req:{...req,res},databases,databaseId,userCollectionId});if(auth.error)return auth.error;
- const {reviewId,status}=req.bodyJson??{};if(!isNonEmptyString(reviewId,128)||!["published","hidden","removed"].includes(status))return jsonError(res,"A valid review and moderation status are required.",400);
- try{await databases.getDocument(databaseId,REVIEWS_TABLE_ID,reviewId);const updated=await databases.updateDocument(databaseId,REVIEWS_TABLE_ID,reviewId,{status});return res.json({ok:true,review:updated});}
- catch(err){if(err?.code===404)return jsonError(res,"Review not found.",404);error(err?.message??"Review moderation failed.");return jsonError(res,"Could not update review status.",500);}
+async function replyToReview({ req, res, error, databases, databaseId }) {
+    const actorId = req.headers["x-appwrite-user-id"];
+    if (!actorId) return jsonError(res, "Sign in to reply to reviews.", 401);
+    const { reviewId, vendorReply } = req.bodyJson ?? {};
+    if (!isNonEmptyString(reviewId, 128) || typeof vendorReply !== "string" || !vendorReply.trim() || vendorReply.trim().length > 2000) {
+        return jsonError(res, "A review and reply of up to 2,000 characters are required.", 400);
+    }
+    try {
+        const review = await databases.getDocument(databaseId, REVIEWS_TABLE_ID, reviewId);
+        if (review.vendorId !== actorId) return jsonError(res, "Only the listing owner can reply to this review.", 403);
+        if (review.status !== "published") return jsonError(res, "Only published reviews can receive a reply.", 409);
+        if (review.vendorReply && review.vendorReply.trim()) return jsonError(res, "A reply has already been posted for this review.", 409);
+        const updated = await databases.updateDocument(databaseId, REVIEWS_TABLE_ID, reviewId, {
+            vendorReply: vendorReply.trim(),
+            vendorReplyAt: new Date().toISOString()
+        });
+        return res.json({ ok: true, review: updated });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Review not found.", 404);
+        error(err?.message ?? "Review reply failed.");
+        return jsonError(res, "Could not save your reply.", 500);
+    }
 }
 
+async function listReviewsForAdmin({ req, res, error, databases, databaseId, userCollectionId }) {
+    const auth = await requireAdmin({ req: { ...req, res }, databases, databaseId, userCollectionId });
+    if (auth.error) return auth.error;
+    try {
+        const status = req.bodyJson?.status;
+        const queries = [Query.orderDesc("$createdAt"), Query.limit(100)];
+        if (["published", "hidden", "removed"].includes(status)) queries.unshift(Query.equal("status", status));
+        const result = await databases.listDocuments({ databaseId, collectionId: REVIEWS_TABLE_ID, queries });
+        return res.json({ ok: true, reviews: result.documents });
+    } catch (err) {
+        error(err?.message ?? "Review moderation lookup failed.");
+        return jsonError(res, "Could not load reviews for moderation.", 500);
+    }
+}
+
+async function moderateReview({ req, res, error, databases, databaseId, userCollectionId }) {
+    const auth = await requireAdmin({ req: { ...req, res }, databases, databaseId, userCollectionId });
+    if (auth.error) return auth.error;
+    const { reviewId, status } = req.bodyJson ?? {};
+    if (!isNonEmptyString(reviewId, 128) || !["published", "hidden", "removed"].includes(status)) {
+        return jsonError(res, "A valid review and moderation status are required.", 400);
+    }
+    try {
+        const review = await databases.getDocument(databaseId, REVIEWS_TABLE_ID, reviewId);
+        const updated = await databases.updateDocument(databaseId, REVIEWS_TABLE_ID, reviewId, { status });
+        return res.json({ ok: true, review: updated });
+    } catch (err) {
+        if (err?.code === 404) return jsonError(res, "Review not found.", 404);
+        error(err?.message ?? "Review moderation failed.");
+        return jsonError(res, "Could not update review status.", 500);
+    }
+}
 
 const TESTIMONIALS_TABLE_ID = "testimonials";
 
