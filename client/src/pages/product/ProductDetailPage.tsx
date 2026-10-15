@@ -14,7 +14,6 @@ import type { Product } from "@/types/product";
 import {
     ArrowLeft,
     Star,
-    Share2,
     Heart,
     MessageCircle,
     Loader2
@@ -327,8 +326,6 @@ export default function ProductDetailPage() {
         }
     };
 
-    const handleShare = () => { if (!product) return; };
-
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[50vh] text-gray-400">
@@ -342,7 +339,7 @@ export default function ProductDetailPage() {
         return (
             <div className="max-w-5xl mx-auto px-4 py-16 text-center">
                 <p className="text-red-500 mb-4">
-                    {error ?? "Product not found."}
+                    {error ?? "This listing is unavailable."}
                 </p>
                 <Button variant="outline" onClick={() => navigate(-1)}>
                     <ArrowLeft className="w-4 h-4 mr-2" />
