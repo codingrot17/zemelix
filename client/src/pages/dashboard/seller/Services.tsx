@@ -329,7 +329,8 @@ export default function SellerServices() {
                                         </div>
                                     </div>
                                     <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">{service.shortDescription}</p>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {service.status === "active" && <ShareListingButton item={{ id: service.$id, title: service.title, description: service.shortDescription, price: service.price, imageUrl: service.imageUrl, listingType: "service" }} variant="outline" className="w-full" />}
                                         <Button variant="outline" onClick={() => openEdit(service)}>
                                             <Edit className="w-4 h-4 mr-2" /> Edit
                                         </Button>
