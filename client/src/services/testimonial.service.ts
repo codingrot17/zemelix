@@ -1,7 +1,8 @@
 import { functions } from "@/lib/appwrite/client";
 
 export type TestimonialType = "text" | "video";
-export interface Testimonial { $id: string; $createdAt: string; name: string; quote: string; type: TestimonialType; videoUrl: string | null; rating: number; }
+export type TestimonialStatus = "pending" | "approved" | "rejected";
+export interface Testimonial { $id: string; $createdAt: string; name: string; quote: string; type: TestimonialType; videoUrl: string | null; rating: number; status?: TestimonialStatus; }
 export interface SubmitTestimonialInput { name: string; quote: string; type: TestimonialType; videoUrl?: string; rating: number; }
 
 async function execute(operation: string, payload: Record<string, unknown> = {}) {
