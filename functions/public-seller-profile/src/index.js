@@ -816,6 +816,22 @@ async function replyToReview({ req, res, error, databases, databaseId }) {
     }
 }
 
+async function listReviewsForVendor({ req, res, error, databases, databaseId }) {
+    const vendorId = req.headers["x-appwrite-user-id"];
+    if (!vendorId) return jsonError(res, "Sign in to view your reviews.", 401);
+    try {
+        const result = await databases.listDocuments({
+            databaseId,
+            collectionId: REVIEWS_TABLE_ID,
+            queries: [Query.equal("vendorId", vendorId), Query.orderDesc("$createdAt"), Query.limit(100)]
+        });
+        return res.json({ ok: true, reviews: result.documents });
+    } catch (err) {
+        error(err?.message ?? "Vendor review lookup failed.");
+        return jsonError(res, "Could not load your reviews.", 500);
+    }
+}
+
 async function listReviewsForAdmin({ req, res, error, databases, databaseId, userCollectionId }) {
     const auth = await requireAdmin({ req: { ...req, res }, databases, databaseId, userCollectionId });
     if (auth.error) return auth.error;
@@ -955,6 +971,7 @@ export default async ({ req, res, error }) => {
     if (body.operation === "listReviewsForListing") return listReviewsForListing({ req, res, error, databases, databaseId });
     if (body.operation === "submitReview") return submitReview({ req, res, error, databases, databaseId });
     if (body.operation === "replyToReview") return replyToReview({ req, res, error, databases, databaseId });
+    if (body.operation === "listReviewsForVendor") return listReviewsForVendor({ req, res, error, databases, databaseId });
     if (body.operation === "listReviewsForAdmin") return listReviewsForAdmin({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     if (body.operation === "moderateReview") return moderateReview({ req, res, error, databases, databaseId, userCollectionId: collectionId });
     if (body.operation === "listApprovedTestimonials") return listApprovedTestimonials({ req, res, error, databases, databaseId });
