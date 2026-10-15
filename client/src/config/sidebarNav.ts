@@ -18,7 +18,8 @@ import { isServiceProvider } from "@/lib/vendorAccess";
 export const sidebarNavConfig = {
     admin: [
         { label: "Agent Dashboard", to: "/dashboard/admin", icon: HiOutlineHome },
-        { label: "Feedback & Complaints", to: "/dashboard/admin/feedback", icon: HiOutlineBell }
+        { label: "Feedback & Complaints", to: "/dashboard/admin/feedback", icon: HiOutlineBell },
+        { label: "Testimonials", to: "/dashboard/admin/testimonials", icon: HiOutlineDocumentReport }
     ],
     seller: [
         { label: "Dashboard", to: "/dashboard", icon: HiOutlineHome },
