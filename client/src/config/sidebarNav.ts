@@ -19,7 +19,8 @@ export const sidebarNavConfig = {
     admin: [
         { label: "Agent Dashboard", to: "/dashboard/admin", icon: HiOutlineHome },
         { label: "Feedback & Complaints", to: "/dashboard/admin/feedback", icon: HiOutlineBell },
-        { label: "Testimonials", to: "/dashboard/admin/testimonials", icon: HiOutlineDocumentReport }
+        { label: "Testimonials", to: "/dashboard/admin/testimonials", icon: HiOutlineDocumentReport },
+        { label: "Reviews", to: "/dashboard/admin/reviews", icon: HiOutlineClipboardList }
     ],
     seller: [
         { label: "Dashboard", to: "/dashboard", icon: HiOutlineHome },
