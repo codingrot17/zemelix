@@ -22,6 +22,8 @@ export default function SupportChat({ onClose }: { onClose: () => void }) {
   const [active, setActive] = useState<SupportConversation | null>(null);
   const [messages, setMessages] = useState<ChatLine[]>([{ id: "welcome", role: "bot", message: "Hi! 👋 I’m Zemelix support. Choose a quick answer below or send us a message." }]);
   const [subject, setSubject] = useState("");
+  const [category, setCategory] = useState("general");
+  const [priority, setPriority] = useState<"normal" | "urgent">("normal");
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -57,7 +59,7 @@ export default function SupportChat({ onClose }: { onClose: () => void }) {
     if (!subject.trim() || !draft.trim()) return;
     setSending(true); setError("");
     try {
-      const result = await createSupportConversation(subject.trim(), draft.trim());
+      const result = await createSupportConversation(subject.trim(), draft.trim(), category, priority);
       setActive(result.conversation); setConversations(prev => [result.conversation, ...prev]);
       setMessages(result.messages.map(m => ({ id: m.$id, role: "user", message: m.message, createdAt: m.$createdAt })));
       setDraft(""); setSubject(""); setView("conversation");
@@ -104,6 +106,8 @@ export default function SupportChat({ onClose }: { onClose: () => void }) {
       {view === "new" && <form onSubmit={startConversation} className="space-y-3">
         <p className="text-sm text-gray-600 dark:text-gray-300">Tell us what you need help with. Our team can reply in your dashboard chat.</p>
         <label className="block text-xs font-medium">Subject<input required maxLength={180} value={subject} onChange={e=>setSubject(e.target.value)} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm dark:bg-gray-900" placeholder="e.g. Help with a booking"/></label>
+        <label className="block text-xs font-medium">Category<select value={category} onChange={e=>setCategory(e.target.value)} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm dark:bg-gray-900"><option value="account">Account &amp; profile</option><option value="orders">Orders</option><option value="bookings">Bookings</option><option value="payments">Payments</option><option value="technical">Technical problem</option><option value="general">General enquiry</option></select></label>
+        <label className="block text-xs font-medium">Priority<select value={priority} onChange={e=>setPriority(e.target.value as "normal" | "urgent")} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm dark:bg-gray-900"><option value="normal">Normal</option><option value="urgent">Urgent</option></select></label>
         <label className="block text-xs font-medium">Message<textarea required maxLength={4000} value={draft} onChange={e=>setDraft(e.target.value)} rows={5} className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-sm dark:bg-gray-900" placeholder="Describe the issue..."/></label>
         <Button type="submit" disabled={sending} className="w-full">{sending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Send to support</Button>
       </form>}
