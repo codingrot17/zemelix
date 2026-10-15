@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Heart, Star } from "lucide-react";
+import { Star } from "lucide-react";
+import FavoriteButton from "@/components/shared/FavoriteButton";
 import ShareListingButton from "@/components/shared/ShareListingButton";
 import { Link, useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
@@ -22,7 +23,6 @@ export default function ProductCard({
 }) {
     const navigate = useNavigate();
     const { add } = useCart();
-    const [wishlisted, setWishlisted] = useState(false);
     const [added, setAdded] = useState(false);
     const [reviews, setReviews] = useState<Review[]>([]);
 
@@ -61,23 +61,6 @@ export default function ProductCard({
         setTimeout(() => setAdded(false), 2000);
     };
 
-    const toggleWishlist = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setWishlisted(prev => {
-            const next = !prev;
-            try {
-                const stored: string[] = JSON.parse(
-                    localStorage.getItem("wishlist") || "[]"
-                );
-                const updated = next
-                    ? [...stored, product.id]
-                    : stored.filter(id => id !== product.id);
-                localStorage.setItem("wishlist", JSON.stringify(updated));
-            } catch {}
-            return next;
-        });
-    };
-
     return (
         <div
             className="group relative flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
@@ -107,20 +90,7 @@ export default function ProductCard({
 
                 <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
                 <ShareListingButton item={{ id: product.id, title: product.title, description: product.shortDescription, price: product.price, imageUrl: product.imageUrl, listingType: isService ? "service" : "product" }} compact variant="secondary" className="[&_button]:rounded-full [&_button]:bg-white/90 [&_button]:shadow" />
-                {/* Wishlist */}
-                <button
-                    onClick={toggleWishlist}
-                    className="absolute top-3 right-3 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-sm rounded-full p-1.5 shadow hover:scale-110 transition"
-                    aria-label="Wishlist"
-                >
-                    <Heart
-                        className={`w-4 h-4 transition ${
-                            wishlisted
-                                ? "fill-red-500 text-red-500"
-                                : "text-zinc-400"
-                        }`}
-                    />
-                </button>
+                <FavoriteButton id={product.id} size="sm" className="bg-white/90 dark:bg-zinc-800/90" />
                 </div>
 
                 {/* Out of stock overlay */}
