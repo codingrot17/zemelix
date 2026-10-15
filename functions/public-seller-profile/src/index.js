@@ -596,7 +596,7 @@ async function mutateSellerOrderInventory({ req, res, error, databases, database
         }
 
         if (undo) {
-            const priorReview = await databases.listDocuments(databaseId, REVIEWS_TABLE_ID, [Query.equal("orderId", orderId), Query.limit(1)]);
+            const priorReview = await databases.listDocuments({ databaseId, collectionId: REVIEWS_TABLE_ID, queries: [Query.equal("orderId", orderId), Query.limit(1)], transactionId });
             if (priorReview.documents.length) throw orderMutationError("This purchase cannot be reverted after a review has been submitted.", 409);
         }
 
@@ -729,8 +729,8 @@ async function setSellerOrderArchived({ req, res, error, databases, databaseId, 
 
 
 const REVIEWS_TABLE_ID = "reviews";
-const PRODUCTS_COLLECTIONS_ID_FOR_REVIEWS = "products";
-const BOOKINGS_TABLES_ID_FOR_REVIEWS = "bookings";
+const PRODUCTS_COLLECTIONS_ID_FOR_REVIEWS = PRODUCTS_COLLECTION_ID;
+const BOOKINGS_TABLES_ID_FOR_REVIEWS = BOOKINGS_TABLE_ID;
 
 async function listReviewsForListing({ req, res, error, databases, databaseId }) {
  const listingId=req.bodyJson?.listingId;
