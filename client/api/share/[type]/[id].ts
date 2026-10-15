@@ -50,6 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let image = absoluteUrl("/images/brand-dark.jpg", origin);
   let price = "";
   let unavailable = false;
+  let temporaryError = false;
 
   try {
     if (!projectId || !databaseId || !collectionId) throw new Error("Missing Appwrite public configuration");
@@ -59,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (response.status === 404) {
       unavailable = true;
     } else if (!response.ok) {
-      throw new Error(`Appwrite returned ${response.status}`);
+      temporaryError = true;
     } else {
       const item = await response.json() as Record<string, unknown>;
       if (item.status && item.status !== "active") unavailable = true;
@@ -73,12 +74,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error) {
     console.error("Unable to resolve listing share metadata", error);
-    unavailable = true;
+    temporaryError = true;
   }
 
   if (unavailable) {
     title = "This listing is no longer available | Zemelix";
-    description = "This item may have been removed or is temporarily unavailable. Browse Zemelix for more products and services.";
+    description = "This item has been removed or is no longer publicly available. Browse Zemelix for more products and services.";
+    image = absoluteUrl("/images/brand-dark.jpg", origin);
+  } else if (temporaryError) {
+    title = "Listing temporarily unavailable | Zemelix";
+    description = "We could not load this listing right now. Please try again or browse Zemelix for more products and services.";
     image = absoluteUrl("/images/brand-dark.jpg", origin);
   }
 
@@ -86,9 +91,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const safeDescription = escapeHtml(description);
   const safeImage = escapeHtml(image);
   const safeCanonical = escapeHtml(canonical);
-  const fallback = unavailable
+  const fallback = (unavailable || temporaryError)
     ? `<main><h1>${safeTitle}</h1><p>${safeDescription}</p><a href="/">Browse Zemelix</a></main>`
     : `<main><h1>${safeTitle}</h1><p>${safeDescription}</p><p>Opening this listing on Zemelix…</p><a href="${safeCanonical}">Continue to listing</a></main>`;
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeTitle}</title><meta name="description" content="${safeDescription}"><link rel="canonical" href="${safeCanonical}"><meta property="og:type" content="product"><meta property="og:site_name" content="Zemelix"><meta property="og:title" content="${safeTitle}"><meta property="og:description" content="${safeDescription}"><meta property="og:image" content="${safeImage}"><meta property="og:url" content="${safeCanonical}"><meta property="og:image:alt" content="${safeTitle}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${safeTitle}"><meta name="twitter:description" content="${safeDescription}"><meta name="twitter:image" content="${safeImage}">${unavailable ? "" : `<script>window.location.replace(${JSON.stringify(canonical)})</script><meta http-equiv="refresh" content="0;url=${safeCanonical}">`} </head><body>${fallback}</body></html>`;
-  res.status(unavailable ? 404 : 200).setHeader("Content-Type", "text/html; charset=utf-8").setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300").send(html);
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeTitle}</title><meta name="description" content="${safeDescription}"><link rel="canonical" href="${safeCanonical}"><meta property="og:type" content="product"><meta property="og:site_name" content="Zemelix"><meta property="og:title" content="${safeTitle}"><meta property="og:description" content="${safeDescription}"><meta property="og:image" content="${safeImage}"><meta property="og:url" content="${safeCanonical}"><meta property="og:image:alt" content="${safeTitle}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${safeTitle}"><meta name="twitter:description" content="${safeDescription}"><meta name="twitter:image" content="${safeImage}">${(unavailable || temporaryError) ? "" : `<script>window.location.replace(${JSON.stringify(canonical)})</script><meta http-equiv="refresh" content="0;url=${safeCanonical}">`} </head><body>${fallback}</body></html>`;
+  res.status(unavailable ? 404 : temporaryError ? 503 : 200).setHeader("Content-Type", "text/html; charset=utf-8").setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300").send(html);
 }
