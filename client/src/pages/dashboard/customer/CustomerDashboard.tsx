@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { listCustomerOrders, type Order } from "@/services/order.service";
 import { listBuyerBookings, type Booking } from "@/services/booking.service";
 import { useNavigate } from "react-router-dom";
+import { useFavorites } from "@/hooks/useFavorites";
 
 export default function CustomerDashboard() {
     const { user } = useAuth();
@@ -13,6 +14,7 @@ export default function CustomerDashboard() {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const { count: favoritesCount } = useFavorites();
 
     const firstName = user?.name?.split(" ")[0] ?? "there";
 
@@ -50,7 +52,7 @@ export default function CustomerDashboard() {
                 <StatCard label="Total Orders" value={loading ? "…" : String(orders.length)} icon={<ShoppingBag className="w-5 h-5" />} onClick={() => navigate("/dashboard/user/orders")} />
                 <StatCard label="Open Orders" value={loading ? "…" : String(activeOrders.length)} icon={<Clock className="w-5 h-5" />} onClick={() => navigate("/dashboard/user/orders")} />
                 <StatCard label="Active Bookings" value={loading ? "…" : String(activeBookings.length)} icon={<CalendarCheck className="w-5 h-5" />} onClick={() => navigate("/dashboard/user/bookings")} />
-                <StatCard label="Favorites" value="—" icon={<Heart className="w-5 h-5" />} onClick={() => navigate("/dashboard/user/favorites")} />
+                <StatCard label="Favorites" value={String(favoritesCount)} icon={<Heart className="w-5 h-5" />} onClick={() => navigate("/dashboard/user/favorites")} />
             </div>
             <div className="grid lg:grid-cols-2 gap-6">
                 <ActivityCard title="Recent Orders" empty="No orders yet. Start exploring the marketplace." actionLabel="View all" onAction={() => navigate("/dashboard/user/orders")}>
