@@ -51,7 +51,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let price = "";
   let unavailable = false;
   let temporaryError = false;
-  let temporaryError = false;
 
   try {
     if (!projectId || !databaseId || !collectionId) throw new Error("Missing Appwrite public configuration");
