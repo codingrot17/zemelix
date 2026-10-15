@@ -294,7 +294,7 @@ export default function SellerServices() {
                                             <td className="px-5 py-4"><StatusBadge status={service.status} /></td>
                                             <td className="px-5 py-4">
                                                 <div className="flex justify-end gap-2">
-                                                    {service.status === "active" && <ShareListingButton item={{ id: service.$id, title: service.title, description: service.shortDescription, price: service.price, imageUrl: service.imageUrl, listingType: "service" }} compact variant="outline" />}
+                                                    {service.status === "active" && <ShareListingButton item={{ id: service.$id, title: service.title, description: service.shortDescription, price: service.price, imageUrl: service.imageUrl, listingType: "service" }} variant="outline" />}
                                                     <Button size="sm" variant="outline" onClick={() => openEdit(service)}>
                                                         <Edit className="w-4 h-4 mr-1" /> Edit
                                                     </Button>
