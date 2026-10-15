@@ -1,4 +1,10 @@
-import ComingSoon from "@/components/ui/ComingSoon";
-export default function SupportPage() {
-  return <ComingSoon title="Support" backTo="/" backLabel="Back" />;
-}
+import { HelpCircle, MessageCircle, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+const faqs = [
+{q:"How do I buy something?",a:"Open a product listing and follow the available purchase or contact action. Order activity appears in your dashboard."},
+{q:"How do I book a service?",a:"Open a service listing, choose Book Now, and submit the booking request. You can track it from your dashboard."},
+{q:"How do I contact Zemelix support?",a:"Open the support chat and choose Message the support team. Sign in so your ticket and replies are saved to your account."},
+{q:"What should I include in a support request?",a:"Describe the issue clearly and include the related order or booking reference when relevant. Never share your password or one-time verification codes."}
+];
+export default function SupportPage(){function openChat(){window.dispatchEvent(new Event("zemelix:open-support"));}return <div className="mx-auto max-w-4xl space-y-8 px-4 py-10 sm:py-14"><header className="text-center"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600"><HelpCircle className="h-7 w-7"/></div><h1 className="text-3xl font-bold">How can we help?</h1><p className="mt-2 text-gray-600">Find a quick answer or contact the Zemelix support team.</p><Button className="mt-5" onClick={openChat}><MessageCircle className="mr-2 h-4 w-4"/>Open support chat</Button></header><section className="space-y-3"><h2 className="text-xl font-semibold">Frequently asked questions</h2>{faqs.map(item=><details key={item.q} className="rounded-xl border bg-white p-4"><summary className="cursor-pointer font-medium">{item.q}</summary><p className="mt-3 text-sm leading-6 text-gray-600">{item.a}</p></details>)}</section><div className="flex items-start gap-3 rounded-xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-950"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0"/><p>For your security, support will never ask you for your password or verification code. You can also visit <Link className="font-semibold underline" to="/dashboard/user/feedback">Feedback &amp; Complaints</Link> after signing in to share feedback or report a problem.</p></div></div>}
