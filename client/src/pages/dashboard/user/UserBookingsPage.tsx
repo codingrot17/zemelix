@@ -6,6 +6,7 @@ import { listBuyerBookings,updateBookingStatus,type Booking } from "@/services/b
 import { BookingCard } from "@/components/shared/BookingCard";
 import { BookingStatusTabs,type BookingView } from "@/components/shared/BookingStatusTabs";
 import ReviewForm from "@/components/shared/ReviewForm";
+import PostInteractionFeedback from "@/components/shared/PostInteractionFeedback";
 
 const activeStatuses=["requested","accepted"];
 const historyStatuses=["declined","cancelled","completed","no_show","expired"];
@@ -50,7 +51,7 @@ export default function UserBookingsPage(){
    <BookingStatusTabs view={view} onChange={setView} counts={{active:active.length,history:history.length,archived:archived.length}}/>
    {loading?<div className="py-16 text-center text-gray-400">Loading bookings…</div>:visible.length===0?
     <div className="p-12 text-center text-gray-500"><p className="font-semibold text-gray-900 dark:text-white">{view==="active"?"No active bookings":view==="history"?"No booking history":"No archived bookings"}</p><p className="text-sm mt-1">{view==="active"?"Your pending and accepted bookings will appear here.":view==="history"?"Declined, cancelled, completed, and no-show bookings will remain here.":"Archived bookings will appear here when available."}</p></div>
-    :<div className="divide-y">{visible.map(b=><div key={b.$id} className="p-5"><BookingCard booking={b} actions={b.status==="requested"?<Button size="sm" variant="outline" onClick={()=>void cancel(b.$id)} disabled={busy===b.$id}><XCircle className="w-4 h-4 mr-2"/>Cancel request</Button>:undefined}/>{b.status==="completed"&&<ReviewForm listingId={b.serviceId} listingType="service" bookingId={b.$id}/>}</div>)}</div>}
+    :<div className="divide-y">{visible.map(b=><div key={b.$id} className="p-5"><BookingCard booking={b} actions={b.status==="requested"?<Button size="sm" variant="outline" onClick={()=>void cancel(b.$id)} disabled={busy===b.$id}><XCircle className="w-4 h-4 mr-2"/>Cancel request</Button>:undefined}/>{b.status==="completed"&&<><ReviewForm listingId={b.serviceId} listingType="service" bookingId={b.$id}/><PostInteractionFeedback bookingId={b.$id} interactionLabel="booking"/></>}</div>)}</div>}
   </div>
  </div>;
 }
