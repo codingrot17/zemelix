@@ -736,21 +736,10 @@ async function listReviewsForListing({ req, res, error, databases, databaseId })
     const listingId = req.bodyJson?.listingId;
     if (!isNonEmptyString(listingId, 128)) return jsonError(res, "A valid listingId is required.", 400);
     try {
-        const result = await databases.listDocuments({
-            databaseId,
-            collectionId: REVIEWS_TABLE_ID,
-            queries: [
-                Query.equal("listingId", listingId),
-                Query.equal("status", "published"),
-                Query.orderDesc("$createdAt"),
-                Query.limit(100)
-            ]
-        });
-        return res.json({ ok: true, reviews: result.documents });
-    } catch (err) {
-        error(err?.message ?? "Review lookup failed.");
-        return jsonError(res, "Could not load reviews.", 500);
-    }
+        const result = await databases.listDocuments({ databaseId, collectionId: REVIEWS_TABLE_ID, queries: [Query.equal("listingId", listingId), Query.equal("status", "published"), Query.orderDesc("$createdAt"), Query.limit(100)] });
+        const reviews = result.documents.map(review => ({ $id: review.$id, $createdAt: review.$createdAt, listingId: review.listingId, listingType: review.listingType, rating: review.rating, reviewText: review.reviewText, vendorReply: review.vendorReply, vendorReplyAt: review.vendorReplyAt, editedAt: review.editedAt, status: review.status }));
+        return res.json({ ok: true, reviews });
+    } catch (err) { error(err?.message ?? "Review lookup failed."); return jsonError(res, "Could not load reviews.", 500); }
 }
 async function submitReview({req,res,error,databases,databaseId}) {
  const reviewerId=req.headers["x-appwrite-user-id"];
