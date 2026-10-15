@@ -80,12 +80,12 @@ export default function ProductCard({
 
     return (
         <div
-            className="group relative flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
+            className="group relative flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer"
             style={validSellerBrandColor ? { borderTopColor: validSellerBrandColor } : undefined}
             onClick={() => navigate(`/product/${product.id}`)}
         >
             {/* ── Image ── */}
-            <div className="relative h-52 w-full overflow-hidden">
+            <div className="relative h-52 w-full overflow-hidden rounded-t-2xl">
                 <img
                     src={product.imageUrl || "/images/placeholder.svg"}
                     alt={product.title}
