@@ -1,4 +1,4 @@
-import ComingSoon from "@/components/ui/ComingSoon";
-export default function ContactPage() {
-  return <ComingSoon title="Contact Us" backTo="/" backLabel="Back" />;
-}
+import { Mail, MessageCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+export default function ContactPage(){function openChat(){window.dispatchEvent(new Event("zemelix:open-support"));}return <main className="mx-auto max-w-3xl px-4 py-12 sm:py-16"><div className="rounded-2xl border bg-white p-6 text-center shadow-sm sm:p-10"><div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600"><Mail className="h-7 w-7"/></div><h1 className="text-3xl font-bold">Contact Zemelix</h1><p className="mx-auto mt-3 max-w-xl text-gray-600">Need help with an order, booking, account, or using the marketplace? Start a support conversation and keep your replies together in one place.</p><Button className="mt-6" onClick={openChat}><MessageCircle className="mr-2 h-4 w-4"/>Chat with support</Button><p className="mt-5 text-sm text-gray-500">For quick answers, visit our <Link className="font-medium text-indigo-600 underline" to="/support">Help &amp; Support page</Link>. Signed-in users can also submit <Link className="font-medium text-indigo-600 underline" to="/dashboard/user/feedback">feedback or a complaint</Link>.</p></div></main>}
