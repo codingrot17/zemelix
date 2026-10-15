@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, DollarSign, Edit, Eye, ImagePlus, Loader2, Package, Plus, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ShareListingButton from "@/components/shared/ShareListingButton";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -153,6 +154,7 @@ export default function SellerProducts() {
                                         <td className="px-4 py-3"><StatusBadge status={product.status} /></td>
                                         <td className="px-4 py-3">
                                             <div className="flex justify-end gap-1">
+                                                {product.status === "active" && <ShareListingButton item={{ id: product.$id, title: product.title, description: product.shortDescription, price: product.price, imageUrl: product.imageUrl, listingType: "product" }} compact variant="ghost" />}
                                                 <Button size="sm" variant="ghost" onClick={() => openEdit(product)}><Edit className="w-4 h-4" /></Button>
                                                 <Button size="sm" variant="ghost" disabled={deletingId === product.$id} onClick={() => handleDelete(product)}>
                                                     {deletingId === product.$id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 text-red-500" />}
@@ -185,6 +187,7 @@ export default function SellerProducts() {
                                     </div>
                                 </div>
                                 <div className="flex justify-end gap-2 mt-3">
+                                    {product.status === "active" && <ShareListingButton item={{ id: product.$id, title: product.title, description: product.shortDescription, price: product.price, imageUrl: product.imageUrl, listingType: "product" }} compact variant="outline" />}
                                     <Button size="sm" variant="outline" onClick={() => openEdit(product)}><Edit className="w-4 h-4 mr-1" />Edit</Button>
                                     <Button size="sm" variant="outline" disabled={deletingId === product.$id} onClick={() => handleDelete(product)}>
                                         {deletingId === product.$id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1 text-red-500" />Delete</>}
