@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, Copy, Facebook, Share2, X as XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -37,13 +38,26 @@ export default function ShareListingButton({
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 80, left: 8 });
+  const toggleMenu = () => {
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const menuHeight = Math.min(320, window.innerHeight - 24);
+      const top = rect.bottom + menuHeight + 12 > window.innerHeight ? Math.max(12, rect.top - menuHeight - 8) : rect.bottom + 8;
+      const left = Math.max(12, Math.min(rect.right - 224, window.innerWidth - 236));
+      setMenuPosition({ top, left });
+    }
+    setOpen(value => !value);
+  };
   const url = getShareUrl(item);
   const shareText = getShareText(item, url);
 
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setOpen(false);
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -111,19 +125,20 @@ export default function ShareListingButton({
   return (
     <div className={`relative inline-flex ${className}`} ref={rootRef} onClick={event => event.stopPropagation()}>
       <Button
+        ref={triggerRef}
         type="button"
         variant={variant}
         className={`min-h-11 ${compact ? "w-11 px-0" : ""}`}
         aria-label={`Share ${item.listingType ?? "listing"}: ${item.title}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen(value => !value)}
+        onClick={toggleMenu}
       >
         <Share2 className="h-4 w-4" />
         {!compact && <span className="ml-2">Share</span>}
       </Button>
-      {open && (
-        <div role="menu" aria-label="Share listing" className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-2 shadow-xl dark:border-gray-700 dark:bg-gray-900">
+      {open && createPortal(
+        <div ref={menuRef} role="menu" aria-label="Share listing" style={{ position: "fixed", top: menuPosition.top, left: menuPosition.left, width: 224, maxHeight: "min(80vh, 320px)", overflowY: "auto" }} className="z-[9999] rounded-xl border border-gray-200 bg-white p-2 shadow-2xl ring-1 ring-black/10 dark:border-gray-700 dark:bg-gray-900">
           <p className="px-3 py-2 text-xs font-semibold text-gray-500">Share this listing</p>
           <button role="menuitem" type="button" onClick={() => openShareTarget("whatsapp")} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800">
             <span className="w-5 text-center text-green-600">◉</span> WhatsApp
@@ -142,7 +157,8 @@ export default function ShareListingButton({
               <Share2 className="h-4 w-4" /> More sharing options
             </button>
           )}
-        </div>
+        </div>,
+        document.body
       )}
       {message && <span role="status" className="absolute right-0 top-full z-[60] mt-2 whitespace-nowrap rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg">{message}{message.includes("copied") ? <Check className="ml-1 inline h-3 w-3" /> : null}</span>}
     </div>
