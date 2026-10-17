@@ -208,8 +208,14 @@ async function createSupportConversation({ req, res, error, databases, databaseI
     if (actor.role === "admin") return jsonError(res, "Admins should reply from the support inbox.", 400);
     const subject = req.bodyJson?.subject;
     const message = req.bodyJson?.message;
+    const allowedCategories = ["account", "orders", "bookings", "payments", "technical", "general"];
+    const category = req.bodyJson?.category ?? "general";
+    const priority = req.bodyJson?.priority ?? "normal";
     if (!isNonEmptyString(subject, 180) || !isNonEmptyString(message, 4000)) {
         return jsonError(res, "A subject and message are required.", 400);
+    }
+    if (!allowedCategories.includes(category) || !["normal", "urgent"].includes(priority)) {
+        return jsonError(res, "Choose a valid support category and priority.", 400);
     }
     try {
         const now = new Date().toISOString();
@@ -221,6 +227,8 @@ async function createSupportConversation({ req, res, error, databases, databaseI
                 ownerName: String(actor.profile.fullName || ""),
                 ownerEmail: String(actor.profile.email || ""),
                 subject: subject.trim(),
+                category,
+                priority,
                 status: "open",
                 lastMessage: message.trim(),
                 lastMessageAt: now,
