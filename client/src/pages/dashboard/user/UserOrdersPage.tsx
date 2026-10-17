@@ -8,9 +8,9 @@ import PostInteractionFeedback from "@/components/shared/PostInteractionFeedback
 
 type OrderWithItems = Order & { items: OrderItem[] };
 function statusClass(status: Order["status"]) {
-    if (status === "purchased") return "bg-green-100 text-green-700";
-    if (status === "cancelled") return "bg-red-100 text-red-700";
-    return "bg-yellow-100 text-yellow-700";
+    if (status === "purchased") return "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300";
+    if (status === "cancelled") return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
+    return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300";
 }
 export default function UserOrdersPage() {
     const { user } = useAuth();
@@ -35,8 +35,8 @@ export default function UserOrdersPage() {
             <div><h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">My Orders</h1><p className="text-gray-600 dark:text-gray-400 mt-1">Track your marketplace orders and their current status.</p></div>
             <Button variant="outline" onClick={() => void load()} disabled={loading} className="w-full sm:w-auto"><RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />Refresh</Button>
         </div>
-        {error && <div className="flex items-center gap-2 p-4 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700"><AlertCircle className="w-4 h-4" />{error}</div>}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border overflow-hidden">
+        {error && <div className="flex items-start gap-2 p-4 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"><AlertCircle className="w-4 h-4" />{error}</div>}
+        <div className="min-w-0 bg-card text-card-foreground rounded-lg shadow border border-border overflow-hidden">
             {loading ? <div className="py-16 text-center text-gray-400"><Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Loading orders…</div> :
                 orders.length === 0 ? <div className="p-12 text-center"><ShoppingBag className="w-10 h-10 text-gray-300 mx-auto mb-3" /><h2 className="font-semibold text-gray-900 dark:text-white">No orders yet</h2><p className="text-sm text-gray-500 mt-1">Orders created from your marketplace activity will appear here.</p></div> :
                 <div className="divide-y">{orders.map(order => {
