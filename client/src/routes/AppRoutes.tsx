@@ -14,7 +14,7 @@ import SellerStorePage from "@/pages/seller/SellerStorePage";
 
 // Auth Pages
 import LoginPage from "@/pages/auth/login";
-import RegisterPage from "@/pages/auth/register";
+import RegisterPage from "@/pages/auth/register";\nimport ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";\nimport ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 import Unauthorized from "@/pages/auth/Unauthorized";
 import Verify from "@/pages/auth/Verify";
 
@@ -130,7 +130,7 @@ export default function AppRoutes() {
                 AUTH ROUTES (NO GUARD)
             ======================================== */}
                 <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/register" element={<RegisterPage />} />\n                <Route path="/forgot-password" element={<ForgotPasswordPage />} />\n                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />
                 <Route path="/verify" element={<Verify />} />
                 <Route path="/auth/verify" element={<Verify />} />
