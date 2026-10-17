@@ -1,5 +1,5 @@
 // client/src/pages/auth/login.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import AuthLayout from "@/components/layouts/AuthLayout";
 import { Input } from "@/components/ui/input";
@@ -18,13 +18,12 @@ export default function LoginPage() {
     // Get redirect path from URL or default to dashboard
     const redirectTo = searchParams.get("redirect") || "/dashboard";
 
-    // Form state
-    const [email, setEmail] = useState("");
+    // Remember Me stores the email on this device; authentication remains managed by Appwrite.\n    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);\n\n    useEffect(() => {\n        try {\n            const savedEmail = localStorage.getItem("zemelix-remembered-email");\n            if (savedEmail) { setEmail(savedEmail); setRememberMe(true); }\n        } catch { /* Storage may be disabled by the browser. */ }\n    }, []);
 
     // Client-side validation
     const validateForm = (): boolean => {
@@ -62,7 +61,7 @@ export default function LoginPage() {
 
         try {
             // Login via AuthContext
-            await login(email, password);
+            await login(email, password);\n            try {\n                if (rememberMe) localStorage.setItem("zemelix-remembered-email", email.trim());\n                else localStorage.removeItem("zemelix-remembered-email");\n            } catch { /* Sign-in should still work when storage is unavailable. */ }
 
             // Navigate to intended destination
             navigate(redirectTo, { replace: true });
@@ -161,7 +160,7 @@ export default function LoginPage() {
                             htmlFor="remember"
                             className="text-sm font-normal cursor-pointer"
                         >
-                            Remember me
+                            Remember email on this device
                         </Label>
                     </div>
 
