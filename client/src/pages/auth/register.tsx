@@ -274,7 +274,7 @@ export default function RegisterPage() {
                     </Label>
                 </div>
 
-                {/* Submit */}
+                <p className="text-xs leading-relaxed text-muted-foreground">Please review our <Link to="/privacy" target="_blank" rel="noreferrer" className="font-medium text-indigo-600 underline dark:text-indigo-400">Privacy Policy</Link> to understand how account and marketplace information is handled.</p>\n\n                {/* Submit */}
                 <Button
                     type="submit"
                     className="w-full h-11 mt-6"
