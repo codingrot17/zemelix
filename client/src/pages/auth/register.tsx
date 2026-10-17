@@ -257,17 +257,10 @@ export default function RegisterPage() {
                         <Link
                             to="/terms"
                             target="_blank"
+                            rel="noreferrer"
                             className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 font-medium"
                         >
                             Terms and Conditions
-                        </Link>{" "}
-                        and{" "}
-                        <Link
-                            to="/privacy"
-                            target="_blank"
-                            className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 font-medium"
-                        >
-                            Privacy Policy
                         </Link>
                     </Label>
                 </div>
