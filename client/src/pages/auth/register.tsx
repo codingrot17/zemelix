@@ -193,7 +193,6 @@ export default function RegisterPage() {
                             aria-label={
                                 showPassword ? "Hide password" : "Show password"
                             }
-                            tabIndex={-1}
                         >
                             {showPassword ? (
                                 <EyeOff size={18} />
@@ -231,7 +230,6 @@ export default function RegisterPage() {
                                     ? "Hide password"
                                     : "Show password"
                             }
-                            tabIndex={-1}
                         >
                             {showConfirmPassword ? (
                                 <EyeOff size={18} />
@@ -274,7 +272,9 @@ export default function RegisterPage() {
                     </Label>
                 </div>
 
-                <p className="text-xs leading-relaxed text-muted-foreground">Please review our <Link to="/privacy" target="_blank" rel="noreferrer" className="font-medium text-indigo-600 underline dark:text-indigo-400">Privacy Policy</Link> to understand how account and marketplace information is handled.</p>\n\n                {/* Submit */}
+                <p className="text-xs leading-relaxed text-muted-foreground">Please review our <Link to="/privacy" target="_blank" rel="noreferrer" className="font-medium text-indigo-600 underline dark:text-indigo-400">Privacy Policy</Link> to understand how account and marketplace information is handled.</p>
+
+                {/* Submit */}
                 <Button
                     type="submit"
                     className="w-full h-11 mt-6"
