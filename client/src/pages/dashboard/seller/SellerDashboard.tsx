@@ -39,7 +39,7 @@ function StatusBadge({ status }: { status: string }) {
 
     return (
         <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${styles[status] ?? styles.draft}`}
+            className={`inline-flex shrink-0 items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${styles[status] ?? styles.draft}`}
         >
             {status}
         </span>
@@ -226,7 +226,7 @@ export default function SellerDashboard() {
 
             {provider ? (
                 <div>
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
                         <div><h2 className="text-base font-semibold text-gray-900 dark:text-white">Bookings</h2><p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your service request pipeline and completed bookings</p></div>
                         <button onClick={() => navigate("/dashboard/seller/bookings")} className="text-xs text-teal-600 hover:text-teal-700 font-medium">View bookings →</button>
                     </div>
@@ -238,7 +238,7 @@ export default function SellerDashboard() {
                 </div>
             ) : (
                 <div>
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
                         <div><h2 className="text-base font-semibold text-gray-900 dark:text-white">Leads & Revenue</h2><p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your current lead pipeline and confirmed sales</p></div>
                         <button onClick={() => navigate("/dashboard/seller/orders")} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">View orders →</button>
                     </div>
@@ -251,8 +251,8 @@ export default function SellerDashboard() {
                 </div>
             )}
             
-            <div className="grid lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+                <div className="min-w-0 bg-card text-card-foreground rounded-lg shadow border border-border">
                     <div className="flex items-center justify-between p-5 border-b">
                         <div>
                             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
@@ -297,7 +297,7 @@ export default function SellerDashboard() {
                             recentProducts.map(product => (
                                 <div
                                     key={product.$id}
-                                    className="flex items-center gap-3 p-4"
+                                    className="flex min-w-0 items-center gap-3 p-3 sm:p-4"
                                 >
                                     <img
                                         src={
@@ -322,7 +322,7 @@ export default function SellerDashboard() {
                     </div>
                 </div>
 
-                {!provider && (                <div className="bg-white dark:bg-gray-800 rounded-lg shadow border">
+                {!provider && (                <div className="min-w-0 bg-card text-card-foreground rounded-lg shadow border border-border">
                     <div className="flex items-center justify-between p-5 border-b">
                         <div>
                             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
@@ -355,7 +355,7 @@ export default function SellerDashboard() {
                             lowStockProducts.map(product => (
                                 <div
                                     key={product.$id}
-                                    className="flex items-center gap-3 p-4"
+                                    className="flex min-w-0 items-center gap-3 p-3 sm:p-4"
                                 >
                                     <div className="w-9 h-9 rounded-full bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 flex items-center justify-center flex-shrink-0">
                                         <Package className="w-4 h-4" />
@@ -392,11 +392,11 @@ export default function SellerDashboard() {
 
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow border p-5">
+            <div className="min-w-0 bg-card text-card-foreground rounded-lg shadow border border-border p-4 sm:p-5">
                 <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
                     Quick Actions
                 </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                     <QuickAction
                         label={provider ? "My Services" : "My Products"}
                         icon={<Package className="w-5 h-5" />}
@@ -442,8 +442,8 @@ function StatCard({
     };
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border p-5">
-            <div className="flex items-center justify-between mb-3">
+        <div className="min-w-0 bg-card text-card-foreground rounded-lg shadow border border-border p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
                 <div className={`p-2.5 rounded-lg ${bg[color]} text-white`}>
                     {icon}
                 </div>
