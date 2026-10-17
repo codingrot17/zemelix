@@ -18,7 +18,6 @@ export async function validateSession(): Promise<boolean> {
 
 export async function createSession(email: string, password: string) {
     try {
-        // Login creates a new session without destroying sessions on other devices.
         return await account.createEmailPasswordSession(email, password);
     } catch (error) {
         console.error("Session creation failed:", error);
@@ -28,7 +27,6 @@ export async function createSession(email: string, password: string) {
 
 export async function deleteSession() {
     try {
-        // Normal logout only ends the current device/session.
         await account.deleteSession("current");
     } catch (error) {
         console.warn("Session deletion warning:", error);
@@ -37,7 +35,6 @@ export async function deleteSession() {
 
 export async function deleteAllSessions() {
     try {
-        // Explicitly reserved for a future "log out all devices" action.
         await account.deleteSessions();
     } catch (error) {
         console.warn("All-session deletion warning:", error);
@@ -70,24 +67,15 @@ export async function registerUser(
     name: string
 ) {
     try {
-        const newUser = await account.create(
-            ID.unique(),
-            email,
-            password,
-            name
-        );
-
+        const newUser = await account.create(ID.unique(), email, password, name);
         await createSession(email, password);
 
         try {
             await createUserProfile(newUser.$id, email, name);
         } catch (error) {
-            // Do not leave a newly registered user with an authenticated
-            // session when required profile initialization has failed.
             await deleteSession();
             throw error;
         }
-
         return newUser;
     } catch (error) {
         console.error("Registration failed:", error);
@@ -115,9 +103,21 @@ export async function verifyEmail(userId: string, secret: string) {
     }
 }
 
+export async function requestPasswordRecovery(email: string, redirectUrl: string) {
+    return account.createRecovery(email, redirectUrl);
+}
+
+export async function completePasswordRecovery(
+    userId: string,
+    secret: string,
+    password: string,
+    passwordAgain: string
+) {
+    return account.updateRecovery(userId, secret, password, passwordAgain);
+}
+
 export function startSessionMonitor(onExpire: () => void): () => void {
     const INTERVAL = 1000 * 60 * 10;
-
     const checkSession = async () => {
         try {
             await account.get();
@@ -126,7 +126,6 @@ export function startSessionMonitor(onExpire: () => void): () => void {
             if (error?.code === 401) onExpire();
         }
     };
-
     const timer = setInterval(checkSession, INTERVAL);
     return () => clearInterval(timer);
 }
