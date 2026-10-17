@@ -82,6 +82,7 @@ export async function createFeedback(input: CreateFeedbackInput) {
 
     if (!subject || subject.length > 180) throw new Error("Subject is required and must be 180 characters or fewer.");
     if (!message || message.length > 5000) throw new Error("Message is required and must be 5,000 characters or fewer.");
+    if (input.rating != null && (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5)) throw new Error("Rating must be a whole number from 1 to 5.");
 
     const document = await databases.createDocument(
         DB_ID,
