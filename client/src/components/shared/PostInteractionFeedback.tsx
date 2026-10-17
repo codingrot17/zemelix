@@ -19,11 +19,13 @@ export default function PostInteractionFeedback({ orderId, bookingId, interactio
     async function check() {
       try {
         const existing = await listMyFeedback();
+        const interactionKey = orderId ? `order:${orderId}` : bookingId ? `booking:${bookingId}` : "";
+        const dismissed = interactionKey ? window.localStorage.getItem(`zemelix-feedback-dismissed:${interactionKey}`) === "1" : false;
         const alreadySubmitted = existing.some(item =>
-          (orderId && item.orderId === orderId) || (bookingId && item.bookingId === bookingId)
+          item.rating != null && ((orderId && item.orderId === orderId) || (bookingId && item.bookingId === bookingId))
         );
         if (!cancelled) {
-          setVisible(!alreadySubmitted);
+          setVisible(!alreadySubmitted && !dismissed);
           setSubmitted(alreadySubmitted);
         }
       } catch {
@@ -71,6 +73,6 @@ export default function PostInteractionFeedback({ orderId, bookingId, interactio
     </div>
     <textarea value={comment} onChange={e=>setComment(e.target.value)} maxLength={1000} rows={2} placeholder="Anything you'd like us to know? (optional)" className="w-full rounded-lg border bg-white px-3 py-2 text-sm dark:bg-gray-900"/>
     {error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
-    <div className="flex flex-wrap gap-2"><Button type="submit" size="sm" disabled={saving||rating<1}>{saving&&<Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Send feedback</Button><Button type="button" size="sm" variant="ghost" onClick={()=>setVisible(false)}>Not now</Button></div>
+    <div className="flex flex-wrap gap-2"><Button type="submit" size="sm" disabled={saving||rating<1}>{saving&&<Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Send feedback</Button><Button type="button" size="sm" variant="ghost" onClick={()=>{const key=orderId?`order:${orderId}`:bookingId?`booking:${bookingId}`:"";if(key)window.localStorage.setItem(`zemelix-feedback-dismissed:${key}`,"1");setVisible(false);}}>Not now</Button></div>
   </form>;
 }
