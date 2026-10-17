@@ -18,12 +18,20 @@ export default function LoginPage() {
     // Get redirect path from URL or default to dashboard
     const redirectTo = searchParams.get("redirect") || "/dashboard";
 
-    // Remember Me stores the email on this device; authentication remains managed by Appwrite.\n    const [email, setEmail] = useState("");
+    // Remember Me stores the email on this device; authentication remains managed by Appwrite.
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);\n\n    useEffect(() => {\n        try {\n            const savedEmail = localStorage.getItem("zemelix-remembered-email");\n            if (savedEmail) { setEmail(savedEmail); setRememberMe(true); }\n        } catch { /* Storage may be disabled by the browser. */ }\n    }, []);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        try {
+            const savedEmail = localStorage.getItem("zemelix-remembered-email");
+            if (savedEmail) { setEmail(savedEmail); setRememberMe(true); }
+        } catch { /* Storage may be disabled by the browser. */ }
+    }, []);
 
     // Client-side validation
     const validateForm = (): boolean => {
@@ -61,7 +69,11 @@ export default function LoginPage() {
 
         try {
             // Login via AuthContext
-            await login(email, password);\n            try {\n                if (rememberMe) localStorage.setItem("zemelix-remembered-email", email.trim());\n                else localStorage.removeItem("zemelix-remembered-email");\n            } catch { /* Sign-in should still work when storage is unavailable. */ }
+            await login(email, password);
+            try {
+                if (rememberMe) localStorage.setItem("zemelix-remembered-email", email.trim());
+                else localStorage.removeItem("zemelix-remembered-email");
+            } catch { /* Sign-in should still work when storage is unavailable. */ }
 
             // Navigate to intended destination
             navigate(redirectTo, { replace: true });
@@ -134,7 +146,6 @@ export default function LoginPage() {
                             aria-label={
                                 showPassword ? "Hide password" : "Show password"
                             }
-                            tabIndex={-1}
                         >
                             {showPassword ? (
                                 <EyeOff size={18} />
