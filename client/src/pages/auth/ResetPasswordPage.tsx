@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/layouts/AuthLayout";
@@ -18,7 +18,7 @@ export default function ResetPasswordPage() {
     const [complete, setComplete] = useState(false);
     const [error, setError] = useState("");
 
-    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError("");
         if (!userId || !secret) {
