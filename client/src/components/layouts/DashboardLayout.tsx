@@ -9,7 +9,7 @@ export default function DashboardLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="flex min-h-screen bg-gray-50 text-gray-800">
+        <div className="flex min-h-screen min-w-0 bg-background text-foreground">
             <SidebarNavigation />
             {/* Mobile Sidebar */}
             {sidebarOpen && (
@@ -25,12 +25,12 @@ export default function DashboardLayout() {
                 </div>
             )}
 
-            <div className="flex-1 flex flex-col">
+            <div className="flex min-w-0 flex-1 flex-col">
                 <DashboardHeader
                     onToggleSidebar={() => setSidebarOpen(prev => !prev)}
                 />
                 <VerificationBanner />
-                <main className="flex-grow container mx-auto px-4 py-6">
+                <main className="container mx-auto min-w-0 flex-grow px-3 py-4 sm:px-4 sm:py-6">
                     <Outlet />
                 </main>
                 <DashboardFooter />
